@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Casa · Corvo (video)</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #fff;
+    touch-action: manipulation;
+    user-select: none;
+    cursor: default;
+}
+.bg-video {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    z-index: 1;
+    will-change: opacity;
+}
+.bg-video.active { opacity: 1; }
+/* Darken edges with vignette */
+#vignette {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 50% 55%, transparent 35%, rgba(0,0,0,0.65) 100%);
+    mix-blend-mode: multiply;
+}
+/* State-driven color overlay (warm when speaking, cool when idle) */
+#mood-tint {
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    opacity: 0;
+    transition: opacity 0.6s ease, background 0.6s ease;
+}
+#char-name {
+    position: fixed;
+    top: 28px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.1rem;
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    opacity: 0.45;
+    z-index: 10;
+    pointer-events: none;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+}
+#transcript {
+    position: fixed;
+    bottom: 100px; left: 50%;
+    transform: translateX(-50%);
+    max-width: 80vw;
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: 300;
+    line-height: 1.5;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    z-index: 10;
+    pointer-events: none;
+    text-shadow: 0 2px 12px rgba(0,0,0,1);
+}
+#transcript.visible { opacity: 0.95; }
+#tap-prompt {
+    position: fixed;
+    bottom: 36px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.85rem;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    opacity: 0.35;
+    z-index: 10;
+    transition: opacity 0.8s ease;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+}
+#tap-prompt.hidden { opacity: 0; pointer-events: none; }
+#state-dot {
+    position: fixed;
+    top: 22px; right: 22px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #555;
+    z-index: 10;
+    transition: background 0.4s ease, box-shadow 0.4s ease;
+}
+#state-dot.listening { background: #50a0ff; box-shadow: 0 0 16px #50a0ff; }
+#state-dot.thinking { background: #ffc83c; box-shadow: 0 0 16px #ffc83c; }
+#state-dot.speaking { background: #50dc78; box-shadow: 0 0 16px #50dc78; }
+</style>
+</head>
+<body>
+<!--
+  Video-first architecture:
+  - Multiple <video> elements, one per state clip, all full-screen
+  - Only the 'active' one has opacity 1, others are opacity 0
+  - Crossfade between clips on state change via opacity transition
+  - Each video loops muted with autoplay so they're always spinning
+    in the background, ready to fade in
+-->
+<video class="bg-video active" id="vid-idle"     src="/static/videos/corvo/idle.mp4"     autoplay loop muted playsinline preload="auto"></video>
+<video class="bg-video"        id="vid-speaking" src="/static/videos/corvo/speaking.mp4" autoplay loop muted playsinline preload="auto"></video>
+<video class="bg-video"        id="vid-flight"   src="/static/videos/corvo/flight.mp4"   autoplay loop muted playsinline preload="auto"></video>
+<video class="bg-video"        id="vid-looking"  src="/static/videos/corvo/look_around.mp4" autoplay loop muted playsinline preload="auto"></video>
+
+<div id="vignette"></div>
+<div id="mood-tint"></div>
+<div id="char-name">Corvo</div>
+<div id="transcript"></div>
+<div id="tap-prompt">Tap anywhere to talk</div>
+<div id="state-dot"></div>
+
+<script>
+(function () {
+    'use strict';
+
+    const transcriptEl = document.getElementById('transcript');
+    const tapPrompt = document.getElementById('tap-prompt');
+    const stateDot = document.getElementById('state-dot');
+    const moodTint = document.getElementById('mood-tint');
+    const nameEl = document.getElementById('char-name');
+
+    const params = new URLSearchParams(window.location.search);
+    const characterKey = params.get('character') || 'corvo';
+
+    // State
+    let appState = 'idle';
+    let firstInteraction = false;
+    let conversationHistory = [];
+    let isListening = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let currentAudio = null;
+    let audioCtx = null;
+    let analyser = null;
+    let amplitude = 0;
+    let smoothAmplitude = 0;
+    let transcriptTimeout = null;
+
+    // Mood (drives color tint, subtle UX feedback)
+    const mood = {
+        arousal: 0.55, valence: 0.30, energy: 0.15,
+        phaseA: Math.random() * Math.PI * 2,
+        phaseB: Math.random() * Math.PI * 2,
+    };
+
+    // Video clip mapping: app state → which clip to show
+    // Fallback chain: if a specific clip 404s, we fall back to idle
+    const CLIP_FOR_STATE = {
+        idle:      'idle',
+        thinking:  'idle',        // thinking → stay on idle until we have a 'thinking' clip
+        listening: 'looking',     // looking around while listening
+        speaking:  'speaking',
+    };
+    const videos = {
+        idle:     document.getElementById('vid-idle'),
+        speaking: document.getElementById('vid-speaking'),
+        flight:   document.getElementById('vid-flight'),
+        looking:  document.getElementById('vid-looking'),
+    };
+    // Track which clips actually loaded (so we can fall back to idle if a clip is 404)
+    const clipLoaded = { idle: true, speaking: false, flight: false, looking: false };
+    Object.entries(videos).forEach(([k, v]) => {
+        if (k === 'idle') return;
+        v.addEventListener('loadeddata', () => { clipLoaded[k] = true; });
+        v.addEventListener('error', () => {
+            console.warn(`clip ${k} failed to load — will fall back to idle`);
+            clipLoaded[k] = false;
+        });
+    });
+
+    function setActiveClip(clipKey) {
+        const effective = clipLoaded[clipKey] ? clipKey : 'idle';
+        Object.entries(videos).forEach(([k, v]) => {
+            if (k === effective) v.classList.add('active');
+            else v.classList.remove('active');
+        });
+    }
+
+    function setState(newState) {
+        appState = newState;
+        stateDot.className = '';
+        if (newState !== 'idle') stateDot.classList.add(newState);
+
+        // Switch clip
+        const clipKey = CLIP_FOR_STATE[newState] || 'idle';
+        setActiveClip(clipKey);
+
+        if (newState !== 'idle' && !firstInteraction) {
+            firstInteraction = true;
+            tapPrompt.classList.add('hidden');
+        }
+    }
+
+    function updateMood(dt) {
+        mood.phaseA += dt * 0.00013;
+        mood.phaseB += dt * 0.00019;
+        const tgtA = 0.55 + Math.sin(mood.phaseA) * 0.28;
+        const tgtV = 0.30 + Math.sin(mood.phaseB) * 0.40;
+        mood.arousal += (tgtA - mood.arousal) * 0.004;
+        mood.valence += (tgtV - mood.valence) * 0.004;
+        if (appState === 'speaking')  mood.energy = Math.min(1, mood.energy + dt * 0.0012);
+        mood.energy *= Math.pow(0.9994, dt / 16);
+    }
+
+    function updateMoodTint() {
+        const t = (mood.valence + 1) * 0.5;
+        const warmR = 255, warmG = 170, warmB = 80;
+        const coolR = 90,  coolG = 120, coolB = 200;
+        const r = Math.round(coolR + (warmR - coolR) * t);
+        const g = Math.round(coolG + (warmG - coolG) * t);
+        const b = Math.round(coolB + (warmB - coolB) * t);
+        moodTint.style.background = `rgba(${r}, ${g}, ${b}, 1)`;
+        moodTint.style.opacity = String(0.08 + mood.arousal * 0.08 + smoothAmplitude * 0.10);
+    }
+
+    // --- Voice pipeline (identical to /tv) ---
+    function showTranscript(text) {
+        if (transcriptTimeout) clearTimeout(transcriptTimeout);
+        transcriptEl.textContent = text;
+        transcriptEl.classList.add('visible');
+        transcriptTimeout = setTimeout(() => transcriptEl.classList.remove('visible'), 8000);
+    }
+
+    function playAudioWithAmplitude(url) {
+        stopCurrentAudio();
+        setState('speaking');
+        const audio = new Audio(url);
+        currentAudio = audio;
+        audio.onended = () => { cleanupAmp(); URL.revokeObjectURL(url); currentAudio = null; setState('idle'); };
+        audio.onerror = () => { cleanupAmp(); currentAudio = null; setState('idle'); };
+        audio.play().then(() => {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioCtx.createMediaElementSource(audio);
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                source.connect(analyser);
+                analyser.connect(audioCtx.destination);
+            } catch {}
+        }).catch(() => { currentAudio = null; setState('idle'); });
+    }
+    function cleanupAmp() { analyser = null; amplitude = 0; }
+    function stopCurrentAudio() {
+        cleanupAmp();
+        if (currentAudio) { currentAudio.pause(); currentAudio.src = ''; currentAudio = null; }
+    }
+
+    async function sendMessage(text) {
+        conversationHistory.push({ role: 'user', content: text });
+        setState('thinking');
+        const recent = conversationHistory.slice(-10);
+        try {
+            const r = await fetch('/api/chat-and-speak', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text, history: recent, character: characterKey, mode: null, customName: null }),
+            });
+            if (!r.ok) { setState('idle'); return; }
+            const buf = await r.arrayBuffer();
+            const view = new DataView(buf);
+            const headerLen = view.getUint32(0);
+            const headerBytes = new Uint8Array(buf, 4, headerLen);
+            const header = JSON.parse(new TextDecoder().decode(headerBytes).trim());
+            const reply = header.response || '';
+            conversationHistory.push({ role: 'assistant', content: reply });
+            if (reply) showTranscript(reply);
+            const audioBytes = buf.slice(4 + headerLen);
+            if (audioBytes.byteLength > 0) {
+                const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
+                playAudioWithAmplitude(URL.createObjectURL(blob));
+            } else { setState('idle'); }
+        } catch { setState('idle'); }
+    }
+
+    async function startVoiceInput() {
+        if (isListening) { stopVoiceInput(); return; }
+        stopCurrentAudio();
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true, channelCount: 1 }
+            });
+            audioChunks = [];
+            const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+            mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+            mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+            mediaRecorder.onstop = async () => {
+                stream.getTracks().forEach(t => t.stop());
+                if (!audioChunks.length) { setState('idle'); return; }
+                const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+                audioChunks = [];
+                setState('thinking');
+                try {
+                    const fd = new FormData();
+                    fd.append('file', blob, 'recording.webm');
+                    const sr = await fetch('/api/stt', { method: 'POST', body: fd });
+                    if (!sr.ok) { showTranscript("I couldn't hear that."); setState('idle'); return; }
+                    const sd = await sr.json();
+                    const tx = (sd.text || '').trim();
+                    if (!tx) { showTranscript("I didn't catch that."); setState('idle'); return; }
+                    showTranscript(tx);
+                    sendMessage(tx);
+                } catch { setState('idle'); }
+            };
+            mediaRecorder.start();
+            isListening = true;
+            setState('listening');
+        } catch { setState('idle'); }
+    }
+    function stopVoiceInput() {
+        if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+        isListening = false;
+    }
+
+    let touchStartTime = 0;
+    document.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (appState === 'thinking') return;
+        if (appState === 'speaking') { stopCurrentAudio(); setState('idle'); return; }
+        touchStartTime = Date.now();
+        startVoiceInput();
+    });
+    document.addEventListener('pointerup', (e) => {
+        e.preventDefault();
+        if (isListening) {
+            const held = Date.now() - touchStartTime;
+            if (held > 300) stopVoiceInput();
+            else setTimeout(() => stopVoiceInput(), 2000);
+        }
+    });
+
+    async function greet() {
+        setState('thinking');
+        try {
+            const r = await fetch('/api/chat-and-speak', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: 'Say hello and introduce yourself warmly', history: [], character: characterKey, mode: 'introduction', customName: null }),
+            });
+            if (!r.ok) { setState('idle'); return; }
+            const buf = await r.arrayBuffer();
+            const view = new DataView(buf);
+            const headerLen = view.getUint32(0);
+            const headerBytes = new Uint8Array(buf, 4, headerLen);
+            const header = JSON.parse(new TextDecoder().decode(headerBytes).trim());
+            const reply = header.response || '';
+            conversationHistory.push({ role: 'assistant', content: reply });
+            if (reply) showTranscript(reply);
+            const audioBytes = buf.slice(4 + headerLen);
+            if (audioBytes.byteLength > 0) {
+                const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
+                playAudioWithAmplitude(URL.createObjectURL(blob));
+            } else { setState('idle'); }
+        } catch { setState('idle'); }
+    }
+
+    // Render loop (mood + amplitude + tint)
+    let lastTime = performance.now();
+    function tick() {
+        const now = performance.now();
+        const dt = Math.min(80, now - lastTime);
+        lastTime = now;
+        updateMood(dt);
+        if (analyser) {
+            const data = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(data);
+            let s = 0; for (let i = 0; i < data.length; i++) s += data[i];
+            amplitude = s / data.length / 255;
+        }
+        smoothAmplitude += (amplitude - smoothAmplitude) * 0.3;
+        if (appState !== 'speaking') smoothAmplitude *= 0.9;
+        updateMoodTint();
+        requestAnimationFrame(tick);
+    }
+
+    // Load character name
+    (async function initName() {
+        try {
+            const r = await fetch('/api/characters');
+            const chars = await r.json();
+            const info = chars[characterKey];
+            nameEl.textContent = info ? info.name : characterKey.charAt(0).toUpperCase() + characterKey.slice(1);
+        } catch {}
+    })();
+
+    // Make sure videos start paused until user interacts (some browsers block autoplay)
+    Object.values(videos).forEach(v => {
+        v.play().catch(() => {});
+    });
+
+    requestAnimationFrame(tick);
+    setTimeout(greet, 1500);
+})();
+</script>
+</body>
+</html>

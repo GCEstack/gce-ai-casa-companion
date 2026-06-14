@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casa Companion · video tests</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    width: 100%; min-height: 100%;
+    background: radial-gradient(ellipse at 50% 30%, #0a0a18 0%, #020306 70%);
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
+}
+.wrap {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+}
+h1 {
+    font-size: 1rem;
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    opacity: 0.45;
+    text-align: center;
+    margin-bottom: 40px;
+}
+.char-section + .char-section { margin-top: 60px; }
+.char-label {
+    font-size: 0.85rem;
+    font-weight: 400;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-bottom: 16px;
+    color: #d4b080;
+}
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+}
+.panel {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 18px;
+}
+.panel h2 {
+    font-size: 0.7rem;
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-bottom: 12px;
+}
+.panel img, .panel video {
+    width: 100%;
+    border-radius: 8px;
+    display: block;
+}
+.info {
+    margin-top: 10px;
+    font-size: 0.75rem;
+    opacity: 0.4;
+    line-height: 1.5;
+}
+.footer {
+    margin-top: 40px;
+    text-align: center;
+    font-size: 0.75rem;
+    opacity: 0.35;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Casa · Wan 2.1 I2V tests</h1>
+
+    <section class="char-section">
+        <div class="char-label">CORVO</div>
+        <div class="grid">
+            <div class="panel">
+                <h2>source reference</h2>
+                <img src="/static/images/heroes/crow.webp" alt="Corvo source">
+            </div>
+            <div class="panel">
+                <h2>generated · idle (4s loop)</h2>
+                <video src="/static/videos/corvo/idle.mp4" autoplay loop muted playsinline></video>
+            </div>
+        </div>
+    </section>
+
+    <section class="char-section">
+        <div class="char-label">STELLINO</div>
+        <div class="grid">
+            <div class="panel">
+                <h2>source reference</h2>
+                <img src="/static/images/heroes/stellino.webp" alt="Stellino source">
+            </div>
+            <div class="panel">
+                <h2>generated · idle (4s loop)</h2>
+                <video src="/static/videos/stellino/idle.mp4" autoplay loop muted playsinline></video>
+            </div>
+        </div>
+    </section>
+
+    <div class="footer">
+        Pipeline: Wan 2.1 I2V + CausVid · 4 steps · 512×512 · ~30–60s per clip on ZeroGPU ·
+        reference-image conditioned for character consistency.
+    </div>
+</div>
+</body>
+</html>

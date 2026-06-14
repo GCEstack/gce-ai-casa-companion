@@ -13,6 +13,7 @@ casa-companion-master/
 ├── web-next/                 # Original Next.js 14 landing + demo site
 ├── web-revamp/               # Newer Vite + React marketing frontend (evaluation)
 ├── voice-agent/              # FastAPI voice backend, Next.js dashboard, firmware, Supabase migrations
+├── tv-companion/             # Original TV demo: FastAPI server + vanilla JS TV rigs + 3D assets
 ├── pipelines/
 │   ├── hero-video/           # Image-to-video batch pipeline for hero animations
 │   └── 3d-character-gen/     # 3D character / video generation scripts
@@ -54,6 +55,18 @@ python -m venv .venv
 pip install -r requirements.txt
 python batch_processor.py --input-dir ../../web-revamp/public/characters --output-dir ./videos --backend pika_fal
 ```
+
+### TV companion demo
+
+```bash
+cd tv-companion
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+python server.py
+```
+
+Open `http://localhost:8000` for the main demo or `http://localhost:8000/tv.html` for the TV rig.
 
 ---
 

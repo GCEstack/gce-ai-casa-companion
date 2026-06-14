@@ -1,0 +1,7 @@
+.env
+__pycache__/
+.venv/
+.venv-seg/
+*.pyc
+workspace/
+static/images/tv/corvo/_original/

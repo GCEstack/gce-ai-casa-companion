@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Casa Companion TV</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #fff;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
+}
+canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+#character-layer {
+    position: fixed;
+    top: 0; left: 0;
+    z-index: 2;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    will-change: transform;
+}
+#character-layer > img {
+    max-height: 45vh;
+    max-width: 60vw;
+    object-fit: contain;
+    filter: drop-shadow(0 0 40px rgba(255, 170, 50, 0.15));
+    display: block;
+}
+/* --- Rigged character (Corvo) --- */
+#rig {
+    position: relative;
+    width: 1024px;
+    height: 1024px;
+    filter: drop-shadow(0 0 40px rgba(255, 170, 50, 0.15));
+    display: none;
+}
+#rig.visible { display: block; }
+#rig .layer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 1024px;
+    height: 1024px;
+    pointer-events: none;
+    will-change: transform, opacity;
+}
+#rig #l-left-wing  { transform-origin: 482px 400px; }
+#rig #l-right-wing { transform-origin: 573px 400px; }
+#rig #l-head       { transform-origin: 512px 450px; }
+#rig #l-beak       { transform-origin: 528px 350px; }
+#char-name {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.2rem;
+    font-weight: 300;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    z-index: 10;
+    pointer-events: none;
+}
+#transcript {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 80vw;
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: 300;
+    line-height: 1.5;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    z-index: 10;
+    pointer-events: none;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+}
+#transcript.visible { opacity: 0.85; }
+#tap-prompt {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.9rem;
+    font-weight: 300;
+    letter-spacing: 0.1em;
+    opacity: 0.35;
+    z-index: 10;
+    transition: opacity 0.8s ease;
+}
+#tap-prompt.hidden { opacity: 0; pointer-events: none; }
+#state-dot {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #555;
+    z-index: 10;
+    transition: background 0.4s ease;
+}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div id="character-layer">
+    <img id="char-img" src="" alt="">
+    <div id="rig">
+        <img class="layer" id="l-body"       src="" alt="">
+        <img class="layer" id="l-tail"       src="" alt="">
+        <img class="layer" id="l-legs"       src="" alt="">
+        <img class="layer" id="l-left-wing"  src="" alt="">
+        <img class="layer" id="l-right-wing" src="" alt="">
+        <img class="layer" id="l-head"       src="" alt="">
+        <img class="layer" id="l-eye"        src="" alt="">
+        <img class="layer" id="l-beak"       src="" alt="">
+    </div>
+</div>
+<div id="char-name"></div>
+<div id="transcript"></div>
+<div id="tap-prompt">Tap anywhere to talk</div>
+<div id="state-dot"></div>
+
+<script>
+(function() {
+    'use strict';
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const charImg = document.getElementById('char-img');
+    const charLayer = document.getElementById('character-layer');
+    const nameEl = document.getElementById('char-name');
+    const transcriptEl = document.getElementById('transcript');
+    const tapPrompt = document.getElementById('tap-prompt');
+    const stateDot = document.getElementById('state-dot');
+
+    const params = new URLSearchParams(window.location.search);
+    const characterKey = params.get('character') || 'corvo';
+
+    let W = 0, H = 0;
+    let state = 'idle';
+    let prevFrameKey = '';
+    let bobPhase = 0;
+    let breathePhase = 0;
+    let idleVariant = 0;
+    let idleSwapTimer = 0;
+    let firstInteraction = false;
+
+    // --- Flight / behavior engine ---
+    // Perches in viewport fractions. Corvo hops between these.
+    const PERCHES = [
+        { x: 0.50, y: 0.55 },  // center, on a branch
+        { x: 0.18, y: 0.42 },  // left tree branch
+        { x: 0.82, y: 0.45 },  // right tree branch
+        { x: 0.30, y: 0.32 },  // high-left
+        { x: 0.70, y: 0.35 },  // high-right
+        { x: 0.50, y: 0.28 }   // near the moon
+    ];
+    let currentPerchIdx = 0;
+    let perchX = PERCHES[0].x;
+    let perchY = PERCHES[0].y;
+    let flightMode = 'perched';        // 'perched' | 'flying'
+    let flightStart = 0;
+    let flightDuration = 0;
+    let fromX = perchX, fromY = perchY;
+    let toX = perchX,   toY = perchY;
+    let arcHeight = 0;
+    let facingRight = true;
+    let wingFlapOn = true;
+    let wingFlapAccum = 0;
+    let nextFlightAt = 0;
+    let bankAngle = 0;
+
+    function scheduleNextFlight(ts) {
+        // 6–16s between flights
+        nextFlightAt = ts + 6000 + Math.random() * 10000;
+    }
+
+    function startFlight(ts) {
+        // Pick a different perch
+        let nextIdx = currentPerchIdx;
+        while (nextIdx === currentPerchIdx) {
+            nextIdx = Math.floor(Math.random() * PERCHES.length);
+        }
+        const next = PERCHES[nextIdx];
+        fromX = perchX; fromY = perchY;
+        toX = next.x;   toY = next.y;
+        facingRight = toX >= fromX;
+        const dist = Math.hypot(toX - fromX, toY - fromY);
+        flightDuration = 1800 + dist * 2400;           // farther = longer
+        arcHeight = 0.08 + dist * 0.25;                // farther = higher arc
+        flightStart = ts;
+        flightMode = 'flying';
+        currentPerchIdx = nextIdx;
+    }
+
+    function updateFlight(ts, dt) {
+        if (flightMode === 'perched') {
+            perchX = PERCHES[currentPerchIdx].x;
+            perchY = PERCHES[currentPerchIdx].y;
+            if (state === 'idle' && ts > nextFlightAt) {
+                startFlight(ts);
+            }
+            bankAngle *= 0.85;
+            return { flying: false, x: perchX, y: perchY };
+        }
+
+        // Flying
+        const raw = (ts - flightStart) / flightDuration;
+        const t = Math.min(1, Math.max(0, raw));
+        // Smoothstep — gentle takeoff, gentle landing
+        const ease = t * t * (3 - 2 * t);
+
+        const x = fromX + (toX - fromX) * ease;
+        const lineY = fromY + (toY - fromY) * ease;
+        const arc = Math.sin(t * Math.PI) * arcHeight;   // up-arc
+        const y = lineY - arc;
+
+        // Wing flap — 6 flaps/sec
+        wingFlapAccum += dt;
+        if (wingFlapAccum > 160) {
+            wingFlapOn = !wingFlapOn;
+            wingFlapAccum = 0;
+        }
+
+        // Bank into direction of travel + dip while climbing/descending
+        const climbRate = Math.cos(t * Math.PI);        // +1 at takeoff, -1 at landing
+        const bankTarget = (facingRight ? 1 : -1) * (8 + climbRate * 6);
+        bankAngle += (bankTarget - bankAngle) * 0.15;
+
+        if (t >= 1) {
+            flightMode = 'perched';
+            perchX = toX; perchY = toY;
+            scheduleNextFlight(ts);
+            return { flying: false, x: perchX, y: perchY };
+        }
+
+        // If conversation starts mid-flight, cut the flight short and land at nearest perch
+        if (state !== 'idle' && t > 0.15) {
+            // Snap to destination early
+            flightMode = 'perched';
+            perchX = toX; perchY = toY;
+            scheduleNextFlight(ts);
+            return { flying: false, x: perchX, y: perchY };
+        }
+
+        return { flying: true, x, y };
+    }
+
+    let conversationHistory = [];
+    let isListening = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let currentAudio = null;
+    let audioCtx = null;
+    let analyser = null;
+    let amplitude = 0;
+    let smoothAmplitude = 0;
+    let transcriptTimeout = null;
+    let mouthOpen = false;
+    let mouthToggleTimer = 0;
+
+    // --- Character frames ---
+    const FRAME_BASE = `/static/images/tv/${characterKey}/`;
+    const FRAME_KEYS = [
+        'idle', 'idle2', 'alert', 'wings_spread',
+        'beak_open', 'beak_closed', 'happy', 'sleepy'
+    ];
+    const frames = {};
+    let framesLoaded = 0;
+
+    FRAME_KEYS.forEach(key => {
+        const img = new Image();
+        img.onload = () => { framesLoaded++; };
+        img.onerror = () => { framesLoaded++; };
+        img.src = FRAME_BASE + characterKey + '_' + key + '.png';
+        frames[key] = img;
+    });
+
+    // Fallback: use hero image if frames not available
+    const heroImg = new Image();
+    heroImg.src = `/static/images/heroes/${characterKey === 'corvo' ? 'crow' : characterKey}.webp`;
+
+    // --- Layered rig (Corvo) ---
+    const RIG_BASE = `/static/images/tv/${characterKey}/layers/`;
+    const RIG_LAYERS = {
+        'l-body':       'body_trunk.png',
+        'l-tail':       'tail.png',
+        'l-legs':       'legs.png',
+        'l-left-wing':  'left_wing.png',
+        'l-right-wing': 'right_wing.png',
+        'l-head':       'head.png',
+        'l-eye':        'eye.png',
+        'l-beak':       'beak.png',
+    };
+    const rigEl = document.getElementById('rig');
+    let rigReady = false;
+    let rigFailed = false;
+    let rigLoaded = 0;
+    const rigTotal = Object.keys(RIG_LAYERS).length;
+
+    Object.entries(RIG_LAYERS).forEach(([id, file]) => {
+        const el = document.getElementById(id);
+        el.onload = () => {
+            rigLoaded++;
+            if (rigLoaded === rigTotal) {
+                rigReady = true;
+                rigEl.classList.add('visible');
+                charImg.style.display = 'none';
+            }
+        };
+        el.onerror = () => {
+            rigFailed = true;
+        };
+        el.src = RIG_BASE + file;
+    });
+
+    // Blink state
+    let blinkUntil = 0;
+    let nextBlinkAt = performance.now() + 2000 + Math.random() * 4000;
+
+    // --- Unified emotional state (shared by Corvo AND the world) ---
+    // Arousal: 0=sleepy/dim,  1=alert/bright
+    // Valence: -1=dark/cold,  1=warm/joyful
+    // Energy:  recent activity — decays; flight and speech pump it up
+    // Cumulative "world memory" — trees sway on this, not on random loops
+    const mood = {
+        arousal: 0.50,
+        valence: 0.25,
+        energy:  0.15,
+        curiosity: 0.5,
+        // Lissajous drift — two independent oscillators so mood slides, never snaps
+        phaseA: Math.random() * Math.PI * 2,
+        phaseB: Math.random() * Math.PI * 2,
+        // World memory — grows with activity, decays slowly
+        worldMemory: 0,
+    };
+
+    function updateMood(ts, dt) {
+        // Slow aimless drift — Lissajous-style, two prime-ish frequencies
+        mood.phaseA += dt * 0.00013;
+        mood.phaseB += dt * 0.00019;
+        const tgtArousal = 0.55 + Math.sin(mood.phaseA) * 0.28;
+        const tgtValence = 0.30 + Math.sin(mood.phaseB) * 0.40;
+        // Lazy lerp — mood slides into itself
+        mood.arousal += (tgtArousal - mood.arousal) * 0.004;
+        mood.valence += (tgtValence - mood.valence) * 0.004;
+
+        // Voice + flight bump energy
+        if (state === 'speaking')  mood.energy = Math.min(1, mood.energy + dt * 0.0012);
+        if (state === 'listening') mood.arousal = Math.min(1, mood.arousal + dt * 0.0006);
+        if (flightMode === 'flying') mood.energy = Math.min(1, mood.energy + dt * 0.0006);
+        mood.energy *= Math.pow(0.9994, dt / 16);
+
+        // World memory — slowly accumulates any activity; decays even slower
+        mood.worldMemory += dt * 0.00002 * (mood.energy + (state === 'speaking' ? 0.5 : 0));
+        mood.worldMemory *= Math.pow(0.99996, dt / 16);
+        mood.worldMemory = Math.min(2.0, mood.worldMemory);
+    }
+
+    // --- Fireflies (Corvo's forest world) ---
+    const fireflies = [];
+    const FIREFLY_COUNT = 60;
+
+    function initFireflies() {
+        for (let i = 0; i < FIREFLY_COUNT; i++) {
+            fireflies.push({
+                x: Math.random(),
+                y: Math.random(),
+                vx: 0, vy: 0,                             // boid velocity, flees Corvo
+                size: 1 + Math.random() * 2.5,
+                speed: 0.0002 + Math.random() * 0.0005,
+                drift: Math.random() * Math.PI * 2,
+                driftSpeed: 0.3 + Math.random() * 0.7,
+                pulseSpeed: 0.5 + Math.random() * 1.5,
+                pulseOffset: Math.random() * Math.PI * 2,
+                brightness: 0.3 + Math.random() * 0.7,
+                hue: 35 + Math.random() * 25 // warm amber to gold
+            });
+        }
+    }
+
+    // Corvo's actual rendered position in pixel space — fireflies flee this
+    let corvoPxX = 0, corvoPxY = 0, corvoPrevX = 0, corvoPrevY = 0, corvoSpeed = 0;
+
+    // --- Moon ---
+    const moon = {
+        x: 0.78,
+        y: 0.15,
+        radius: 0.04,
+        glow: 0.15
+    };
+
+    // --- Resize ---
+    function resize() {
+        W = canvas.width = window.innerWidth * devicePixelRatio;
+        H = canvas.height = window.innerHeight * devicePixelRatio;
+        canvas.style.width = window.innerWidth + 'px';
+        canvas.style.height = window.innerHeight + 'px';
+    }
+    window.addEventListener('resize', resize);
+    resize();
+    initFireflies();
+
+    // --- State ---
+    function setState(newState) {
+        state = newState;
+        const dotColors = { idle: '#555', listening: '#50a0ff', thinking: '#ffc83c', speaking: '#50dc78' };
+        stateDot.style.background = dotColors[newState] || '#555';
+        if (newState !== 'idle' && !firstInteraction) {
+            firstInteraction = true;
+            tapPrompt.classList.add('hidden');
+        }
+    }
+
+    // --- Get current frame based on state ---
+    function getCurrentFrameKey() {
+        switch (state) {
+            case 'speaking':
+                return mouthOpen ? 'beak_open' : 'beak_closed';
+            case 'listening':
+                return 'alert';
+            case 'thinking':
+                return 'idle';
+            case 'idle':
+            default:
+                return idleVariant === 0 ? 'idle' : 'idle2';
+        }
+    }
+
+    // --- Draw dark forest background ---
+    function drawBackground(ts, dt) {
+        // Valence shifts the gradient warmth — cold dark to warm green
+        const warmShift = Math.max(0, mood.valence) * 8;
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, `rgb(${5 + warmShift}, 5, ${16 - warmShift})`);
+        grad.addColorStop(0.3, `rgb(${10 + warmShift}, 10, ${24 - warmShift})`);
+        grad.addColorStop(0.6, `rgb(${13 + warmShift * 0.5}, ${26 + warmShift * 0.5}, 13)`);
+        grad.addColorStop(1, '#060d06');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        // Moon glow — pulses with arousal + voice amplitude
+        const moonPulse = 1 + smoothAmplitude * 0.45 + mood.arousal * 0.18;
+        const mx = moon.x * W, my = moon.y * H;
+        const mr = moon.radius * Math.min(W, H);
+        const moonGlow = ctx.createRadialGradient(mx, my, mr * 0.5, mx, my, mr * 8 * moonPulse);
+        const glowAlpha = 0.12 + smoothAmplitude * 0.15 + mood.arousal * 0.04;
+        moonGlow.addColorStop(0, `rgba(200, 210, 230, ${glowAlpha})`);
+        moonGlow.addColorStop(0.3, `rgba(160, 170, 210, ${glowAlpha * 0.4})`);
+        moonGlow.addColorStop(1, 'transparent');
+        ctx.fillStyle = moonGlow;
+        ctx.fillRect(0, 0, W, H);
+
+        // Moon disc
+        ctx.fillStyle = `rgba(215, 220, 235, ${0.15 + mood.arousal * 0.08})`;
+        ctx.beginPath();
+        ctx.arc(mx, my, mr * (1 + mood.arousal * 0.04), 0, Math.PI * 2);
+        ctx.fill();
+
+        // Tree silhouettes at bottom (sway with world memory + voice)
+        drawTrees(ts);
+
+        // Fireflies
+        drawFireflies(ts, dt);
+    }
+
+    function drawTrees(ts) {
+        const treeBaseY = H * 0.75;
+        // Sway amplitude scales with cumulative world activity + instantaneous voice amplitude
+        const swayAmp = (mood.worldMemory * 0.8 + smoothAmplitude * 1.5) * W * 0.006;
+        const swayPhaseBase = ts * 0.0005;
+
+        ctx.fillStyle = '#020604';
+
+        // Left tree cluster
+        drawTree(W * 0.05, treeBaseY, W * 0.08, H * 0.5, swayAmp, swayPhaseBase + 0.0);
+        drawTree(W * 0.12, treeBaseY, W * 0.06, H * 0.45, swayAmp, swayPhaseBase + 0.3);
+        drawTree(W * 0.02, treeBaseY, W * 0.05, H * 0.35, swayAmp, swayPhaseBase + 0.6);
+
+        // Right tree cluster
+        drawTree(W * 0.88, treeBaseY, W * 0.07, H * 0.48, swayAmp, swayPhaseBase + 0.9);
+        drawTree(W * 0.95, treeBaseY, W * 0.06, H * 0.42, swayAmp, swayPhaseBase + 1.2);
+        drawTree(W * 0.82, treeBaseY, W * 0.05, H * 0.3, swayAmp, swayPhaseBase + 1.5);
+
+        // Far background trees (lighter) — sway less
+        ctx.fillStyle = '#040806';
+        drawTree(W * 0.2, treeBaseY, W * 0.04, H * 0.25, swayAmp * 0.4, swayPhaseBase + 1.8);
+        drawTree(W * 0.75, treeBaseY, W * 0.04, H * 0.28, swayAmp * 0.4, swayPhaseBase + 2.1);
+        drawTree(W * 0.35, treeBaseY, W * 0.03, H * 0.2, swayAmp * 0.4, swayPhaseBase + 2.4);
+        drawTree(W * 0.65, treeBaseY, W * 0.03, H * 0.22, swayAmp * 0.4, swayPhaseBase + 2.7);
+
+        // Ground
+        const groundGrad = ctx.createLinearGradient(0, treeBaseY, 0, H);
+        groundGrad.addColorStop(0, '#030804');
+        groundGrad.addColorStop(1, '#010301');
+        ctx.fillStyle = groundGrad;
+        ctx.fillRect(0, treeBaseY, W, H - treeBaseY);
+    }
+
+    function drawTree(x, baseY, width, height, swayAmp, swayPhase) {
+        // Sway is applied to the TOP of the tree; base stays planted
+        const topOffset = Math.sin(swayPhase) * swayAmp;
+        const midOffset = topOffset * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x - width * 0.1, baseY);
+        ctx.lineTo(x - width * 0.5 + midOffset * 0.3, baseY - height * 0.4);
+        ctx.lineTo(x - width * 0.3 + midOffset * 0.5, baseY - height * 0.5);
+        ctx.lineTo(x - width * 0.6 + midOffset * 0.7, baseY - height * 0.7);
+        ctx.lineTo(x - width * 0.2 + topOffset * 0.85, baseY - height * 0.8);
+        ctx.lineTo(x + topOffset, baseY - height);
+        ctx.lineTo(x + width * 0.2 + topOffset * 0.85, baseY - height * 0.8);
+        ctx.lineTo(x + width * 0.6 + midOffset * 0.7, baseY - height * 0.7);
+        ctx.lineTo(x + width * 0.3 + midOffset * 0.5, baseY - height * 0.5);
+        ctx.lineTo(x + width * 0.5 + midOffset * 0.3, baseY - height * 0.4);
+        ctx.lineTo(x + width * 0.1, baseY);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    function drawFireflies(ts, dt) {
+        // Firefly brightness modulated by Corvo's arousal — world shares his nervous system
+        const moodBright = 0.7 + mood.arousal * 0.6;
+
+        // Flee radius in canvas px (Corvo's pixel position is tracked in render())
+        const FLEE_RADIUS = 180 * devicePixelRatio;
+        const FLEE_R2 = FLEE_RADIUS * FLEE_RADIUS;
+        const speedBoost = Math.min(1.5, corvoSpeed * 0.05);
+
+        for (const f of fireflies) {
+            const pulse = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(ts * 0.001 * f.pulseSpeed + f.pulseOffset));
+            const alpha = f.brightness * pulse * moodBright;
+
+            // Drift (base) + boid-style flee from Corvo when he's close or moving
+            const drift_dx = Math.sin(ts * 0.001 * f.driftSpeed + f.drift) * 0.00012;
+            const drift_dy = Math.cos(ts * 0.001 * f.driftSpeed * 0.7 + f.drift) * 0.00009;
+
+            const fx = f.x * W;
+            const fy = f.y * H;
+            const dxToCorvo = fx - corvoPxX;
+            const dyToCorvo = fy - corvoPxY;
+            const d2 = dxToCorvo * dxToCorvo + dyToCorvo * dyToCorvo;
+            if (d2 < FLEE_R2) {
+                const d = Math.sqrt(d2) + 1;
+                const flee = (FLEE_RADIUS - d) / FLEE_RADIUS; // 0..1
+                const mag = 0.00035 * (1 + speedBoost);
+                f.vx += (dxToCorvo / d) * flee * mag;
+                f.vy += (dyToCorvo / d) * flee * mag;
+            }
+
+            // Integrate + damping + drift
+            f.vx = f.vx * 0.94 + drift_dx;
+            f.vy = f.vy * 0.94 + drift_dy;
+            f.x += f.vx;
+            f.y += f.vy;
+            // Wrap torus so they don't pile up at edges
+            if (f.x < 0) f.x += 1;
+            if (f.x > 1) f.x -= 1;
+            if (f.y < 0) f.y += 1;
+            if (f.y > 1) f.y -= 1;
+
+            const rx = f.x * W;
+            const ry = f.y * H;
+
+            // Glow
+            const glowR = f.size * 4 * devicePixelRatio;
+            const glow = ctx.createRadialGradient(rx, ry, 0, rx, ry, glowR);
+            glow.addColorStop(0, `hsla(${f.hue}, 80%, 65%, ${alpha * 0.4})`);
+            glow.addColorStop(1, 'transparent');
+            ctx.fillStyle = glow;
+            ctx.fillRect(rx - glowR, ry - glowR, glowR * 2, glowR * 2);
+
+            // Core
+            ctx.fillStyle = `hsla(${f.hue}, 90%, 75%, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(rx, ry, f.size * devicePixelRatio * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // --- Character animation ---
+    function updateCharacter(ts, dt) {
+        // Flight first — position comes from here
+        const flight = updateFlight(ts, dt);
+
+        // Bob — amplitude scales with arousal (sleepy = barely moves, alert = bounces)
+        bobPhase += dt * 0.0008 * (0.7 + mood.arousal * 0.6);
+        const bob = flight.flying ? 0 : Math.sin(bobPhase) * (4 + mood.arousal * 7);
+
+        // Breathe — low arousal: slow deep breath; high arousal: short shallow
+        breathePhase += dt * 0.001 * (0.6 + mood.arousal * 1.2);
+        const breatheDepth = 0.006 + (1 - mood.arousal) * 0.010;
+        const breathe = flight.flying ? 1 : 1 + Math.sin(breathePhase) * breatheDepth;
+
+        // Idle variant swap (only when perched & idle)
+        if (state === 'idle' && !flight.flying) {
+            idleSwapTimer += dt;
+            if (idleSwapTimer > 5000 + Math.random() * 3000) {
+                idleVariant = idleVariant === 0 ? 1 : 0;
+                idleSwapTimer = 0;
+            }
+        }
+
+        // Mouth toggle for speaking (synced to amplitude)
+        if (state === 'speaking') {
+            if (analyser) {
+                const data = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(data);
+                let sum = 0;
+                for (let i = 0; i < data.length; i++) sum += data[i];
+                amplitude = sum / data.length / 255;
+            }
+            smoothAmplitude += (amplitude - smoothAmplitude) * 0.3;
+            mouthOpen = smoothAmplitude > 0.08;
+        } else {
+            smoothAmplitude *= 0.9;
+            mouthOpen = false;
+        }
+
+        // Pick frame — flight overrides state-based frame
+        let frameKey;
+        if (flight.flying) {
+            frameKey = wingFlapOn ? 'wings_spread' : 'alert';
+        } else {
+            frameKey = getCurrentFrameKey();
+        }
+        const frame = frames[frameKey];
+        const useFrame = frame && frame.complete && frame.naturalWidth > 0;
+
+        if (useFrame) {
+            if (charImg.src !== frame.src) charImg.src = frame.src;
+        } else if (heroImg.complete && heroImg.naturalWidth > 0) {
+            if (charImg.src !== heroImg.src) charImg.src = heroImg.src;
+        }
+
+        // Position (viewport coords → pixels)
+        const px = flight.x * window.innerWidth;
+        const py = flight.y * window.innerHeight;
+
+        // Track for firefly flee behavior (canvas is retina-scaled, multiply by dpr)
+        corvoPxX = px * devicePixelRatio;
+        corvoPxY = py * devicePixelRatio;
+
+        // Apply transforms
+        const thinkPulse = state === 'thinking' ? (1 + Math.sin(ts * 0.003) * 0.02) : 1;
+        const speakBounce = state === 'speaking' ? (smoothAmplitude * 3) : 0;
+        const totalBob = bob + speakBounce;
+        const baseScale = breathe * thinkPulse;
+        const flipX = facingRight ? 1 : -1;
+
+        // Rig container needs a base scale to fit the 1024x1024 canvas into the viewport
+        const rigFit = Math.min(
+            window.innerHeight * 0.55 / 1024,
+            window.innerWidth * 0.55 / 1024
+        );
+        const outerScale = rigReady ? rigFit * baseScale : baseScale;
+
+        charLayer.style.left = `${px}px`;
+        charLayer.style.top = `${py + totalBob}px`;
+        charLayer.style.transform =
+            `translate(-50%, -50%) ` +
+            `rotate(${bankAngle}deg) ` +
+            `scale(${outerScale * flipX}, ${outerScale})`;
+
+        // --- Layer-level rig updates (Corvo) ---
+        if (rigReady) {
+            // Wing flap — arousal modulates idle ruffle; flight is a harder flap
+            const flapFreq = flight.flying ? 6.0 : (0.5 + mood.arousal * 0.8);
+            const flapMag  = flight.flying ? 28  : (2 + mood.arousal * 4);
+            const flapPhase = Math.sin(ts * 0.001 * flapFreq * Math.PI * 2);
+            const leftWingDeg  =  flapPhase * flapMag;
+            const rightWingDeg = -flapPhase * flapMag;
+            document.getElementById('l-left-wing').style.transform  = `rotate(${leftWingDeg}deg)`;
+            document.getElementById('l-right-wing').style.transform = `rotate(${rightWingDeg}deg)`;
+
+            // Beak opens with audio amplitude when speaking. Scale Y from top anchor.
+            const beakScale = 1 + (state === 'speaking' ? smoothAmplitude * 2.5 : 0);
+            document.getElementById('l-beak').style.transform = `scaleY(${beakScale})`;
+
+            // Blink — frequency rises with arousal. High arousal = frequent alert blinks.
+            //         Low arousal = slow heavy-lidded blinks.
+            if (ts > nextBlinkAt && blinkUntil <= ts) {
+                const lidDur = 80 + (1 - mood.arousal) * 140;   // sleepier = slower
+                blinkUntil = ts + lidDur;
+                const gap = 1400 + (1 - mood.arousal) * 5500;
+                nextBlinkAt = ts + gap + Math.random() * 2500;
+            }
+            const blinking = ts < blinkUntil;
+            document.getElementById('l-eye').style.opacity = blinking ? '0' : '1';
+
+            // Head — tilts when listening, continuous curiosity drift otherwise
+            const listenTilt = state === 'listening' ? 6 : 0;
+            const curiosityDrift = Math.sin(ts * 0.0009) * mood.arousal * 3
+                                 + Math.sin(ts * 0.00057) * mood.curiosity * 2;
+            const headDeg = listenTilt + curiosityDrift;
+            document.getElementById('l-head').style.transform = `rotate(${headDeg}deg)`;
+
+            // Legs — hide mid-flight
+            document.getElementById('l-legs').style.opacity = flight.flying ? '0' : '1';
+
+            // Tail — wag scales with energy; two-frequency so it never snaps to a rhythm
+            const tailDeg = Math.sin(ts * 0.0022) * (1 + mood.energy * 3)
+                          + Math.sin(ts * 0.0037) * mood.energy * 1.5;
+            document.getElementById('l-tail').style.transform = `rotate(${tailDeg}deg)`;
+        }
+
+        // Glow — brighter during flight, tinted by valence
+        const glowBase = flight.flying ? 35 : 20;
+        const glowExtra = state === 'speaking' ? smoothAmplitude * 40 : 0;
+        const glowListening = state === 'listening' ? 20 : 0;
+        const glowThinking = state === 'thinking' ? 10 : 0;
+        const totalGlow = glowBase + glowExtra + glowListening + glowThinking
+                        + mood.arousal * 8;
+
+        // Tint: warm amber when valence positive, cool blue-violet when negative
+        const warmR = 255, warmG = 170, warmB = 50;
+        const coolR = 120, coolG = 140, coolB = 220;
+        const t = (mood.valence + 1) * 0.5;       // 0..1
+        const r = Math.round(coolR + (warmR - coolR) * t);
+        const g = Math.round(coolG + (warmG - coolG) * t);
+        const b = Math.round(coolB + (warmB - coolB) * t);
+        const glowRgba = `rgba(${r}, ${g}, ${b}, ${0.15 + smoothAmplitude * 0.2 + mood.arousal * 0.05})`;
+        charImg.style.filter = `drop-shadow(0 0 ${totalGlow}px ${glowRgba})`;
+        if (rigReady) {
+            rigEl.style.filter = `drop-shadow(0 0 ${totalGlow}px ${glowRgba})`;
+        }
+
+        // Listening bumps curiosity, decays slowly — feeds head drift
+        if (state === 'listening') {
+            mood.curiosity = Math.min(1, mood.curiosity + dt * 0.0005);
+        } else {
+            mood.curiosity *= Math.pow(0.9995, dt / 16);
+        }
+    }
+
+    // --- Render loop ---
+    let lastTime = 0;
+
+    function render(ts) {
+        const dt = lastTime ? Math.min(80, ts - lastTime) : 16;
+        lastTime = ts;
+
+        updateMood(ts, dt);
+        drawBackground(ts, dt);
+        updateCharacter(ts, dt);
+
+        // Track Corvo's pixel position + speed for firefly flee behavior
+        const dx = corvoPxX - corvoPrevX;
+        const dy = corvoPxY - corvoPrevY;
+        corvoSpeed = Math.sqrt(dx * dx + dy * dy);
+        corvoPrevX = corvoPxX;
+        corvoPrevY = corvoPxY;
+
+        requestAnimationFrame(render);
+    }
+
+    // --- Cursor hide ---
+    let cursorTimer = null;
+    document.addEventListener('mousemove', () => {
+        document.body.style.cursor = 'default';
+        if (cursorTimer) clearTimeout(cursorTimer);
+        cursorTimer = setTimeout(() => { document.body.style.cursor = 'none'; }, 3000);
+    });
+    cursorTimer = setTimeout(() => { document.body.style.cursor = 'none'; }, 3000);
+
+    // --- Voice integration ---
+
+    function showTranscript(text) {
+        if (transcriptTimeout) clearTimeout(transcriptTimeout);
+        transcriptEl.textContent = text;
+        transcriptEl.classList.add('visible');
+        transcriptTimeout = setTimeout(() => {
+            transcriptEl.classList.remove('visible');
+        }, 8000);
+    }
+
+    function playAudioWithAmplitude(url) {
+        stopCurrentAudio();
+        setState('speaking');
+
+        const audio = new Audio(url);
+        currentAudio = audio;
+
+        audio.onended = () => {
+            cleanupAmplitude();
+            URL.revokeObjectURL(url);
+            currentAudio = null;
+            setState('idle');
+        };
+        audio.onerror = () => {
+            cleanupAmplitude();
+            currentAudio = null;
+            setState('idle');
+        };
+
+        audio.play().then(() => {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioCtx.createMediaElementSource(audio);
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                source.connect(analyser);
+                analyser.connect(audioCtx.destination);
+            } catch {}
+        }).catch(() => {
+            currentAudio = null;
+            setState('idle');
+        });
+    }
+
+    function cleanupAmplitude() {
+        analyser = null;
+        amplitude = 0;
+    }
+
+    function stopCurrentAudio() {
+        cleanupAmplitude();
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio.src = '';
+            currentAudio = null;
+        }
+    }
+
+    async function sendMessage(text) {
+        conversationHistory.push({ role: 'user', content: text });
+        setState('thinking');
+
+        const recentHistory = conversationHistory.slice(-10);
+
+        try {
+            const resp = await fetch('/api/chat-and-speak', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: text,
+                    history: recentHistory,
+                    character: characterKey,
+                    mode: null,
+                    customName: null
+                })
+            });
+
+            if (!resp.ok) { setState('idle'); return; }
+
+            const buffer = await resp.arrayBuffer();
+            const view = new DataView(buffer);
+            const headerLen = view.getUint32(0);
+            const headerBytes = new Uint8Array(buffer, 4, headerLen);
+            const header = JSON.parse(new TextDecoder().decode(headerBytes).trim());
+            const reply = header.response || '';
+
+            conversationHistory.push({ role: 'assistant', content: reply });
+            if (reply) showTranscript(reply);
+
+            const audioBytes = buffer.slice(4 + headerLen);
+            if (audioBytes.byteLength > 0) {
+                const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
+                const url = URL.createObjectURL(blob);
+                playAudioWithAmplitude(url);
+            } else {
+                setState('idle');
+            }
+        } catch {
+            setState('idle');
+        }
+    }
+
+    async function greet() {
+        setState('thinking');
+
+        try {
+            const resp = await fetch('/api/chat-and-speak', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: 'Say hello and introduce yourself warmly',
+                    history: [],
+                    character: characterKey,
+                    mode: 'introduction',
+                    customName: null
+                })
+            });
+
+            if (!resp.ok) { setState('idle'); return; }
+
+            const buffer = await resp.arrayBuffer();
+            const view = new DataView(buffer);
+            const headerLen = view.getUint32(0);
+            const headerBytes = new Uint8Array(buffer, 4, headerLen);
+            const header = JSON.parse(new TextDecoder().decode(headerBytes).trim());
+            const reply = header.response || '';
+
+            conversationHistory.push({ role: 'assistant', content: reply });
+            if (reply) showTranscript(reply);
+
+            const audioBytes = buffer.slice(4 + headerLen);
+            if (audioBytes.byteLength > 0) {
+                const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
+                const url = URL.createObjectURL(blob);
+                playAudioWithAmplitude(url);
+            } else {
+                setState('idle');
+            }
+        } catch {
+            setState('idle');
+        }
+    }
+
+    async function startVoiceInput() {
+        if (isListening) {
+            stopVoiceInput();
+            return;
+        }
+
+        stopCurrentAudio();
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    noiseSuppression: true,
+                    echoCancellation: true,
+                    autoGainControl: true,
+                    channelCount: 1
+                }
+            });
+
+            audioChunks = [];
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+            mediaRecorder = new MediaRecorder(stream, { mimeType });
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                stream.getTracks().forEach(t => t.stop());
+                if (audioChunks.length === 0) { setState('idle'); return; }
+
+                const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+                audioChunks = [];
+
+                setState('thinking');
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', blob, 'recording.webm');
+                    const sttResp = await fetch('/api/stt', { method: 'POST', body: formData });
+
+                    if (!sttResp.ok) {
+                        showTranscript("I couldn't hear that. Try again.");
+                        setState('idle');
+                        return;
+                    }
+
+                    const sttData = await sttResp.json();
+                    const transcript = (sttData.text || '').trim();
+
+                    if (!transcript) {
+                        showTranscript("I didn't catch that. Try again.");
+                        setState('idle');
+                        return;
+                    }
+
+                    showTranscript(transcript);
+                    sendMessage(transcript);
+                } catch {
+                    setState('idle');
+                }
+            };
+
+            mediaRecorder.start();
+            isListening = true;
+            setState('listening');
+        } catch {
+            setState('idle');
+        }
+    }
+
+    function stopVoiceInput() {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+        }
+        isListening = false;
+    }
+
+    let touchStartTime = 0;
+
+    document.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (state === 'thinking') return;
+
+        if (state === 'speaking') {
+            stopCurrentAudio();
+            setState('idle');
+            return;
+        }
+
+        touchStartTime = Date.now();
+        startVoiceInput();
+    });
+
+    document.addEventListener('pointerup', (e) => {
+        e.preventDefault();
+        if (isListening) {
+            const held = Date.now() - touchStartTime;
+            if (held > 300) {
+                stopVoiceInput();
+            } else {
+                setTimeout(() => stopVoiceInput(), 2000);
+            }
+        }
+    });
+
+    // --- Init ---
+    (async function initCharacter() {
+        try {
+            const resp = await fetch('/api/characters');
+            const chars = await resp.json();
+            const info = chars[characterKey];
+            nameEl.textContent = info ? info.name : characterKey.charAt(0).toUpperCase() + characterKey.slice(1);
+        } catch {
+            nameEl.textContent = characterKey.charAt(0).toUpperCase() + characterKey.slice(1);
+        }
+    })();
+
+    // First flight kicks in ~10s after load — gives greet time to finish
+    nextFlightAt = performance.now() + 10000;
+
+    requestAnimationFrame(render);
+    setTimeout(greet, 1000);
+
+})();
+</script>
+</body>
+</html>

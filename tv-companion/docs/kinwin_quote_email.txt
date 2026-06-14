@@ -1,0 +1,41 @@
+Subject: Quote Request -- Custom AI-Connected Plush Companion Toy (3 SKUs)
+
+Hello Kinwin Team,
+
+My name is Peter Wilson. I'm the founder of Casa Gianelli, a US-based company developing an AI-powered plush companion toy called Casa Companion.
+
+We are evaluating manufacturing partners for our initial production run and your experience with electronic interactive plush toys caught our attention.
+
+THE PRODUCT
+
+Casa Companion is a connected plush toy with an integrated AI assistant. We are planning three animal form factors for our first run: capybara, axolotl, and highland cow. Target size is approximately 25-30cm.
+
+ELECTRONICS REQUIREMENTS
+
+Each unit needs the following integrated into the plush body:
+- Small speaker (for AI voice output)
+- Microphone (for voice input / conversation)
+- Touch sensors (multiple zones: belly, head, paws)
+- LED modules (eyes, with color-changing capability)
+- WiFi and/or BLE module (for cloud connectivity)
+- Rechargeable battery with USB-C charging
+- Central control board (we can supply firmware/specs)
+
+The toy connects to our cloud AI platform for real-time voice conversation. This is not a pre-recorded sound module. The electronics need to support streaming audio in and out over WiFi.
+
+WHAT WE NEED FROM YOU
+
+1. Can you integrate WiFi/BLE connectivity modules and real-time audio hardware into a plush form factor? Or do you work strictly with pre-programmed sound modules?
+2. Do you accept client-supplied PCB/firmware, or do you only use your in-house electronics?
+3. What is your MOQ per SKU for an electronic plush of this complexity?
+4. Approximate unit cost range at 500 and 1,000 units per SKU?
+5. Prototype timeline and cost?
+6. Which safety certifications would apply (we need CPSIA, FCC, CE at minimum)?
+
+We have detailed design specs, 2D reference art, and a technical requirements document ready to share.
+
+Would you be available for a 30-minute video call this week or next to discuss feasibility and next steps?
+
+Best regards,
+Peter Wilson
+Casa Gianelli

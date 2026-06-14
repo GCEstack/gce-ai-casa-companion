@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Casa Companion · Corvo 3D</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #fff;
+    touch-action: manipulation;
+    user-select: none;
+    cursor: default;
+}
+#scene {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+#char-name {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.2rem;
+    font-weight: 300;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    z-index: 10;
+    pointer-events: none;
+}
+#transcript {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 80vw;
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: 300;
+    line-height: 1.5;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    z-index: 10;
+    pointer-events: none;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+}
+#transcript.visible { opacity: 0.85; }
+#tap-prompt {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.9rem;
+    opacity: 0.35;
+    z-index: 10;
+    transition: opacity 0.8s ease;
+}
+#tap-prompt.hidden { opacity: 0; pointer-events: none; }
+#loading {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    opacity: 0.5;
+    z-index: 5;
+    pointer-events: none;
+}
+#loading.gone { opacity: 0; transition: opacity 1s ease; }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="char-name">Corvo</div>
+<div id="loading">entering the forest…</div>
+<div id="transcript"></div>
+<div id="tap-prompt">Tap anywhere to talk</div>
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass }    from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass }    from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass }    from 'three/addons/postprocessing/ShaderPass.js';
+import { BokehPass }     from 'three/addons/postprocessing/BokehPass.js';
+
+const canvas = document.getElementById('scene');
+const loadingEl = document.getElementById('loading');
+const transcriptEl = document.getElementById('transcript');
+const tapPrompt = document.getElementById('tap-prompt');
+
+const params = new URLSearchParams(window.location.search);
+const characterKey = params.get('character') || 'corvo';
+
+// --- Renderer ---
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x000000, 1);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.9;
+
+// --- Scene ---
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x050510, 0.035);
+
+// --- Camera ---
+const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 200);
+camera.position.set(0, 3.5, 10);
+camera.lookAt(0, 2.5, 0);
+
+// --- Unified emotional state (shared by Corvo AND world) ---
+const mood = {
+    arousal: 0.55,
+    valence: 0.30,
+    energy:  0.15,
+    curiosity: 0.5,
+    phaseA: Math.random() * Math.PI * 2,
+    phaseB: Math.random() * Math.PI * 2,
+    worldMemory: 0,
+};
+
+let appState = 'idle'; // idle | listening | thinking | speaking
+let smoothAmplitude = 0;
+let amplitude = 0;
+let analyser = null;
+
+function updateMood(dt) {
+    mood.phaseA += dt * 0.00013;
+    mood.phaseB += dt * 0.00019;
+    const tgtArousal = 0.55 + Math.sin(mood.phaseA) * 0.28;
+    const tgtValence = 0.30 + Math.sin(mood.phaseB) * 0.40;
+    mood.arousal += (tgtArousal - mood.arousal) * 0.004;
+    mood.valence += (tgtValence - mood.valence) * 0.004;
+
+    if (appState === 'speaking')  mood.energy = Math.min(1, mood.energy + dt * 0.0012);
+    if (appState === 'listening') mood.arousal = Math.min(1, mood.arousal + dt * 0.0006);
+    mood.energy *= Math.pow(0.9994, dt / 16);
+
+    mood.worldMemory += dt * 0.00002 * (mood.energy + (appState === 'speaking' ? 0.5 : 0));
+    mood.worldMemory *= Math.pow(0.99996, dt / 16);
+    mood.worldMemory = Math.min(2.0, mood.worldMemory);
+
+    if (appState === 'listening') mood.curiosity = Math.min(1, mood.curiosity + dt * 0.0005);
+    else mood.curiosity *= Math.pow(0.9995, dt / 16);
+}
+
+// --- Lighting ---
+const ambient = new THREE.HemisphereLight(0x4455aa, 0x080410, 0.25);
+scene.add(ambient);
+
+const moonLight = new THREE.DirectionalLight(0xc8d4e8, 0.9);
+moonLight.position.set(8, 12, -4);
+moonLight.castShadow = true;
+moonLight.shadow.mapSize.set(1024, 1024);
+moonLight.shadow.camera.left = -10;
+moonLight.shadow.camera.right = 10;
+moonLight.shadow.camera.top = 10;
+moonLight.shadow.camera.bottom = -10;
+moonLight.shadow.camera.far = 30;
+moonLight.shadow.bias = -0.001;
+scene.add(moonLight);
+
+// Warm rim from below — suggests firefly glow pooling up
+const rimLight = new THREE.PointLight(0xffaa32, 0.8, 8, 2);
+rimLight.position.set(0, 1.5, 3);
+scene.add(rimLight);
+
+// --- Post-processing composer ---
+const composer = new EffectComposer(renderer);
+composer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+composer.setSize(window.innerWidth, window.innerHeight);
+
+const renderPass = new RenderPass(scene, camera);
+composer.addPass(renderPass);
+
+// Depth of field — focus on Corvo, blur everything else. Hides mesh flaws.
+const bokehPass = new BokehPass(scene, camera, {
+    focus: 8.0,
+    aperture: 0.0020,
+    maxblur: 0.015,
+});
+composer.addPass(bokehPass);
+
+// UnrealBloom — glows moonlight, fireflies, rim. Threshold low for dark scene.
+const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    0.9,    // strength
+    0.85,   // radius
+    0.15    // threshold — below this → glows
+);
+composer.addPass(bloomPass);
+
+// Vignette + subtle film grain shader pass
+const cinematicShader = {
+    uniforms: {
+        tDiffuse: { value: null },
+        time:     { value: 0 },
+        vignetteStrength: { value: 0.9 },
+        grainStrength: { value: 0.06 },
+        saturation: { value: 1.05 },
+    },
+    vertexShader: `
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform float time;
+        uniform float vignetteStrength;
+        uniform float grainStrength;
+        uniform float saturation;
+        varying vec2 vUv;
+        float rand(vec2 co) {
+            return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+        }
+        void main() {
+            vec4 c = texture2D(tDiffuse, vUv);
+            // Saturation
+            float luma = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+            c.rgb = mix(vec3(luma), c.rgb, saturation);
+            // Vignette
+            vec2 d = vUv - 0.5;
+            float v = 1.0 - dot(d, d) * vignetteStrength;
+            c.rgb *= v;
+            // Film grain
+            float g = (rand(vUv + fract(time)) - 0.5) * grainStrength;
+            c.rgb += g;
+            gl_FragColor = c;
+        }
+    `
+};
+const cinematicPass = new ShaderPass(cinematicShader);
+composer.addPass(cinematicPass);
+
+const outputPass = new OutputPass();
+composer.addPass(outputPass);
+
+// --- Moon (billboard quad with radial falloff) ---
+const moonTexture = (() => {
+    const size = 256;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = size;
+    const g = cv.getContext('2d');
+    const grad = g.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+    grad.addColorStop(0, 'rgba(240,245,255,1)');
+    grad.addColorStop(0.35, 'rgba(200,215,240,0.6)');
+    grad.addColorStop(0.7, 'rgba(140,160,200,0.1)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+    return new THREE.CanvasTexture(cv);
+})();
+const moonMat = new THREE.SpriteMaterial({ map: moonTexture, transparent: true, depthWrite: false });
+const moonSprite = new THREE.Sprite(moonMat);
+moonSprite.scale.set(6, 6, 1);
+moonSprite.position.set(10, 12, -18);
+scene.add(moonSprite);
+
+// --- God rays (additive radial streaks from moon) ---
+const godRayTex = (() => {
+    const size = 512;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = size;
+    const g = cv.getContext('2d');
+    g.fillStyle = '#000';
+    g.fillRect(0, 0, size, size);
+    // Radial streaks from center — vertical-ish for 'shafts from above'
+    g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 40; i++) {
+        const ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.1;
+        const len = size * (0.3 + Math.random() * 0.5);
+        const w = 2 + Math.random() * 6;
+        const grad = g.createLinearGradient(
+            size/2, size/2,
+            size/2 + Math.cos(ang) * len,
+            size/2 + Math.sin(ang) * len
+        );
+        grad.addColorStop(0, 'rgba(230, 240, 255, 0.5)');
+        grad.addColorStop(1, 'rgba(230, 240, 255, 0)');
+        g.strokeStyle = grad;
+        g.lineWidth = w;
+        g.beginPath();
+        g.moveTo(size/2, size/2);
+        g.lineTo(size/2 + Math.cos(ang) * len, size/2 + Math.sin(ang) * len);
+        g.stroke();
+    }
+    const tex = new THREE.CanvasTexture(cv);
+    return tex;
+})();
+const godRayMat = new THREE.SpriteMaterial({
+    map: godRayTex,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    opacity: 0.35,
+});
+const godRays = new THREE.Sprite(godRayMat);
+godRays.scale.set(28, 28, 1);
+godRays.position.set(10, 9, -17.5);
+scene.add(godRays);
+
+// --- Ground mist (stacked semi-transparent plane layers) ---
+const mistGroup = new THREE.Group();
+const mistTex = (() => {
+    const size = 256;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = size;
+    const g = cv.getContext('2d');
+    // Cloudy noise
+    for (let i = 0; i < 400; i++) {
+        const x = Math.random() * size;
+        const y = Math.random() * size;
+        const r = 10 + Math.random() * 40;
+        const grd = g.createRadialGradient(x, y, 0, x, y, r);
+        grd.addColorStop(0, `rgba(255,255,255,${0.04 + Math.random() * 0.05})`);
+        grd.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = grd;
+        g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    const t = new THREE.CanvasTexture(cv);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    return t;
+})();
+const mistMat = new THREE.MeshBasicMaterial({
+    map: mistTex,
+    transparent: true,
+    opacity: 0.22,
+    depthWrite: false,
+    blending: THREE.NormalBlending,
+    color: 0xbbccee,
+});
+for (let i = 0; i < 5; i++) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(40, 12), mistMat.clone());
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(0, 0.2 + i * 0.35, -2 - i * 2);
+    m.userData._phase = Math.random() * Math.PI * 2;
+    m.userData._drift = 0.00002 + Math.random() * 0.00004;
+    mistGroup.add(m);
+}
+scene.add(mistGroup);
+
+// --- Ground ---
+const groundGeo = new THREE.PlaneGeometry(80, 80, 40, 40);
+const groundMat = new THREE.MeshStandardMaterial({
+    color: 0x0a1406,
+    roughness: 0.95,
+    metalness: 0.0,
+});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = 0;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// --- Trees (instanced cones for silhouette) ---
+const treeGroup = new THREE.Group();
+const treeMat = new THREE.MeshStandardMaterial({
+    color: 0x020604,
+    roughness: 1.0,
+    metalness: 0.0,
+});
+// 30 trees scattered in a ring, skipping the central area
+for (let i = 0; i < 30; i++) {
+    const ang = (i / 30) * Math.PI * 2 + Math.random() * 0.25;
+    const rad = 8 + Math.random() * 16;
+    const x = Math.cos(ang) * rad;
+    const z = Math.sin(ang) * rad;
+    // Pine-like tapered cone
+    const h = 4 + Math.random() * 6;
+    const baseR = 0.7 + Math.random() * 0.5;
+    const geo = new THREE.ConeGeometry(baseR, h, 6);
+    const tree = new THREE.Mesh(geo, treeMat);
+    tree.position.set(x, h / 2, z);
+    tree.rotation.y = Math.random() * Math.PI;
+    tree.userData = { baseX: x, baseZ: z, baseY: h/2, swayPhase: Math.random() * Math.PI * 2, height: h };
+    tree.castShadow = true;
+    tree.receiveShadow = true;
+    treeGroup.add(tree);
+}
+scene.add(treeGroup);
+
+// --- Fireflies (instanced small emissive spheres with boid behavior) ---
+const FIREFLY_COUNT = 80;
+const fireflyGeo = new THREE.SphereGeometry(0.04, 6, 6);
+const fireflyMat = new THREE.MeshBasicMaterial({ color: 0xffcc66, transparent: true });
+const fireflyMesh = new THREE.InstancedMesh(fireflyGeo, fireflyMat, FIREFLY_COUNT);
+fireflyMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+const fireflyColor = new THREE.InstancedBufferAttribute(new Float32Array(FIREFLY_COUNT * 3), 3);
+fireflyMesh.instanceColor = fireflyColor;
+
+const fireflies = [];
+const _fireflyMatrix = new THREE.Matrix4();
+const _fireflyPos = new THREE.Vector3();
+const _fireflyScale = new THREE.Vector3(1, 1, 1);
+const _fireflyQuat = new THREE.Quaternion();
+
+for (let i = 0; i < FIREFLY_COUNT; i++) {
+    fireflies.push({
+        x: (Math.random() - 0.5) * 22,
+        y: 0.5 + Math.random() * 4,
+        z: (Math.random() - 0.5) * 22,
+        vx: 0, vy: 0, vz: 0,
+        pulseSpeed: 0.5 + Math.random() * 1.5,
+        pulseOffset: Math.random() * Math.PI * 2,
+        brightness: 0.4 + Math.random() * 0.6,
+    });
+}
+scene.add(fireflyMesh);
+
+// --- Particle swirl (orbits Corvo; glints when he speaks / is alert) ---
+const SWIRL_COUNT = 40;
+const swirlGeo = new THREE.SphereGeometry(0.03, 5, 5);
+const swirlMat = new THREE.MeshBasicMaterial({ color: 0xffe6b0, transparent: true, opacity: 0.8 });
+const swirlMesh = new THREE.InstancedMesh(swirlGeo, swirlMat, SWIRL_COUNT);
+swirlMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+const swirlData = [];
+for (let i = 0; i < SWIRL_COUNT; i++) {
+    swirlData.push({
+        radius: 0.9 + Math.random() * 1.6,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.0004 + Math.random() * 0.0007,
+        yOffset: (Math.random() - 0.5) * 1.4,
+        wobblePhase: Math.random() * Math.PI * 2,
+        wobbleSpeed: 0.001 + Math.random() * 0.002,
+        scale: 0.6 + Math.random() * 0.7,
+    });
+}
+scene.add(swirlMesh);
+const _swirlMat = new THREE.Matrix4();
+const _swirlPos = new THREE.Vector3();
+const _swirlScl = new THREE.Vector3();
+const _swirlQuat = new THREE.Quaternion();
+
+// --- Drifting leaves (sprite planes that fall diagonally and rotate) ---
+const LEAF_COUNT = 24;
+const leafTex = (() => {
+    const size = 64;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = size;
+    const g = cv.getContext('2d');
+    g.fillStyle = 'rgba(0,0,0,0)';
+    g.fillRect(0, 0, size, size);
+    // Simple leaf silhouette — two curves meeting at tips
+    g.fillStyle = 'rgba(140, 100, 60, 1)';
+    g.beginPath();
+    g.moveTo(size * 0.5, size * 0.1);
+    g.bezierCurveTo(size * 0.9, size * 0.35, size * 0.9, size * 0.65, size * 0.5, size * 0.9);
+    g.bezierCurveTo(size * 0.1, size * 0.65, size * 0.1, size * 0.35, size * 0.5, size * 0.1);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = 'rgba(60, 40, 20, 0.6)';
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.moveTo(size * 0.5, size * 0.15);
+    g.lineTo(size * 0.5, size * 0.85);
+    g.stroke();
+    return new THREE.CanvasTexture(cv);
+})();
+const leafMat = new THREE.MeshBasicMaterial({
+    map: leafTex, transparent: true, depthWrite: false,
+    side: THREE.DoubleSide, color: 0x996a3a,
+});
+const leafMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.3, 0.3), leafMat, LEAF_COUNT);
+leafMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+const leaves = [];
+for (let i = 0; i < LEAF_COUNT; i++) {
+    leaves.push({
+        x: (Math.random() - 0.5) * 22,
+        y: 4 + Math.random() * 8,
+        z: (Math.random() - 0.5) * 18 - 2,
+        vy: -0.002 - Math.random() * 0.003,
+        vx: (Math.random() - 0.5) * 0.004,
+        vz: (Math.random() - 0.5) * 0.003,
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.01,
+        tiltPhase: Math.random() * Math.PI * 2,
+        scale: 0.6 + Math.random() * 0.6,
+    });
+}
+scene.add(leafMesh);
+const _leafMat = new THREE.Matrix4();
+const _leafPos = new THREE.Vector3();
+const _leafScl = new THREE.Vector3();
+const _leafQuat = new THREE.Quaternion();
+const _leafEuler = new THREE.Euler();
+
+// --- Corvo (loaded async) ---
+let corvo = null;            // THREE.Group root
+let corvoMixer = null;       // for baked anims if any
+let corvoBaseY = 2.5;        // perch height
+let corvoHeadBone = null;
+const corvoPos = new THREE.Vector3(0, 2.5, 0);
+const corvoPrevPos = new THREE.Vector3(0, 2.5, 0);
+let corvoSpeed = 0;
+
+const loader = new GLTFLoader();
+loader.load(
+    `/static/models/corvo/corvo_hunyuan.glb`,
+    (gltf) => {
+        corvo = gltf.scene;
+        // Normalize scale — Hunyuan outputs can be any size
+        const box = new THREE.Box3().setFromObject(corvo);
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const desired = 1.8; // meters
+        const scale = desired / maxDim;
+        corvo.scale.setScalar(scale);
+        // Re-center above feet
+        const box2 = new THREE.Box3().setFromObject(corvo);
+        const center = box2.getCenter(new THREE.Vector3());
+        corvo.position.x -= center.x;
+        corvo.position.z -= center.z;
+        corvo.position.y -= box2.min.y;  // plant feet at origin
+
+        // Lift to perch
+        corvo.position.y += corvoBaseY;
+
+        corvo.traverse(o => {
+            if (o.isMesh) {
+                o.castShadow = true;
+                o.receiveShadow = true;
+            }
+            if (o.isBone && /head/i.test(o.name)) corvoHeadBone = o;
+        });
+        scene.add(corvo);
+        corvoPos.copy(corvo.position);
+        corvoPrevPos.copy(corvo.position);
+
+        if (gltf.animations && gltf.animations.length) {
+            corvoMixer = new THREE.AnimationMixer(corvo);
+            const action = corvoMixer.clipAction(gltf.animations[0]);
+            action.play();
+        }
+
+        loadingEl.classList.add('gone');
+    },
+    undefined,
+    (err) => {
+        console.error('GLB load failed:', err);
+        loadingEl.textContent = 'Corvo failed to load. Check /static/models/corvo/corvo_hunyuan.glb';
+    }
+);
+
+// --- Flight / perch system (3D) ---
+const PERCHES = [
+    new THREE.Vector3(0,   2.5,  0),
+    new THREE.Vector3(-5,  3.5, -3),
+    new THREE.Vector3( 5,  3.2, -2),
+    new THREE.Vector3(-3,  4.5,  3),
+    new THREE.Vector3( 3,  4.8,  2),
+    new THREE.Vector3( 0,  5.5, -5),
+];
+let currentPerch = 0;
+let flightMode = 'perched';
+let flightStart = 0;
+let flightDuration = 0;
+let nextFlightAt = 0;
+const flightFrom = new THREE.Vector3();
+const flightTo = new THREE.Vector3();
+let facingAngle = 0;        // yaw
+
+function scheduleNextFlight(ts) {
+    nextFlightAt = ts + 5000 + Math.random() * 9000;
+}
+function startFlight(ts) {
+    let next = currentPerch;
+    while (next === currentPerch) next = Math.floor(Math.random() * PERCHES.length);
+    flightFrom.copy(corvo.position);
+    flightTo.copy(PERCHES[next]);
+    const dist = flightFrom.distanceTo(flightTo);
+    flightDuration = 1500 + dist * 600;
+    flightStart = ts;
+    flightMode = 'flying';
+    currentPerch = next;
+}
+function updateFlight(ts) {
+    if (!corvo) return;
+    if (flightMode === 'perched') {
+        if (appState === 'idle' && ts > nextFlightAt) startFlight(ts);
+        return;
+    }
+    // Flying — ease along arc
+    const t = Math.min(1, (ts - flightStart) / flightDuration);
+    const e = t * t * (3 - 2 * t);
+    corvo.position.x = flightFrom.x + (flightTo.x - flightFrom.x) * e;
+    corvo.position.z = flightFrom.z + (flightTo.z - flightFrom.z) * e;
+    const lineY = flightFrom.y + (flightTo.y - flightFrom.y) * e;
+    corvo.position.y = lineY + Math.sin(t * Math.PI) * 1.2;
+
+    // Face travel direction
+    const dx = flightTo.x - flightFrom.x;
+    const dz = flightTo.z - flightFrom.z;
+    const yawTarget = Math.atan2(dx, dz);
+    facingAngle += (yawTarget - facingAngle) * 0.15;
+
+    if (t >= 1) {
+        flightMode = 'perched';
+        scheduleNextFlight(ts);
+    }
+    // Cut flight short if conversation started
+    if (appState !== 'idle' && t > 0.15) {
+        corvo.position.copy(flightTo);
+        flightMode = 'perched';
+        scheduleNextFlight(ts);
+    }
+}
+
+// --- Voice pipeline (chat-and-speak + STT, same as 2D tv.html) ---
+let conversationHistory = [];
+let isListening = false;
+let mediaRecorder = null;
+let audioChunks = [];
+let currentAudio = null;
+let audioCtx = null;
+let transcriptTimeout = null;
+let firstInteraction = false;
+
+function showTranscript(text) {
+    if (transcriptTimeout) clearTimeout(transcriptTimeout);
+    transcriptEl.textContent = text;
+    transcriptEl.classList.add('visible');
+    transcriptTimeout = setTimeout(() => transcriptEl.classList.remove('visible'), 8000);
+}
+
+function setAppState(s) {
+    appState = s;
+    if (s !== 'idle' && !firstInteraction) {
+        firstInteraction = true;
+        tapPrompt.classList.add('hidden');
+    }
+}
+
+function playAudioWithAmplitude(url) {
+    stopCurrentAudio();
+    setAppState('speaking');
+    const audio = new Audio(url);
+    currentAudio = audio;
+    audio.onended = () => { cleanupAmplitude(); URL.revokeObjectURL(url); currentAudio = null; setAppState('idle'); };
+    audio.onerror = () => { cleanupAmplitude(); currentAudio = null; setAppState('idle'); };
+    audio.play().then(() => {
+        try {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioCtx.createMediaElementSource(audio);
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+            analyser.connect(audioCtx.destination);
+        } catch {}
+    }).catch(() => { currentAudio = null; setAppState('idle'); });
+}
+function cleanupAmplitude() { analyser = null; amplitude = 0; }
+function stopCurrentAudio() {
+    cleanupAmplitude();
+    if (currentAudio) { currentAudio.pause(); currentAudio.src = ''; currentAudio = null; }
+}
+
+async function sendMessage(text) {
+    conversationHistory.push({ role: 'user', content: text });
+    setAppState('thinking');
+    const recent = conversationHistory.slice(-10);
+    try {
+        const r = await fetch('/api/chat-and-speak', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: text, history: recent, character: characterKey,
+                mode: null, customName: null,
+            }),
+        });
+        if (!r.ok) { setAppState('idle'); return; }
+        const buf = await r.arrayBuffer();
+        const view = new DataView(buf);
+        const headerLen = view.getUint32(0);
+        const headerBytes = new Uint8Array(buf, 4, headerLen);
+        const header = JSON.parse(new TextDecoder().decode(headerBytes).trim());
+        const reply = header.response || '';
+        conversationHistory.push({ role: 'assistant', content: reply });
+        if (reply) showTranscript(reply);
+        const audioBytes = buf.slice(4 + headerLen);
+        if (audioBytes.byteLength > 0) {
+            const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
+            playAudioWithAmplitude(URL.createObjectURL(blob));
+        } else { setAppState('idle'); }
+    } catch { setAppState('idle'); }
+}
+
+async function startVoiceInput() {
+    if (isListening) { stopVoiceInput(); return; }
+    stopCurrentAudio();
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true, channelCount: 1 }
+        });
+        audioChunks = [];
+        const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+        mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+        mediaRecorder.onstop = async () => {
+            stream.getTracks().forEach(t => t.stop());
+            if (!audioChunks.length) { setAppState('idle'); return; }
+            const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+            audioChunks = [];
+            setAppState('thinking');
+            try {
+                const fd = new FormData();
+                fd.append('file', blob, 'recording.webm');
+                const sr = await fetch('/api/stt', { method: 'POST', body: fd });
+                if (!sr.ok) { showTranscript("I couldn't hear that."); setAppState('idle'); return; }
+                const sd = await sr.json();
+                const tx = (sd.text || '').trim();
+                if (!tx) { showTranscript("I didn't catch that."); setAppState('idle'); return; }
+                showTranscript(tx);
+                sendMessage(tx);
+            } catch { setAppState('idle'); }
+        };
+        mediaRecorder.start();
+        isListening = true;
+        setAppState('listening');
+    } catch { setAppState('idle'); }
+}
+function stopVoiceInput() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+    isListening = false;
+}
+
+let touchStartTime = 0;
+document.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (appState === 'thinking') return;
+    if (appState === 'speaking') { stopCurrentAudio(); setAppState('idle'); return; }
+    touchStartTime = Date.now();
+    startVoiceInput();
+});
+document.addEventListener('pointerup', (e) => {
+    e.preventDefault();
+    if (isListening) {
+        const held = Date.now() - touchStartTime;
+        if (held > 300) stopVoiceInput();
+        else setTimeout(() => stopVoiceInput(), 2000);
+    }
+});
+
+async function greet() {
+    setAppState('thinking');
+    try {
+        const r = await fetch('/api/chat-and-speak', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: 'Say hello and introduce yourself warmly',
+                history: [], character: characterKey, mode: 'introduction', customName: null,
+            }),
+        });
+        if (!r.ok) { setAppState('idle'); return; }
+        const buf = await r.arrayBuffer();
+        const view = new DataView(buf);
+        const headerLen = view.getUint32(0);
+        const headerBytes = new Uint8Array(buf, 4, headerLen);
+        const header = JSON.parse(new TextDecoder().decode(headerBytes).trim());
+        const reply = header.response || '';
+        conversationHistory.push({ role: 'assistant', content: reply });
+        if (reply) showTranscript(reply);
+        const audioBytes = buf.slice(4 + headerLen);
+        if (audioBytes.byteLength > 0) {
+            const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
+            playAudioWithAmplitude(URL.createObjectURL(blob));
+        } else { setAppState('idle'); }
+    } catch { setAppState('idle'); }
+}
+
+// --- Main render loop ---
+const clock = new THREE.Clock();
+let lastTime = performance.now();
+nextFlightAt = lastTime + 8000;
+
+function animate() {
+    const now = performance.now();
+    const dt = Math.min(80, now - lastTime);
+    lastTime = now;
+    const delta = clock.getDelta();
+
+    updateMood(dt);
+
+    // Analyser → amplitude
+    if (analyser) {
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) sum += data[i];
+        amplitude = sum / data.length / 255;
+    }
+    smoothAmplitude += (amplitude - smoothAmplitude) * 0.3;
+    if (appState !== 'speaking') smoothAmplitude *= 0.9;
+
+    updateFlight(now);
+
+    // Corvo micro-motion (until we have real bones)
+    if (corvo) {
+        // Track speed for fireflies
+        corvoSpeed = corvo.position.distanceTo(corvoPrevPos);
+        corvoPrevPos.copy(corvo.position);
+
+        // Face direction (yaw)
+        corvo.rotation.y = facingAngle + Math.PI;  // GLB often faces -Z by default
+
+        // Breathe — subtle non-uniform scale on Y modulated by arousal
+        const breatheDepth = 0.010 + (1 - mood.arousal) * 0.014;
+        const breathePulse = 1 + Math.sin(now * 0.001 * (0.6 + mood.arousal * 1.2)) * breatheDepth;
+        // Only modulate Y scale to simulate chest rise, preserve overall scale
+        const baseScale = corvo.scale.x / (corvo.userData._lastBreathe || 1);
+        corvo.userData._lastBreathe = breathePulse;
+        corvo.scale.set(baseScale, baseScale * breathePulse, baseScale);
+
+        // Bob — vertical offset at rest, scaled by arousal. Stops during flight.
+        if (flightMode === 'perched') {
+            const bob = Math.sin(now * 0.0008 * (0.7 + mood.arousal * 0.6)) * (0.03 + mood.arousal * 0.06);
+            corvo.position.y = PERCHES[currentPerch].y + bob;
+        }
+
+        // Head tilt (if head bone present) — curiosity drift
+        if (corvoHeadBone) {
+            const drift = Math.sin(now * 0.0009) * mood.arousal * 0.15
+                        + Math.sin(now * 0.00057) * mood.curiosity * 0.1;
+            const listenTilt = appState === 'listening' ? 0.12 : 0;
+            corvoHeadBone.rotation.z = drift + listenTilt;
+        }
+
+        // Update rim light to track Corvo's position (warm glow pools around him)
+        rimLight.position.set(corvo.position.x, corvo.position.y - 0.5, corvo.position.z + 1);
+        rimLight.intensity = 0.6 + smoothAmplitude * 1.8 + mood.arousal * 0.3;
+    }
+
+    if (corvoMixer) corvoMixer.update(delta);
+
+    // Trees sway with world memory + voice amplitude
+    {
+        const swayAmp = (mood.worldMemory * 0.6 + smoothAmplitude * 0.9) * 0.08;
+        for (const tree of treeGroup.children) {
+            const ud = tree.userData;
+            const s = Math.sin(now * 0.0005 + ud.swayPhase) * swayAmp;
+            tree.rotation.z = s * 0.1;
+            tree.position.x = ud.baseX + s * 0.15;
+        }
+    }
+
+    // Fireflies update (boid flee from Corvo + pulse brightness)
+    {
+        const moodBright = 0.6 + mood.arousal * 0.7;
+        const FLEE = 1.8;
+        const FLEE2 = FLEE * FLEE;
+        const speedBoost = Math.min(2, corvoSpeed * 30);
+        for (let i = 0; i < FIREFLY_COUNT; i++) {
+            const f = fireflies[i];
+            // Drift
+            f.vx += (Math.random() - 0.5) * 0.002;
+            f.vy += (Math.random() - 0.5) * 0.001;
+            f.vz += (Math.random() - 0.5) * 0.002;
+            // Flee from Corvo
+            if (corvo) {
+                const dx = f.x - corvo.position.x;
+                const dy = f.y - corvo.position.y;
+                const dz = f.z - corvo.position.z;
+                const d2 = dx*dx + dy*dy + dz*dz;
+                if (d2 < FLEE2) {
+                    const d = Math.sqrt(d2) + 0.001;
+                    const flee = (FLEE - d) / FLEE;
+                    const mag = 0.012 * (1 + speedBoost);
+                    f.vx += (dx / d) * flee * mag;
+                    f.vy += (dy / d) * flee * mag;
+                    f.vz += (dz / d) * flee * mag;
+                }
+            }
+            // Damping
+            f.vx *= 0.94; f.vy *= 0.92; f.vz *= 0.94;
+            f.x += f.vx; f.y += f.vy; f.z += f.vz;
+            // Soft bounds
+            if (Math.abs(f.x) > 20) f.vx -= Math.sign(f.x) * 0.02;
+            if (f.y < 0.3) f.vy += 0.01;
+            if (f.y > 6)   f.vy -= 0.01;
+            if (Math.abs(f.z) > 20) f.vz -= Math.sign(f.z) * 0.02;
+
+            // Brightness pulse
+            const pulse = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(now * 0.001 * f.pulseSpeed + f.pulseOffset));
+            const a = f.brightness * pulse * moodBright;
+            fireflyColor.setXYZ(i, 1.0 * a, 0.8 * a, 0.35 * a);
+
+            _fireflyPos.set(f.x, f.y, f.z);
+            _fireflyMatrix.compose(_fireflyPos, _fireflyQuat, _fireflyScale);
+            fireflyMesh.setMatrixAt(i, _fireflyMatrix);
+        }
+        fireflyMesh.instanceMatrix.needsUpdate = true;
+        fireflyColor.needsUpdate = true;
+    }
+
+    // Moon — glow/brightness pulse with amplitude + arousal
+    const moonPulse = 1 + smoothAmplitude * 0.25 + mood.arousal * 0.1;
+    moonSprite.scale.set(6 * moonPulse, 6 * moonPulse, 1);
+    moonMat.opacity = 0.9 + mood.arousal * 0.1;
+
+    // Scene ambient / fog tint by valence
+    const t = (mood.valence + 1) * 0.5;
+    const fogR = 0.02 + t * 0.03;
+    const fogG = 0.02 + t * 0.04;
+    const fogB = 0.05 + (1-t) * 0.05;
+    scene.fog.color.setRGB(fogR, fogG, fogB);
+
+    // Camera choreography — different dolly per state
+    // idle:      wide, lazy follow, slight breathing
+    // listening: tilt up, reverent framing
+    // speaking:  slow push-in, focused on Corvo
+    // thinking:  pull back, wider
+    if (corvo) {
+        let tgtZ = 9;     // idle default
+        let tgtY = 3.2;
+        let aimYOffset = -0.3;
+        if (appState === 'speaking')  { tgtZ = 6.5; tgtY = 2.9; aimYOffset = -0.1; }
+        if (appState === 'listening') { tgtZ = 7.5; tgtY = 4.0; aimYOffset = 0.0; }
+        if (appState === 'thinking')  { tgtZ = 10.0; tgtY = 3.5; aimYOffset = -0.2; }
+
+        const camTargetX = corvo.position.x * 0.2 + Math.sin(now * 0.0003) * 0.2;
+        const camTargetY = tgtY + Math.sin(now * 0.0004) * 0.15;
+        const camTargetZ = tgtZ + Math.cos(now * 0.0003) * 0.3;
+        // Smoother lerp when far from target, tighter when close
+        camera.position.x += (camTargetX - camera.position.x) * 0.012;
+        camera.position.y += (camTargetY - camera.position.y) * 0.012;
+        camera.position.z += (camTargetZ - camera.position.z) * 0.012;
+        camera.lookAt(
+            corvo.position.x,
+            corvo.position.y + aimYOffset,
+            corvo.position.z
+        );
+    }
+
+    // Depth of field — focus tracks Corvo's distance from camera; aperture opens when speaking
+    if (corvo) {
+        const focalDist = camera.position.distanceTo(corvo.position);
+        const bu = bokehPass.uniforms;
+        // Animation modulates focus + aperture for a living camera
+        bu.focus.value    += (focalDist - bu.focus.value) * 0.08;
+        const tgtAperture = 0.0018 + smoothAmplitude * 0.0022 + mood.arousal * 0.0008;
+        bu.aperture.value += (tgtAperture - bu.aperture.value) * 0.05;
+        bu.maxblur.value   = 0.014 + mood.worldMemory * 0.006;
+    }
+
+    // Swirl particles orbiting Corvo
+    if (corvo) {
+        const swirlBright = 0.4 + smoothAmplitude * 1.2 + mood.arousal * 0.3 + mood.energy * 0.4;
+        swirlMat.opacity = Math.min(1, 0.45 + swirlBright * 0.35);
+        for (let i = 0; i < SWIRL_COUNT; i++) {
+            const s = swirlData[i];
+            s.phase += dt * s.speed * (0.5 + mood.arousal * 1.2 + smoothAmplitude * 2);
+            const r = s.radius + Math.sin(now * s.wobbleSpeed + s.wobblePhase) * 0.35;
+            const x = corvo.position.x + Math.cos(s.phase) * r;
+            const y = corvo.position.y + s.yOffset + Math.sin(s.phase * 0.6) * 0.4;
+            const z = corvo.position.z + Math.sin(s.phase) * r;
+            _swirlPos.set(x, y, z);
+            const sc = s.scale * (0.7 + swirlBright * 0.6);
+            _swirlScl.set(sc, sc, sc);
+            _swirlMat.compose(_swirlPos, _swirlQuat, _swirlScl);
+            swirlMesh.setMatrixAt(i, _swirlMat);
+        }
+        swirlMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    // Drifting leaves
+    for (let i = 0; i < LEAF_COUNT; i++) {
+        const lf = leaves[i];
+        lf.x += lf.vx;
+        lf.y += lf.vy;
+        lf.z += lf.vz;
+        lf.rot += lf.rotSpeed;
+        lf.tiltPhase += dt * 0.001;
+        // Wobble horizontally as they fall
+        lf.x += Math.sin(lf.tiltPhase) * 0.003;
+        // Respawn if below ground
+        if (lf.y < 0.1) {
+            lf.x = (Math.random() - 0.5) * 22;
+            lf.y = 8 + Math.random() * 4;
+            lf.z = (Math.random() - 0.5) * 18 - 2;
+        }
+        _leafPos.set(lf.x, lf.y, lf.z);
+        _leafEuler.set(Math.sin(lf.tiltPhase) * 0.6, lf.rot, Math.cos(lf.tiltPhase) * 0.4);
+        _leafQuat.setFromEuler(_leafEuler);
+        _leafScl.set(lf.scale, lf.scale, 1);
+        _leafMat.compose(_leafPos, _leafQuat, _leafScl);
+        leafMesh.setMatrixAt(i, _leafMat);
+    }
+    leafMesh.instanceMatrix.needsUpdate = true;
+
+    // God rays opacity + mist drift modulated by mood
+    godRayMat.opacity = 0.22 + smoothAmplitude * 0.3 + mood.arousal * 0.12;
+    for (const m of mistGroup.children) {
+        m.userData._phase += dt * m.userData._drift;
+        m.material.opacity = 0.14 + mood.worldMemory * 0.08
+                           + Math.sin(m.userData._phase) * 0.04;
+        m.position.x = Math.sin(m.userData._phase) * 2;
+    }
+
+    // Bloom strength tracks speaking amplitude + arousal
+    bloomPass.strength = 0.75 + smoothAmplitude * 0.8 + mood.arousal * 0.25;
+    // Post-process grain time tick
+    cinematicPass.uniforms.time.value = now * 0.0005;
+    // Slightly desaturate and tighten vignette when low arousal / negative valence
+    cinematicPass.uniforms.saturation.value = 0.9 + mood.arousal * 0.25 + Math.max(0, mood.valence) * 0.2;
+    cinematicPass.uniforms.vignetteStrength.value = 1.0 - mood.arousal * 0.15;
+
+    composer.render();
+    requestAnimationFrame(animate);
+}
+
+window.addEventListener('resize', () => {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+    bloomPass.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+});
+
+animate();
+setTimeout(greet, 2000);
+
+// Hide cursor after idle
+let cursorTimer = null;
+document.addEventListener('mousemove', () => {
+    document.body.style.cursor = 'default';
+    if (cursorTimer) clearTimeout(cursorTimer);
+    cursorTimer = setTimeout(() => { document.body.style.cursor = 'none'; }, 3000);
+});
+</script>
+</body>
+</html>
