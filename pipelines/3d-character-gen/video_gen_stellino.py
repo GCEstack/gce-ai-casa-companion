@@ -5,10 +5,12 @@ sys.stdout.reconfigure(encoding="utf-8")
 import os
 import shutil
 from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 from gradio_client import Client, handle_file
 
-SRC = Path(r"C:\Claude\Personal\casa-companion\static\images\heroes\stellino.webp")
-OUT_DIR = Path(r"C:\Claude\Personal\casa-companion\static\videos\stellino")
+SRC = PROJECT_ROOT / "tv-companion" / "static" / "images" / "heroes" / "stellino.webp"
+OUT_DIR = PROJECT_ROOT / "tv-companion" / "static" / "videos" / "stellino"
 SPACE = "multimodalart/wan2-1-fast"
 
 PROMPT = (

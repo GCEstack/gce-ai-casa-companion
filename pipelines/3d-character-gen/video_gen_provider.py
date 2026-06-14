@@ -6,10 +6,12 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 import os
 from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 from huggingface_hub import InferenceClient
 
-SRC = Path(r"C:\Claude\Personal\casa-companion\static\images\heroes\crow.webp")
-OUT = Path(r"C:\Claude\Personal\casa-companion\static\videos\corvo\speaking.mp4")
+SRC = PROJECT_ROOT / "tv-companion" / "static" / "images" / "heroes" / "crow.webp"
+OUT = PROJECT_ROOT / "tv-companion" / "static" / "videos" / "corvo" / "speaking.mp4"
 
 PROMPT = (
     "a plush cartoon crow character, iridescent black feathers, warm amber eyes, "

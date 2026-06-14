@@ -12,10 +12,12 @@ import os
 import shutil
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 from gradio_client import Client, handle_file
 
-SRC = Path(r"C:\Claude\Personal\casa-companion\static\images\heroes\crow.webp")
-OUT_DIR = Path(r"C:\Claude\Personal\casa-companion\workspace\corvo_3d")
+SRC = PROJECT_ROOT / "tv-companion" / "static" / "images" / "heroes" / "crow.webp"
+OUT_DIR = PROJECT_ROOT / "tv-companion" / "static" / "corvo_3d"
 
 SPACE = "trellis-community/TRELLIS"
 

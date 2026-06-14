@@ -4,10 +4,12 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 import os
 from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 from PIL import Image
 import numpy as np
 
-LAYERS_DIR = Path(r"C:\Claude\Personal\casa-companion\workspace\corvo_layers")
+LAYERS_DIR = PROJECT_ROOT / "tv-companion" / "static" / "corvo_layers"
 
 results = []
 for p in sorted(LAYERS_DIR.glob("*.png")):

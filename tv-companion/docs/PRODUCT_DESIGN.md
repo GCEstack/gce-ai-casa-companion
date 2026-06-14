@@ -11,7 +11,7 @@ Casa Companion is an AI-powered plush toy designed for children ages 0-8. The ph
 ### 1. Interactive Demo App (casa-companion)
 - **URL:** casa-companion-demo.onrender.com
 - **Repo:** github.com/simplebalance89-ai/casa-companion
-- **Local:** `C:\Claude\Work\casa-companion\`
+- **Local:** `C:\Users\Dekan AI Brother\casa-companion-master\tv-companion\`
 - **What it does:** Live, working AI demo where visitors talk to 11 companion characters via text chat, tap-to-talk (Whisper STT + GPT-4o-mini TTS), or WebRTC real-time voice mode (Azure OpenAI Realtime API). Includes 12 learning modes, parent dashboard, usage log, and battery simulation.
 - **Backend:** FastAPI + Azure OpenAI (GPT-4o chat, GPT-4o Realtime, GPT-4o-mini TTS, Whisper STT)
 - **Deployed on:** Render (Docker, Oregon region, Starter plan)
@@ -20,24 +20,24 @@ Casa Companion is an AI-powered plush toy designed for children ages 0-8. The ph
 ### 2. Marketing/Vision Site (casa-companion-site)
 - **URL:** simplebalance89-ai.github.io/casa-companion-site/ (GitHub Pages static) + Render deployment
 - **Repo:** github.com/simplebalance89-ai/casa-companion-site
-- **Local:** `C:\Claude\Work\casa-companion-site\`
+- **Local:** `C:\Users\Dekan AI Brother\casa-companion-master\casa-companion-site\`
 - **What it does:** Product marketing site with full scrolling narrative (v5), tab-based navigation (v4/original), promo slideshow with audio narration, voice recording studio page, waitlist email capture API.
 - **Backend:** FastAPI serving static files + `/api/waitlist` endpoint (writes to CSV)
 - **Pages:** `index-v5.html` (v5 scrolling redesign), `index.html` (v4 tab-based), `promo.html` (narrated founder story slideshow), `record.html` (voice recording studio UI)
 - **Version:** 5.0 (per HTML meta tag)
 
 ### 3. Family Dashboard (casa-gianelli-repo)
-- **Local:** `C:\Claude\Work\casa-gianelli-repo\`
+- **Local:** `C:\Users\Dekan AI Brother\casa-companion-master\casa-gianelli-repo\`
 - **What it does:** Streamlit-based family command center with 32 pages across 7 groups. Includes GL (Gian Lucca) developmental tools, health protocol tracking, family logistics, J.A.W. Music AI suite, brain dump tools, and AI-powered chat on 7+ pages. This is the origin of the Casa Companion concept -- the "GL's World" section (7 pages: Story Buddy, GL Stories, GL Languages, GL Signs, GL Games, GL Milestones, GL Music) became the foundation for the toy's AI personality and learning modes.
 - **Framework:** Streamlit + Azure OpenAI
 - **Version:** v5.0 (per sidebar footer)
 
 ### 4. Manufacturing Research (casa-gianelli main dir)
-- **Local:** `C:\Claude\Work\casa-gianelli\`
+- **Local:** `C:\Users\Dekan AI Brother\casa-companion-master\casa-gianelli\`
 - **Contents:** Kinwin Toys manufacturer research (`kinwin_research.md`) and quote request email (`kinwin_quote_email.txt`). Kinwin is a Guangdong, China factory with 17+ years experience, 15 production lines, MOQ 500 units, capable of electronic interactive plush.
 
 ### 5. Comprehensive Site Analysis
-- **File:** `C:\Claude\Work\casa-companion-site\SITE_ANALYSIS.md`
+- **File:** `C:\Users\Dekan AI Brother\casa-companion-master\casa-companion-site\SITE_ANALYSIS.md`
 - **What it is:** 760-line competitive analysis, UX audit, and redesign proposal document covering both sites. Includes competitive research (Moxie, Codi, Toniebox, Yoto, Miko 3), market data, pricing analysis, two vision site redesign wireframes (Investor Pitch vs Emotional Parent Pitch), two demo site redesign wireframes (Guided Experience vs Playground), and prioritized top-10 changes ranked by impact.
 
 ### 6. DALL-E Generated Images (via Azure)
@@ -75,7 +75,7 @@ Casa Companion is an AI-powered plush toy designed for children ages 0-8. The ph
 - **Raw audio:** 10 WebM recordings (narration-1 through narration-10) in `audio-raw/`
 
 ### 8. Demo Character Images
-- **Location:** `C:\Claude\Work\casa-companion\static\images\heroes\`
+- **Location:** `C:\Users\Dekan AI Brother\casa-companion-master\tv-companion\static\images\heroes\`
 - **Characters:** bear, bunny, crow, dolphin, dragon, elephant, fox, lion, owl, turtle, xolo (11 PNGs)
 - **Plus:** corvo.png in `static/images/`
 
@@ -234,39 +234,39 @@ Casa Companion is an AI-powered plush toy designed for children ages 0-8. The ph
 ### Demo App (Interactive)
 | File | Purpose |
 |------|---------|
-| `C:\Claude\Work\casa-companion\server.py` | FastAPI backend. 11 character prompts, 12 learning mode prompts, Azure API proxy endpoints (chat, TTS, STT, realtime token), copyright guard, factual accuracy rules. |
-| `C:\Claude\Work\casa-companion\static\index.html` | Demo frontend. Guided experience with context banner, progress steps, companion selection, chat/voice UI. v3.3. |
-| `C:\Claude\Work\casa-companion\Dockerfile` | Docker build. Python 3.11-slim, uvicorn on port 10000. |
-| `C:\Claude\Work\casa-companion\render.yaml` | Render deployment config. Starter plan, Oregon, Docker runtime. |
-| `C:\Claude\Work\casa-companion\static\images\heroes\` | 11 companion character PNGs (bear, bunny, crow, dolphin, dragon, elephant, fox, lion, owl, turtle, xolo). |
-| `C:\Claude\Work\casa-companion\tests\` | Test suite: test_demo.py, conftest.py. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\tv-companion\server.py` | FastAPI backend. 11 character prompts, 12 learning mode prompts, Azure API proxy endpoints (chat, TTS, STT, realtime token), copyright guard, factual accuracy rules. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\tv-companion\static\index.html` | Demo frontend. Guided experience with context banner, progress steps, companion selection, chat/voice UI. v3.3. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\tv-companion\Dockerfile` | Docker build. Python 3.11-slim, uvicorn on port 10000. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\tv-companion\render.yaml` | Render deployment config. Starter plan, Oregon, Docker runtime. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\tv-companion\static\images\heroes\` | 11 companion character PNGs (bear, bunny, crow, dolphin, dragon, elephant, fox, lion, owl, turtle, xolo). |
+| `C:\Users\Dekan AI Brother\casa-companion-master\tv-companion\tests\` | Test suite: test_demo.py, conftest.py. |
 
 ### Vision Site (Marketing)
 | File | Purpose |
 |------|---------|
-| `C:\Claude\Work\casa-companion-site\index-v5.html` | v5 scrolling redesign. OG meta tags, CSS variables, scroll reveal, full product narrative. Current default served by FastAPI. |
-| `C:\Claude\Work\casa-companion-site\index.html` | v4 tab-based version. 10-section navigation (Home, Product, Features, How It Works, Pricing, Market, Kickstarter, Grandparents, Future Tech, Our Story). |
-| `C:\Claude\Work\casa-companion-site\promo.html` | Narrated founder story slideshow. 11 slides with background images, audio narration, Ken Burns animations. CTA slide at end. |
-| `C:\Claude\Work\casa-companion-site\record.html` | Voice recording studio UI. Progress dots, clip cards with scripts, recording controls. Prototype of the voice cloning flow. |
-| `C:\Claude\Work\casa-companion-site\server.py` | FastAPI backend. Serves static files, `/api/waitlist` email capture (CSV), `/health` endpoint. Routes: `/` (v5), `/v4`, `/v5`. |
-| `C:\Claude\Work\casa-companion-site\SITE_ANALYSIS.md` | 760-line competitive analysis, UX audit, redesign proposals. |
-| `C:\Claude\Work\casa-companion-site\images\` | 35 original images + `generated/` (22) + `batch2/` (31) + `batch3/` (22) + slide images (6). Total: 116+ PNGs. |
-| `C:\Claude\Work\casa-companion-site\audio-raw\` | 10 WebM raw narration recordings. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\casa-companion-site\index-v5.html` | v5 scrolling redesign. OG meta tags, CSS variables, scroll reveal, full product narrative. Current default served by FastAPI. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\casa-companion-site\index.html` | v4 tab-based version. 10-section navigation (Home, Product, Features, How It Works, Pricing, Market, Kickstarter, Grandparents, Future Tech, Our Story). |
+| `C:\Users\Dekan AI Brother\casa-companion-master\casa-companion-site\promo.html` | Narrated founder story slideshow. 11 slides with background images, audio narration, Ken Burns animations. CTA slide at end. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\casa-companion-site\record.html` | Voice recording studio UI. Progress dots, clip cards with scripts, recording controls. Prototype of the voice cloning flow. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\casa-companion-site\server.py` | FastAPI backend. Serves static files, `/api/waitlist` email capture (CSV), `/health` endpoint. Routes: `/` (v5), `/v4`, `/v5`. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\casa-companion-site\SITE_ANALYSIS.md` | 760-line competitive analysis, UX audit, redesign proposals. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\casa-companion-site\images\` | 35 original images + `generated/` (22) + `batch2/` (31) + `batch3/` (22) + slide images (6). Total: 116+ PNGs. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\casa-companion-site\audio-raw\` | 10 WebM raw narration recordings. |
 
 ### Family Dashboard (Origin)
 | File | Purpose |
 |------|---------|
-| `C:\Claude\Work\casa-gianelli-repo\app.py` | Main Streamlit app. 32 pages, 7 groups, sidebar navigation, GL age tracker. |
-| `C:\Claude\Work\casa-gianelli-repo\handoff\HANDOFF.md` | Project handoff doc. Architecture, page registry, state management, design details. |
-| `C:\Claude\Work\casa-gianelli-repo\tabs\` | 32 tab modules including GL's World (7 pages), J.A.W. Music AI (10 pages), Family HQ (6), Health (2), Entertainment (2), Voice (2), AI Tools (3). |
-| `C:\Claude\Work\casa-gianelli-repo\prompts\` | AI prompt files for GL tools: gl_games.py, gl_languages.py, gl_milestones.py, gl_music.py, gl_signs.py, gl_story_buddy.py, story_buddy.py. |
-| `C:\Claude\Work\casa-gianelli-repo\utils\` | Shared utilities: ai_client.py (Azure OpenAI wrapper), state.py (session state + GL age calc), sign_data.py, music_apis.py. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\casa-gianelli-repo\app.py` | Main Streamlit app. 32 pages, 7 groups, sidebar navigation, GL age tracker. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\casa-gianelli-repo\handoff\HANDOFF.md` | Project handoff doc. Architecture, page registry, state management, design details. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\casa-gianelli-repo\tabs\` | 32 tab modules including GL's World (7 pages), J.A.W. Music AI (10 pages), Family HQ (6), Health (2), Entertainment (2), Voice (2), AI Tools (3). |
+| `C:\Users\Dekan AI Brother\casa-companion-master\casa-gianelli-repo\prompts\` | AI prompt files for GL tools: gl_games.py, gl_languages.py, gl_milestones.py, gl_music.py, gl_signs.py, gl_story_buddy.py, story_buddy.py. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\casa-gianelli-repo\utils\` | Shared utilities: ai_client.py (Azure OpenAI wrapper), state.py (session state + GL age calc), sign_data.py, music_apis.py. |
 
 ### Manufacturing
 | File | Purpose |
 |------|---------|
-| `C:\Claude\Work\casa-gianelli\kinwin_research.md` | Kinwin Toys manufacturer research. Capabilities, certifications, contact info. |
-| `C:\Claude\Work\casa-gianelli\kinwin_quote_email.txt` | Quote request email for 3 SKUs (capybara, axolotl, highland cow) with full electronics spec. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\casa-gianelli\kinwin_research.md` | Kinwin Toys manufacturer research. Capabilities, certifications, contact info. |
+| `C:\Users\Dekan AI Brother\casa-companion-master\casa-gianelli\kinwin_quote_email.txt` | Quote request email for 3 SKUs (capybara, axolotl, highland cow) with full electronics spec. |
 
 ---
 

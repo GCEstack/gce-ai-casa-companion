@@ -1,3 +1,4 @@
+
 """
 Bake transparency into Corvo PNGs.
 The FLUX generator put a pure-black (#000000) background on every frame.
@@ -16,11 +17,13 @@ sys.stdout.reconfigure(encoding="utf-8")
 import os
 import glob
 import shutil
+from pathlib import Path
 import numpy as np
 from PIL import Image
 
-SRC_DIR = r"C:\Claude\Personal\casa-companion\static\images\tv\corvo"
-BACKUP_DIR = os.path.join(SRC_DIR, "_original")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SRC_DIR = PROJECT_ROOT / "tv-companion" / "static" / "images" / "tv" / "corvo"
+BACKUP_DIR = SRC_DIR / "_original"
 
 LOW = 10    # below this luminance → fully transparent
 HIGH = 32   # above this luminance → fully opaque

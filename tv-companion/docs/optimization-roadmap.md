@@ -524,7 +524,7 @@ docs/
 *.md
 Dockerfile
 render.yaml
-.claude/
+.kimi/
 ```
 
 ---

@@ -8,7 +8,7 @@ Built Feb 21-23, 2026 across Sessions #93-107.
 
 **Remote:** `https://github.com/simplebalance89-ai/casa-companion`
 **Live URL:** `casa-companion-demo.onrender.com`
-**Local:** `C:\Users\GCTII\.claude\Work\casa-companion`
+**Local:** `C:\Users\Dekan AI Brother\.kimi\work\casa-companion`
 
 ### Tech Stack
 
@@ -98,7 +98,7 @@ WHISPER_DEPLOYMENT = "whisper"
 
 **Remote:** `https://github.com/simplebalance89-ai/casa-companion-site`
 **Live URL:** `simplebalance89-ai.github.io/casa-companion-site/`
-**Local:** `C:\Users\GCTII\.claude\Work\casa-companion-site`
+**Local:** `C:\Users\Dekan AI Brother\.kimi\work\casa-companion-site`
 
 ### Tech Stack
 

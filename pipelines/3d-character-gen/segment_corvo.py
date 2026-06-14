@@ -18,6 +18,8 @@ sys.stdout.reconfigure(encoding="utf-8")
 import os
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 import numpy as np
 import torch
 from PIL import Image, ImageDraw, ImageFont
@@ -29,9 +31,9 @@ from transformers import (
 )
 
 # --- Config ---
-SRC = Path(r"C:\Claude\Personal\casa-companion\static\images\tv\corvo\_original\corvo_wings_spread.png")
-OUT_LAYERS = Path(r"C:\Claude\Personal\casa-companion\static\images\tv\corvo\layers")
-OUT_DEBUG = Path(r"C:\Claude\Personal\casa-companion\workspace\corvo_layers\_debug")
+SRC = PROJECT_ROOT / "tv-companion" / "static" / "images" / "tv" / "corvo" / "_original" / "corvo_wings_spread.png"
+OUT_LAYERS = PROJECT_ROOT / "tv-companion" / "static" / "images" / "tv" / "corvo" / "layers"
+OUT_DEBUG = PROJECT_ROOT / "tv-companion" / "static" / "corvo_layers" / "_debug"
 
 # Anchor points for a 1024x1024 wings_spread frame with Corvo centered.
 # Left/right = viewer's perspective (image left vs image right).

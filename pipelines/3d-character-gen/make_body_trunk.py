@@ -7,10 +7,12 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
 from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 import numpy as np
 from PIL import Image
 
-L = Path(r"C:\Claude\Personal\casa-companion\static\images\tv\corvo\layers")
+L = PROJECT_ROOT / "tv-companion" / "static" / "images" / "tv" / "corvo" / "layers"
 
 body = np.array(Image.open(L / "body.png").convert("RGBA"))
 lw = np.array(Image.open(L / "left_wing.png").convert("RGBA"))

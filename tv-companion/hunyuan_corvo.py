@@ -11,11 +11,13 @@ import os
 import shutil
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 from gradio_client import Client, handle_file
 
-SRC = Path(r"C:\Claude\Personal\casa-companion\static\images\heroes\crow.webp")
-OUT_DIR = Path(r"C:\Claude\Personal\casa-companion\workspace\corvo_3d")
-STATIC_OUT = Path(r"C:\Claude\Personal\casa-companion\static\models\corvo")
+SRC = PROJECT_ROOT / "tv-companion" / "static" / "images" / "heroes" / "crow.webp"
+OUT_DIR = PROJECT_ROOT / "tv-companion" / "static" / "corvo_3d"
+STATIC_OUT = PROJECT_ROOT / "tv-companion" / "static" / "models" / "corvo"
 
 SPACE = "Jbowyer/Hunyuan3D-2.1"
 

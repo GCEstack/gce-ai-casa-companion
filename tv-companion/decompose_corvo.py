@@ -16,13 +16,15 @@ import os
 import shutil
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 from gradio_client import Client, handle_file
 
 # --- Input: use the ORIGINAL (pre-alpha-bake) wings_spread frame.
 # That pose shows the most anatomy — both wings, beak, eyes, tail.
-SRC = Path(r"C:\Claude\Personal\casa-companion\static\images\tv\corvo\_original\corvo_wings_spread.png")
+SRC = PROJECT_ROOT / "tv-companion" / "static" / "images" / "tv" / "corvo" / "_original" / "corvo_wings_spread.png"
 
-WORKSPACE = Path(r"C:\Claude\Personal\casa-companion\workspace")
+WORKSPACE = PROJECT_ROOT / "tv-companion" / "static"
 PSD_OUT = WORKSPACE / "corvo_psd"
 LAYERS_OUT = WORKSPACE / "corvo_layers"
 
