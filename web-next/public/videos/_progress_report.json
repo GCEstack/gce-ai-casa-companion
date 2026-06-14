@@ -1,0 +1,179 @@
+{
+  "started_at": "2026-06-13T06:22:24.065449+00:00",
+  "completed_at": "2026-06-13T06:29:42.710131+00:00",
+  "config": {
+    "backend": "pika_fal",
+    "final_duration": 15,
+    "clip_duration": 5,
+    "resolution": "720p",
+    "aspect_ratio": "16:9",
+    "concurrency": 3,
+    "max_retries": 3,
+    "seed": null,
+    "transition": "fade",
+    "transition_duration": 0.5,
+    "cost_per_second": {
+      "pika_fal": 0.05,
+      "kling_fal": 0.06,
+      "kling_segmind": 0.065,
+      "kling_evolink": 0.075,
+      "pika_pollo": 0.045
+    }
+  },
+  "total_estimated_cost": 4.5,
+  "total_actual_cost": 4.5,
+  "completed_heroes": 6,
+  "failed_heroes": 0,
+  "heroes": [
+    {
+      "name": "octopus",
+      "status": "completed",
+      "clips": [
+        {
+          "index": 2,
+          "path": "videos\\octopus_clip2.mp4",
+          "error": null
+        },
+        {
+          "index": 3,
+          "path": "videos\\octopus_clip3.mp4",
+          "error": null
+        },
+        {
+          "index": 1,
+          "path": "videos\\octopus_clip1.mp4",
+          "error": null
+        }
+      ],
+      "final_video": "videos\\octopus_final.mp4",
+      "estimated_cost": 0.75,
+      "actual_cost": 0.75,
+      "error": null
+    },
+    {
+      "name": "onda",
+      "status": "completed",
+      "clips": [
+        {
+          "index": 1,
+          "path": "videos\\onda_clip1.mp4",
+          "error": null
+        },
+        {
+          "index": 3,
+          "path": "videos\\onda_clip3.mp4",
+          "error": null
+        },
+        {
+          "index": 2,
+          "path": "videos\\onda_clip2.mp4",
+          "error": null
+        }
+      ],
+      "final_video": "videos\\onda_final.mp4",
+      "estimated_cost": 0.75,
+      "actual_cost": 0.75,
+      "error": null
+    },
+    {
+      "name": "owl",
+      "status": "completed",
+      "clips": [
+        {
+          "index": 3,
+          "path": "videos\\owl_clip3.mp4",
+          "error": null
+        },
+        {
+          "index": 1,
+          "path": "videos\\owl_clip1.mp4",
+          "error": null
+        },
+        {
+          "index": 2,
+          "path": "videos\\owl_clip2.mp4",
+          "error": null
+        }
+      ],
+      "final_video": "videos\\owl_final.mp4",
+      "estimated_cost": 0.75,
+      "actual_cost": 0.75,
+      "error": null
+    },
+    {
+      "name": "pietro",
+      "status": "completed",
+      "clips": [
+        {
+          "index": 2,
+          "path": "videos\\pietro_clip2.mp4",
+          "error": null
+        },
+        {
+          "index": 1,
+          "path": "videos\\pietro_clip1.mp4",
+          "error": null
+        },
+        {
+          "index": 3,
+          "path": "videos\\pietro_clip3.mp4",
+          "error": null
+        }
+      ],
+      "final_video": "videos\\pietro_final.mp4",
+      "estimated_cost": 0.75,
+      "actual_cost": 0.75,
+      "error": null
+    },
+    {
+      "name": "ragno",
+      "status": "completed",
+      "clips": [
+        {
+          "index": 1,
+          "path": "videos\\ragno_clip1.mp4",
+          "error": null
+        },
+        {
+          "index": 2,
+          "path": "videos\\ragno_clip2.mp4",
+          "error": null
+        },
+        {
+          "index": 3,
+          "path": "videos\\ragno_clip3.mp4",
+          "error": null
+        }
+      ],
+      "final_video": "videos\\ragno_final.mp4",
+      "estimated_cost": 0.75,
+      "actual_cost": 0.75,
+      "error": null
+    },
+    {
+      "name": "rocco",
+      "status": "completed",
+      "clips": [
+        {
+          "index": 1,
+          "path": "videos\\rocco_clip1.mp4",
+          "error": null
+        },
+        {
+          "index": 3,
+          "path": "videos\\rocco_clip3.mp4",
+          "error": null
+        },
+        {
+          "index": 2,
+          "path": "videos\\rocco_clip2.mp4",
+          "error": null
+        }
+      ],
+      "final_video": "videos\\rocco_final.mp4",
+      "estimated_cost": 0.75,
+      "actual_cost": 0.75,
+      "error": null
+    }
+  ]
+}

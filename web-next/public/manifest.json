@@ -1,0 +1,16 @@
+{
+  "name": "Casa Companion",
+  "short_name": "Casa",
+  "description": "AI plush toy companion demo",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D0D1A",
+  "theme_color": "#D4A017",
+  "icons": [
+    {
+      "src": "/heroes/crow.webp",
+      "sizes": "192x192",
+      "type": "image/webp"
+    }
+  ]
+}

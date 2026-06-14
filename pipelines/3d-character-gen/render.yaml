@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: casa-companion
+    runtime: docker
+    repo: https://github.com/simplebalance89-ai/casa-companion
+    region: oregon
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: AZURE_API_KEY
+        sync: false

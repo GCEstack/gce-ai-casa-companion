@@ -1,0 +1,303 @@
+{
+  "_meta": {
+    "note": "Auto-generated for 34 Casa Companion heroes. Edit motion_prompt per hero for best results."
+  },
+  "default": {
+    "name": "Hero",
+    "category": "fantasy",
+    "motion_prompt": "subtle living motion: gentle breathing, soft blink, hair or fabric swaying in a light breeze, alive and natural",
+    "negative_prompt": "frozen still, no movement, blurry, distorted, warping, jitter, slide-show effect",
+    "duration": 5,
+    "motion_strength": 2
+  },
+  "heroes": {
+    "battito": {
+      "name": "Battito",
+      "category": "fantasy",
+      "motion_prompt": "tiny magical heartbeat creature gently pulsing and bobbing, soft glow, little wings fluttering, big eyes blinking",
+      "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "bear": {
+      "name": "Bear",
+      "category": "animal",
+      "motion_prompt": "mighty bear slowly turning its head, sniffing the air, thick fur ruffling, deep calm breathing",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "bunny": {
+      "name": "Bunny",
+      "category": "animal",
+      "motion_prompt": "cute bunny twitching nose and long ears, soft hops in place, fluffy tail wiggling",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "crow": {
+      "name": "Crow",
+      "category": "bird",
+      "motion_prompt": "mystical black crow flapping wings slowly up and down, head turning sharply, beak opening to caw, glossy feathers ruffling",
+      "negative_prompt": "wings clipped, no wing movement, blurry feathers, frozen pose",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "dragon": {
+      "name": "Dragon",
+      "category": "fantasy",
+      "motion_prompt": "mighty dragon breathing gentle fire puffs from nostrils, large wings slowly flapping, tail swaying side to side",
+      "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "dolphin": {
+      "name": "Dolphin",
+      "category": "animal",
+      "motion_prompt": "playful dolphin gliding through water, fins gently sweeping, tail flicking, subtle splash droplets",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "elephant": {
+      "name": "Elephant",
+      "category": "animal",
+      "motion_prompt": "wise elephant slowly flapping large ears, trunk curling and uncurling, heavy calm breathing",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "fox": {
+      "name": "Fox",
+      "category": "animal",
+      "motion_prompt": "clever fox turning its head alertly, ears perking and swiveling, tail sweeping side to side",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "phoenix": {
+      "name": "Phoenix",
+      "category": "bird",
+      "motion_prompt": "majestic phoenix slowly flapping fiery wings, flames flickering along feathers, glowing eyes opening",
+      "negative_prompt": "no wing movement, frozen, blurry flames, dull colors",
+      "duration": 5,
+      "motion_strength": 5
+    },
+    "wolf": {
+      "name": "Wolf",
+      "category": "animal",
+      "motion_prompt": "noble wolf lifting its head and howling, fur bristling in wind, ears twitching, misty breath",
+      "negative_prompt": "no movement, frozen howl, blurry fur, distorted face",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "bella": {
+      "name": "Bella",
+      "category": "humanoid",
+      "motion_prompt": "elegant Bella gently breathing, soft blink, subtle graceful hand gesture, hair swaying slightly",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "borsa": {
+      "name": "Borsa",
+      "category": "object",
+      "motion_prompt": "animated bag gently swaying side to side, fabric creases shifting, soft magical shimmer",
+      "negative_prompt": "lifeless, frozen, blurry, distorted, no texture movement",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "costruttore": {
+      "name": "Costruttore",
+      "category": "humanoid",
+      "motion_prompt": "builder character looking around proudly, wiping brow, subtle tool movement, breathing",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "cucita": {
+      "name": "Cucita",
+      "category": "fantasy",
+      "motion_prompt": "stitched doll gently tilting its head, button eyes blinking, fabric seams softly shifting",
+      "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "cuoco": {
+      "name": "Cuoco",
+      "category": "humanoid",
+      "motion_prompt": "chef character breathing and blinking, gesturing with a spoon, warm alive expression",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "dottore": {
+      "name": "Dottore",
+      "category": "humanoid",
+      "motion_prompt": "doctor character breathing calmly, adjusting glasses, subtle nod, alive and attentive",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "forza": {
+      "name": "Forza",
+      "category": "humanoid",
+      "motion_prompt": "strong hero breathing deeply, flexing slightly, cape rustling, confident alive stance",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "lion": {
+      "name": "Lion",
+      "category": "animal",
+      "motion_prompt": "noble lion breathing deeply, mane ruffling, slow powerful head turn, majestic alive stance",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "maestra": {
+      "name": "Maestra",
+      "category": "humanoid",
+      "motion_prompt": "teacher character gently gesturing, soft blink, warm smile, breathing naturally",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "mamma": {
+      "name": "Mamma",
+      "category": "humanoid",
+      "motion_prompt": "motherly character breathing gently, soft caring smile, subtle welcoming hand gesture",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "nonna": {
+      "name": "Nonna",
+      "category": "humanoid",
+      "motion_prompt": "grandmother character slowly nodding, kind eyes blinking, knitting hands moving subtly",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "octopus": {
+      "name": "Octopus",
+      "category": "animal",
+      "motion_prompt": "curious octopus gently waving tentacles, skin texture shifting, soft underwater floating motion",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "onda": {
+      "name": "Onda",
+      "category": "fantasy",
+      "motion_prompt": "wave spirit character gently flowing and shimmering, hair like water moving, soft glowing pulse",
+      "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "owl": {
+      "name": "Owl",
+      "category": "bird",
+      "motion_prompt": "wise owl turning its head, large eyes blinking slowly, feathers fluffing, subtle wing adjustment",
+      "negative_prompt": "wings clipped, no wing movement, blurry feathers, frozen pose",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "pietro": {
+      "name": "Pietro",
+      "category": "humanoid",
+      "motion_prompt": "Pietro breathing naturally, soft blink, slight friendly nod, alive expression",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "ragno": {
+      "name": "Ragno",
+      "category": "animal",
+      "motion_prompt": "spider character slowly moving legs, body gently bobbing, subtle web shimmer",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "rocco": {
+      "name": "Rocco",
+      "category": "humanoid",
+      "motion_prompt": "Rocco breathing calmly, subtle confident stance, soft blink, alive expression",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "sacco": {
+      "name": "Sacco",
+      "category": "object",
+      "motion_prompt": "animated sack gently shifting shape, fabric rustling, soft magical wobble",
+      "negative_prompt": "lifeless, frozen, blurry, distorted, no texture movement",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "scheletro": {
+      "name": "Scheletro",
+      "category": "fantasy",
+      "motion_prompt": "skeleton gently bobbing, bones shifting subtly, empty eye sockets glowing faintly, spooky alive motion",
+      "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "spugna": {
+      "name": "Spugna",
+      "category": "object",
+      "motion_prompt": "sponge-like character softly squishing and expanding, pores shimmering, gentle wobble",
+      "negative_prompt": "lifeless, frozen, blurry, distorted, no texture movement",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "stellino": {
+      "name": "Stellino",
+      "category": "fantasy",
+      "motion_prompt": "little star creature gently twinkling and pulsing, soft floating motion, rays shimmering",
+      "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "turtle": {
+      "name": "Turtle",
+      "category": "animal",
+      "motion_prompt": "gentle turtle slowly blinking, head peeking out, flippers moving softly, shell detail alive",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "veloce": {
+      "name": "Veloce",
+      "category": "humanoid",
+      "motion_prompt": "speedy hero in ready stance, slight vibrating energy, breathing fast, cape fluttering",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "verita": {
+      "name": "Verita",
+      "category": "humanoid",
+      "motion_prompt": "truth-teller breathing calmly, gentle open-handed gesture, wise alive eyes",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "vinile": {
+      "name": "Vinile",
+      "category": "object",
+      "motion_prompt": "vinyl record character slowly spinning, grooves shimmering, subtle groove wave motion",
+      "negative_prompt": "lifeless, frozen, blurry, distorted, no texture movement",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "xolo": {
+      "name": "Xolo",
+      "category": "animal",
+      "motion_prompt": "loyal xolo dog breathing, ears perking, tail wagging gently, skin wrinkles shifting",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 3
+    }
+  }
+}
