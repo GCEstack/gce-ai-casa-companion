@@ -1,0 +1,10 @@
+.vercel
+.netlify
+.env
+.env.local
+Casa Companion
+dist
+node_modules
+.cache
+*.log
+*.tsbuildinfo
