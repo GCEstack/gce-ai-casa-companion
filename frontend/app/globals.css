@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0a0a0f;
+  --surface: #13131f;
+  --panel: #1c1c2e;
+  --neon-pink: #ff2a6d;
+  --neon-cyan: #05d9e8;
+  --neon-green: #00ff9f;
+  --neon-yellow: #f7ff58;
+}
+
+html,
+body {
+  background-color: var(--background);
+  color: #e2e8f0;
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neon-cyan);
+}
+
+@layer components {
+  .neon-border {
+    @apply border border-neon-cyan/30 shadow-[0_0_10px_rgba(5,217,232,0.15)];
+  }
+
+  .neon-text-pink {
+    @apply text-neon-pink drop-shadow-[0_0_6px_rgba(255,42,109,0.7)];
+  }
+
+  .neon-text-cyan {
+    @apply text-neon-cyan drop-shadow-[0_0_6px_rgba(5,217,232,0.7)];
+  }
+}
