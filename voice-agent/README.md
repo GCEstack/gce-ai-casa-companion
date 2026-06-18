@@ -113,6 +113,22 @@ fly deploy
 
 `fly.toml` already has `auto_stop_machines = "off"` and `min_machines_running = 1` for toddler-grade latency.
 
+## WebSocket Relay
+
+The standalone relay (`voice-agent/ws-relay.js`) forwards messages between the ESP32-S3 firmware and the React frontend.
+
+```bash
+node ws-relay.js
+```
+
+For production, set a long random `RELAY_TOKEN` and require every client to authenticate immediately after connecting:
+
+```bash
+RELAY_TOKEN=change-me-to-a-long-random-secret node ws-relay.js
+```
+
+Clients must send `{ "type": "auth", "token": "..." }` within 5 seconds. Unauthenticated clients are disconnected and cannot send or receive broadcasts. If `RELAY_TOKEN` is not set, the relay logs a warning and runs unauthenticated (local-dev behavior).
+
 ## Supabase Setup
 
 1. Create a new Supabase project.

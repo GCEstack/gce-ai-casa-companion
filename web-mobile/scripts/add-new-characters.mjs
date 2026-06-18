@@ -117,7 +117,8 @@ Output ONLY raw JSON. No markdown, no explanation.`;
     portrait: '/characters/${slug}.png',
     showcase: '/characters/${slug}.png',
     voiceIntro: '/audio/characters/${slug}-intro.mp3',
-    videoSrc: '/videos/${slug}_idle.mp4',
+    idleVideo: '/videos/${slug}_idle.mp4',
+    speakingVideo: undefined,
     modes: {
       play: ['Story Time', 'Music & Rhythm', 'Geography', 'STEM Sparks'],
       learn: ['All Languages', 'Homework Helper', 'Coding'],

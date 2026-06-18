@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import time
 from dataclasses import dataclass, field
@@ -176,7 +177,11 @@ class SessionManager:
                 ctx.touch()
 
                 if "bytes" in message:
-                    await ctx.set_state("listening")
+                    # Only transition to listening at the start of a new user turn;
+                    # once we are already listening, repeated audio chunks should
+                    # not re-broadcast the same state.
+                    if ctx.state in ("idle", "speaking"):
+                        await ctx.set_state("listening")
                     await ctx.deepgram.feed(message["bytes"])
                 elif "text" in message:
                     await self._handle_control(ctx, json.loads(message["text"]))
@@ -235,10 +240,22 @@ class SessionManager:
 
             await ctx.set_state("speaking")
             try:
+                # Send-side pacing only: we space out audio frames so a slow
+                # network or constrained device isn't flooded. We do NOT wait
+                # for device ACKs here because that requires a firmware
+                # protocol change.
+                seq = 0
                 async for chunk in ctx.tts_pipeline.speak(answer, ctx.mode):
                     if ctx.killed:
                         break
-                    await ctx.send_bytes(chunk)
+                    await ctx.send_json({
+                        "type": "audio",
+                        "seq": seq,
+                        "data": base64.b64encode(chunk).decode("ascii"),
+                    })
+                    seq += 1
+                    if self.settings.tts_chunk_delay_ms > 0:
+                        await asyncio.sleep(self.settings.tts_chunk_delay_ms / 1000.0)
             except Exception as e:
                 print(f"[TTS {ctx.device_id}] {e}")
                 await ctx.send_json({"type": "error", "code": "tts", "message": "TTS failed"})

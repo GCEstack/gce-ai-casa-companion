@@ -48,10 +48,16 @@ app.add_middleware(
 
 
 async def _verify_dashboard_token(authorization: str | None = None, token: str | None = None) -> dict[str, Any]:
-    """Validate a Supabase JWT from header or query param and return the user."""
-    jwt = token
-    if not jwt and authorization and authorization.startswith("Bearer "):
+    """Validate a Supabase JWT from header or query param and return the user.
+
+    The Authorization header is preferred when both are provided; the query
+    param is kept for backward compatibility.
+    """
+    jwt: str | None = None
+    if authorization and authorization.startswith("Bearer "):
         jwt = authorization.replace("Bearer ", "")
+    if not jwt:
+        jwt = token
     if not jwt:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
     if not supabase:

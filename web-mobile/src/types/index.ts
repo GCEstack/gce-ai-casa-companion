@@ -1,17 +1,15 @@
 export interface Character {
   slug: string;
   name: string;
-  description: string;
-  subtitle: string;
   italianMeaning: string;
   accentColor: string;
-  accentHue: number;
   category: 'animal' | 'fantasy' | 'person' | 'object';
   traits: string[];
   portrait: string;
   showcase: string;
   voiceIntro: string;
-  videoSrc?: string;
+  idleVideo?: string;
+  speakingVideo?: string;
   modes: {
     play: string[];
     learn: string[];

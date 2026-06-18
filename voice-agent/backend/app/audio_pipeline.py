@@ -14,6 +14,9 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 from .config import get_settings
 
 
+DEFAULT_SSML_TEMPLATE = "<speak><prosody>{{text}}</prosody></speak>"
+
+
 class TranscriptError(Exception):
     pass
 
@@ -127,16 +130,8 @@ class CartesiaTTSClient:
         ssml_template: str,
     ) -> AsyncIterable[bytes]:
         safe_text = self._escape_xml(text)
-        template = (ssml_template or "").strip()
-        if "{{text}}" in template:
-            transcript = template.replace("{{text}}", safe_text)
-        elif template.startswith("<speak>") and template.endswith("</speak>"):
-            transcript = f"{template[:-8]}<prosody>{safe_text}</prosody></speak>"
-        elif template:
-            # Non-empty fragment without <speak> wrapper or placeholder: wrap it as-is.
-            transcript = f"<speak>{template}{safe_text}</speak>"
-        else:
-            transcript = f"<speak><prosody>{safe_text}</prosody></speak>"
+        template = (ssml_template or "").strip() or DEFAULT_SSML_TEMPLATE
+        transcript = template.replace("{{text}}", safe_text)
 
         payload = {
             "model_id": self.settings.cartesia_model,

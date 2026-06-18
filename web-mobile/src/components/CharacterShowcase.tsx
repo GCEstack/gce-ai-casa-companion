@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import type { Character } from '@/types';
-import { getCharacterVideos } from '@/lib/characterVideos';
 
 interface CharacterShowcaseProps {
   character: Character;
@@ -10,7 +9,8 @@ interface CharacterShowcaseProps {
 export default function CharacterShowcase({ character, isSpeaking = false }: CharacterShowcaseProps) {
   const idleRef = useRef<HTMLVideoElement>(null);
   const speakingRef = useRef<HTMLVideoElement>(null);
-  const { idle: idleVideo, speaking: speakingVideo } = getCharacterVideos(character.slug);
+  const idleVideo = character.idleVideo;
+  const speakingVideo = character.speakingVideo;
   const hasVideo = !!idleVideo;
 
   useEffect(() => {

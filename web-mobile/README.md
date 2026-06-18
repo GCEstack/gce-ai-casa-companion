@@ -64,9 +64,8 @@ web-mobile/
 │   ├── hooks/
 │   │   └── useVoiceChat.ts     # Deepgram + OpenAI voice pipeline
 │   ├── lib/
-│   │   ├── characters.ts       # Character data
+│   │   ├── characters.ts       # Character data (including idle/speaking videos)
 │   │   ├── characterConfig.ts  # Per-character prompts + OpenAI voices
-│   │   ├── characterVideos.ts  # Video file resolver
 │   │   ├── characterVoices.ts  # Browser TTS voice settings
 │   │   ├── personalization.ts  # Build-time roster filtering
 │   │   └── settings.ts         # localStorage settings + favorites

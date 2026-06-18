@@ -1,11 +1,41 @@
 """Character + mode routing, prompt assembly, and TTS text chunking with SSML."""
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from typing import Any
 
 from .config import get_settings
+
+
+DEFAULT_SSML_TEMPLATE = "<speak><prosody>{{text}}</prosody></speak>"
+
+
+def _validate_ssml_template(template: str | None, mode_name: str = "") -> str:
+    """Return a validated SSML template, falling back to the default if invalid."""
+    if not template or not template.strip():
+        return DEFAULT_SSML_TEMPLATE
+
+    template = template.strip()
+    if template.count("{{text}}") != 1:
+        logging.warning(
+            "Invalid SSML template for %s: must contain exactly one {{text}} placeholder. "
+            "Falling back to default.",
+            mode_name or "unknown mode",
+        )
+        return DEFAULT_SSML_TEMPLATE
+
+    # Verify the template itself is wrapped in a well-formed <speak> root so that
+    # substituting the placeholder always yields valid SSML.
+    if not (template.startswith("<speak>") and template.endswith("</speak>")):
+        logging.warning(
+            "Invalid SSML template for %s: must have a <speak> root. Falling back to default.",
+            mode_name or "unknown mode",
+        )
+        return DEFAULT_SSML_TEMPLATE
+
+    return template
 
 
 @dataclass(frozen=True)
@@ -39,14 +69,15 @@ class PromptRouter:
         rows = result.data or []
         self._modes = {}
         for row in rows:
+            mode_name = row.get("name", f"{row['character_key']} {row['mode_key']}")
             mode = CharacterMode(
                 id=row["id"],
                 character_key=row["character_key"],
                 mode_key=row["mode_key"],
-                name=row.get("name", f"{row['character_key']} {row['mode_key']}"),
+                name=mode_name,
                 prompt=row["prompt"],
                 voice_id=row["voice_id"],
-                ssml_template=row["ssml_template"],
+                ssml_template=_validate_ssml_template(row.get("ssml_template"), mode_name),
             )
             self._modes[mode.id] = mode
             if mode.character_key == "orsetto" and mode.mode_key == "default":

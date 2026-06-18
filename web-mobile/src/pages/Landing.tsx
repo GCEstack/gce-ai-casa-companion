@@ -2,44 +2,9 @@ import { Mic, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CharacterCard from '@/components/CharacterCard';
 import BottomNav from '@/components/BottomNav';
-import { characters } from '@/lib/characters';
-import {
-  userName,
-  isPersonalized,
-  getLandingCharacters,
-  getFeaturedCharacter,
-} from '@/lib/personalization';
+import { useAvailableCharacters } from '@/hooks/useAvailableCharacters';
+import { getCharacterRole } from '@/lib/characters';
 import type { Character } from '@/types';
-
-// Per-site character sets. If a hostname has an entry, the landing page shows
-// only those characters (in order). Otherwise it shows the full grid.
-const HOST_CHARACTER_SETS: Record<string, string[]> = {
-  'casa-web-mobile-liam.netlify.app': ['jack', 'tartaruga', 'veloce', 'corvo'],
-  'casa-jack.netlify.app': ['jack', 'tartaruga', 'veloce', 'corvo'],
-  'casa-kids-liam.vercel.app': ['jack', 'tartaruga', 'veloce', 'corvo'],
-  'web-mobile-liam.vercel.app': ['jack', 'tartaruga', 'veloce', 'corvo'],
-  'casa-web-mobile-liam.fly.dev': ['jack', 'tartaruga', 'veloce', 'corvo'],
-  'casa-web-mobile-jenny.netlify.app': ['agenda'],
-  'casa-jenny.netlify.app': ['agenda'],
-  'casa-kids-jenny.vercel.app': ['agenda'],
-  'web-mobile-jenny.vercel.app': ['agenda'],
-  'casa-web-mobile-jenny.fly.dev': ['agenda'],
-  'casa-web-mobile-jimmy.netlify.app': ['papa', 'gufo', 'fraggl', 'stellino', 'rocco', 'onda'],
-  'casa-jimmy.netlify.app': ['papa', 'gufo', 'fraggl', 'stellino', 'rocco', 'onda'],
-  'casa-kids-jimmy.vercel.app': ['papa', 'gufo', 'fraggl', 'stellino', 'rocco', 'onda'],
-  'web-mobile-jimmy.vercel.app': ['papa', 'gufo', 'fraggl', 'stellino', 'rocco', 'onda'],
-  'casa-web-mobile-jimmy.fly.dev': ['papa', 'gufo', 'fraggl', 'stellino', 'rocco', 'onda'],
-  'casa-web-mobile-peter.netlify.app': ['pietro', 'jack', 'corvo'],
-  'casa-kids-peter.vercel.app': ['pietro', 'jack', 'corvo'],
-  'web-mobile-peter.vercel.app': ['pietro', 'jack', 'corvo'],
-  'casa-web-mobile-peter.fly.dev': ['pietro', 'jack', 'corvo'],
-};
-
-function getRole(character: Character): string {
-  const parts = character.description.split('—');
-  const last = parts[parts.length - 1]?.trim() ?? '';
-  return last || character.italianMeaning;
-}
 
 function FeaturedCard({ character }: { character: Character }) {
   const navigate = useNavigate();
@@ -67,7 +32,7 @@ function FeaturedCard({ character }: { character: Character }) {
             </span>
           </div>
           <h3 className="text-xl font-bold text-white">{character.name}</h3>
-          <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{getRole(character)}</p>
+          <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{getCharacterRole(character)}</p>
           <p className="text-[10px] text-gray-500 mt-2">Tap to start talking</p>
         </div>
       </div>
@@ -75,18 +40,9 @@ function FeaturedCard({ character }: { character: Character }) {
   );
 }
 
-function getSiteCharacters(all: Character[]): Character[] {
-  const slugs = HOST_CHARACTER_SETS[window.location.hostname];
-  if (!slugs || slugs.length === 0) return all;
-  const map = new Map(all.map((c) => [c.slug, c]));
-  return slugs.map((slug) => map.get(slug)).filter(Boolean) as Character[];
-}
-
 export default function Landing() {
-  const siteCharacters = getSiteCharacters(characters);
-  const landingCharacters = getLandingCharacters(siteCharacters);
-  const featured = getFeaturedCharacter(siteCharacters);
-  const others = landingCharacters.filter((c) => c.slug !== featured?.slug);
+  const { characters: availableCharacters, featured, userName, isPersonalized } = useAvailableCharacters();
+  const others = availableCharacters.filter((c) => c.slug !== featured?.slug);
 
   return (
     <div className="min-h-full flex flex-col">
@@ -116,7 +72,7 @@ export default function Landing() {
             </h2>
             <div className="grid grid-cols-3 gap-3">
               {others.map((character) => (
-                <CharacterCard key={character.slug} character={character} role={getRole(character)} />
+                <CharacterCard key={character.slug} character={character} role={getCharacterRole(character)} />
               ))}
             </div>
           </>

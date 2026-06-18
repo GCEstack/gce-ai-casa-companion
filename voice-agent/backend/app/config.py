@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     cartesia_language: str = Field(default="en", alias="CARTESIA_LANGUAGE")
     tts_output_sample_rate: int = Field(default=24000, alias="TTS_OUTPUT_SAMPLE_RATE")
     stt_input_sample_rate: int = Field(default=16000, alias="STT_INPUT_SAMPLE_RATE")
+    tts_chunk_delay_ms: float = Field(default=0.0, alias="TTS_CHUNK_DELAY_MS")
 
     # Pipeline limits
     max_tts_chars: int = Field(default=500, alias="MAX_TTS_CHARS")

@@ -9,6 +9,13 @@
  *   - Render:      push this file to a Render Web Service (wss://casa-relay.onrender.com)
  *   - Railway/fly: similar, set PORT env var
  *
+ * Authentication (production):
+ *   - Set the RELAY_TOKEN env var to a long random secret.
+ *   - Every client must send { "type": "auth", "token": "..." } within 5 seconds
+ *     of connecting. Unauthenticated clients are disconnected and cannot
+ *     broadcast or receive messages.
+ *   - If RELAY_TOKEN is not set, the relay runs unauthenticated (local-dev behavior).
+ *
  * Protocol: JSON messages as defined in firmware/main/common.h
  *   device -> relay -> frontend  { type: "voice_stream", data: "<base64_pcm>", character: "coniglio" }
  *   frontend -> relay -> device  { type: "voice_input", data: "<base64_pcm>" }
@@ -22,6 +29,8 @@ const WebSocket = require('ws');
 const http = require('http');
 
 const PORT = process.env.PORT || 8080;
+const RELAY_TOKEN = process.env.RELAY_TOKEN;
+const AUTH_TIMEOUT_MS = 5000;
 const PING_INTERVAL_MS = 30000;
 
 const server = http.createServer((req, res) => {
@@ -38,7 +47,7 @@ const wss = new WebSocket.Server({ server });
 function broadcast(sender, data, isBinary) {
   let sent = 0;
   wss.clients.forEach((client) => {
-    if (client !== sender && client.readyState === WebSocket.OPEN) {
+    if (client !== sender && client.authenticated && client.readyState === WebSocket.OPEN) {
       client.send(data, { binary: isBinary });
       sent++;
     }
@@ -66,26 +75,75 @@ function logMessage(direction, data, isBinary) {
   console.log(`[${direction}] ${preview}`);
 }
 
+function closeWithReason(ws, code, reason) {
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.close(code, reason);
+  } else {
+    ws.terminate();
+  }
+}
+
 wss.on('connection', (ws, req) => {
   const ip = req.socket.remoteAddress;
-  console.log(`Client connected from ${ip}, total clients: ${wss.clients.size}`);
-
   ws.isAlive = true;
+  ws.authenticated = !RELAY_TOKEN;
+
+  if (RELAY_TOKEN) {
+    ws.authTimer = setTimeout(() => {
+      console.log(`Authentication timeout for client ${ip}; closing connection`);
+      closeWithReason(ws, 1008, 'Authentication timeout');
+    }, AUTH_TIMEOUT_MS);
+  }
+
+  console.log(`Client connected from ${ip}, authenticated: ${ws.authenticated}, total clients: ${wss.clients.size}`);
 
   ws.on('pong', () => {
     ws.isAlive = true;
   });
 
   ws.on('message', (data, isBinary) => {
-    const receivedCount = wss.clients.size;
+    if (RELAY_TOKEN && !ws.authenticated) {
+      if (isBinary) {
+        console.log(`Rejecting binary message from unauthenticated client ${ip}`);
+        closeWithReason(ws, 1008, 'Authentication required');
+        return;
+      }
+
+      let message;
+      try {
+        message = JSON.parse(data.toString('utf8'));
+      } catch (e) {
+        console.log(`Rejecting invalid JSON from unauthenticated client ${ip}`);
+        closeWithReason(ws, 1008, 'Invalid JSON');
+        return;
+      }
+
+      if (message && message.type === 'auth' && message.token === RELAY_TOKEN) {
+        ws.authenticated = true;
+        if (ws.authTimer) {
+          clearTimeout(ws.authTimer);
+          ws.authTimer = null;
+        }
+        console.log(`Client ${ip} authenticated successfully`);
+      } else {
+        console.log(`Rejecting unauthenticated client ${ip} (invalid auth message)`);
+        closeWithReason(ws, 1008, 'Authentication required');
+      }
+      return;
+    }
+
     const sentCount = broadcast(ws, data, isBinary);
     logMessage('relay', data, isBinary);
     if (sentCount === 0) {
-      console.log('  -> no other clients connected to receive message');
+      console.log('  -> no other authenticated clients connected to receive message');
     }
   });
 
   ws.on('close', () => {
+    if (ws.authTimer) {
+      clearTimeout(ws.authTimer);
+      ws.authTimer = null;
+    }
     console.log(`Client disconnected, total clients: ${wss.clients.size}`);
   });
 
@@ -112,4 +170,9 @@ wss.on('close', () => {
 server.listen(PORT, () => {
   console.log(`Casa Companion relay listening on port ${PORT}`);
   console.log(`Local dev URI: ws://localhost:${PORT}`);
+  if (!RELAY_TOKEN) {
+    console.warn('WARNING: RELAY_TOKEN is not set; relay is running unauthenticated');
+  } else {
+    console.log('Authentication enabled: clients must send { type: "auth", token: "..." } within 5 seconds');
+  }
 });

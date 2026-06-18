@@ -6,8 +6,8 @@ import ChatTranscript from '@/components/ChatTranscript';
 import InputBar from '@/components/InputBar';
 import { getCharacterBySlug } from '@/lib/characters';
 import { useVoiceChat } from '@/hooks/useVoiceChat';
+import { useAvailableCharacters } from '@/hooks/useAvailableCharacters';
 import { useFavorites, useAppSettings } from '@/lib/settings';
-import { isCharacterEnabled } from '@/lib/personalization';
 
 export default function CharacterDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -17,12 +17,13 @@ export default function CharacterDetail() {
   const voice = useVoiceChat(character ?? null, { mode: settings.activeMode });
   const [favorites, toggleFavorite] = useFavorites();
   const isFav = character ? favorites.includes(character.slug) : false;
+  const { isEnabled } = useAvailableCharacters();
 
   useEffect(() => {
-    if (!character || !isCharacterEnabled(character.slug)) {
+    if (!character || !isEnabled(character.slug)) {
       navigate('/');
     }
-  }, [character, navigate]);
+  }, [character, isEnabled, navigate]);
 
   if (!character) return null;
 

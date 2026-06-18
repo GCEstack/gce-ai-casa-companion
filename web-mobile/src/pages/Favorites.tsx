@@ -2,23 +2,15 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Heart } from 'lucide-react';
 import CharacterCard from '@/components/CharacterCard';
 import BottomNav from '@/components/BottomNav';
-import { characters } from '@/lib/characters';
+import { useAvailableCharacters } from '@/hooks/useAvailableCharacters';
 import { useFavorites } from '@/lib/settings';
-import { isCharacterEnabled } from '@/lib/personalization';
-import type { Character } from '@/types';
-
-function getRole(character: Character): string {
-  const parts = character.description.split('—');
-  const last = parts[parts.length - 1]?.trim() ?? '';
-  return last || character.italianMeaning;
-}
+import { getCharacterRole } from '@/lib/characters';
 
 export default function Favorites() {
   const navigate = useNavigate();
   const [favorites] = useFavorites();
-  const favoriteCharacters = characters.filter(
-    (c) => favorites.includes(c.slug) && isCharacterEnabled(c.slug)
-  );
+  const { characters: availableCharacters } = useAvailableCharacters();
+  const favoriteCharacters = availableCharacters.filter((c) => favorites.includes(c.slug));
 
   return (
     <div className="min-h-full flex flex-col px-4 pt-4 pb-24">
@@ -40,7 +32,7 @@ export default function Favorites() {
         ) : (
           <div className="grid grid-cols-3 gap-3">
             {favoriteCharacters.map((character) => (
-              <CharacterCard key={character.slug} character={character} role={getRole(character)} />
+              <CharacterCard key={character.slug} character={character} role={getCharacterRole(character)} />
             ))}
           </div>
         )}

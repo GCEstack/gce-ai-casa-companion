@@ -88,8 +88,8 @@ function main() {
     const unique = voiceCounts[voice] === 1 ? '✅' : `❌ (${voiceCounts[voice] || 0})`;
     const portraitOk = exists(c.portrait);
     const showcaseOk = exists(c.showcase);
-    const idleOk = exists(c.videoSrc);
-    const speakingRel = `/videos/${c.slug}_speaking.mp4`;
+    const idleOk = exists(c.idleVideo);
+    const speakingRel = c.speakingVideo || `/videos/${c.slug}_speaking.mp4`;
     const speakingOk = exists(speakingRel);
     const assetsOk = portraitOk && idleOk ? '✅' : '⚠️';
 
@@ -102,7 +102,7 @@ function main() {
       `| ${i + 1} | ${c.slug} | ${c.name} | ${c.italianMeaning} | ${voice} | ${unique} | ${
         portraitOk ? path.basename(c.portrait) : '❌ missing'
       } | ${showcaseOk ? path.basename(c.showcase) : '❌ missing'} | ${
-        idleOk ? path.basename(c.videoSrc) : '❌ missing'
+        idleOk ? path.basename(c.idleVideo) : '❌ missing'
       } | ${speakingOk ? path.basename(speakingRel) : '—'} | ${assetsOk} | ${
         c.accentColor
       } | ${c.category} | ${personalitySummary(cfg.prompt)} | ${features} |`
@@ -124,7 +124,7 @@ function main() {
   const gaps = [];
   for (const c of chars) {
     if (!exists(c.portrait)) gaps.push(`- \`${c.slug}\` portrait missing: \`${c.portrait}\``);
-    if (!exists(c.videoSrc)) gaps.push(`- \`${c.slug}\` idle video missing: \`${c.videoSrc}\``);
+    if (!exists(c.idleVideo)) gaps.push(`- \`${c.slug}\` idle video missing: \`${c.idleVideo}\``);
   }
 
   lines.push('', '## Asset gaps', '');
