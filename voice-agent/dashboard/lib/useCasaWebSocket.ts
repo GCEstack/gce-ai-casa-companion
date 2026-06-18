@@ -48,6 +48,14 @@ export function useCasaWebSocket(
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shouldReconnectRef = useRef(true);
 
+  const onMessageRef = useRef(onMessage);
+  const onStatusChangeRef = useRef(onStatusChange);
+
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+    onStatusChangeRef.current = onStatusChange;
+  }, [onMessage, onStatusChange]);
+
   const cleanup = useCallback(() => {
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current);
@@ -106,9 +114,11 @@ export function useCasaWebSocket(
             if (typeof msg.battery === 'number') {
               setBattery(msg.battery);
             }
-            onStatusChange?.(msg.state);
+            onStatusChangeRef.current?.(msg.state);
+          } else if (msg.type === 'command') {
+            console.warn('Casa command received:', msg.command);
           }
-          onMessage?.(msg);
+          onMessageRef.current?.(msg);
         } catch (e) {
           console.warn('Invalid Casa message:', event.data);
         }
@@ -117,7 +127,7 @@ export function useCasaWebSocket(
       console.error('Failed to create Casa WebSocket:', err);
       reconnectTimerRef.current = setTimeout(connect, reconnectIntervalMs);
     }
-  }, [uri, character, mode, onMessage, onStatusChange, reconnectIntervalMs, cleanup]);
+  }, [uri, character, mode, reconnectIntervalMs, cleanup]);
 
   useEffect(() => {
     shouldReconnectRef.current = true;

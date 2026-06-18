@@ -66,6 +66,20 @@ class Settings(BaseSettings):
                 return {}
         return {}
 
+    # CORS
+    cors_origins: list[str] = Field(default=["*"], alias="CORS_ORIGINS")
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _parse_cors_origins(cls, v: Any) -> list[str]:
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            if v.strip() == "*":
+                return ["*"]
+            return [x.strip() for x in v.split(",") if x.strip()]
+        return ["*"]
+
     # Derived
     fly_machine_id: str = Field(default="", alias="FLY_MACHINE_ID")
 

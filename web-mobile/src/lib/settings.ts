@@ -151,6 +151,7 @@ export function setBargeInEnabled(enabled: boolean): void {
 }
 
 const WAKE_WORD_HOSTS = new Set([
+  'casa-web-mobile-peter.netlify.app',
   'casa-kids-peter.vercel.app',
   'web-mobile-peter.vercel.app',
   'casa-web-mobile-peter.fly.dev',

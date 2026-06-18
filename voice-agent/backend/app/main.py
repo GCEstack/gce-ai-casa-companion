@@ -12,9 +12,9 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from supabase import create_async_client
 from supabase._async.client import AsyncClient as SupabaseClient
 
-from config import get_settings
-from prompt_router import PromptRouter
-from session_manager import SessionManager
+from .config import get_settings
+from .prompt_router import PromptRouter
+from .session_manager import SessionManager
 
 
 settings = get_settings()
@@ -40,11 +40,7 @@ app = FastAPI(title="Casa Companion Voice Server", version="1.0.0", lifespan=lif
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://casa-companion.vercel.app",
-        "https://dashboard-ohmjw3x4q-simplebalance89-ais-projects.vercel.app",
-        "https://dashboard-pied-nine-11.vercel.app",
-    ],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

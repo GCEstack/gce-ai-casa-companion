@@ -8,9 +8,10 @@ from typing import Any, AsyncIterable, Callable
 
 import httpx
 from deepgram import DeepgramClient, DeepgramClientOptions, LiveOptions, LiveTranscriptionEvents
-from groq import AsyncGroq
+from groq import AsyncGroq, RateLimitError
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from config import get_settings
+from .config import get_settings
 
 
 class TranscriptError(Exception):
@@ -64,7 +65,7 @@ class DeepgramSTTClient:
         self._is_connected = False
 
     async def feed(self, chunk: bytes):
-        if self._is_connected and self._connection:
+        if self._is_connected and self._connection and chunk:
             self._connection.send(chunk)
 
     async def final_transcript(self, timeout: float | None = None) -> str | None:
@@ -90,6 +91,12 @@ class GroqLLMClient:
         self.client = AsyncGroq(api_key=api_key)
         self.settings = get_settings()
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        retry=retry_if_exception_type((RateLimitError,)),
+        reraise=True,
+    )
     async def complete(self, messages: list[dict[str, str]], system_prompt: str) -> str:
         full_messages = [{"role": "system", "content": system_prompt}]
         # Keep the last several exchanges; system prompt is prepended fresh.
@@ -120,10 +127,14 @@ class CartesiaTTSClient:
         ssml_template: str,
     ) -> AsyncIterable[bytes]:
         safe_text = self._escape_xml(text)
-        if "{{text}}" in ssml_template:
-            transcript = ssml_template.replace("{{text}}", safe_text)
-        elif ssml_template.startswith("<speak>") and ssml_template.endswith("</speak>"):
-            transcript = f"{ssml_template[:-8]}<prosody>{safe_text}</prosody></speak>"
+        template = (ssml_template or "").strip()
+        if "{{text}}" in template:
+            transcript = template.replace("{{text}}", safe_text)
+        elif template.startswith("<speak>") and template.endswith("</speak>"):
+            transcript = f"{template[:-8]}<prosody>{safe_text}</prosody></speak>"
+        elif template:
+            # Non-empty fragment without <speak> wrapper or placeholder: wrap it as-is.
+            transcript = f"<speak>{template}{safe_text}</speak>"
         else:
             transcript = f"<speak><prosody>{safe_text}</prosody></speak>"
 

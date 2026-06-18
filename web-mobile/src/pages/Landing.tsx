@@ -14,18 +14,22 @@ import type { Character } from '@/types';
 // Per-site character sets. If a hostname has an entry, the landing page shows
 // only those characters (in order). Otherwise it shows the full grid.
 const HOST_CHARACTER_SETS: Record<string, string[]> = {
+  'casa-web-mobile-liam.netlify.app': ['jack', 'tartaruga', 'veloce', 'corvo'],
   'casa-jack.netlify.app': ['jack', 'tartaruga', 'veloce', 'corvo'],
   'casa-kids-liam.vercel.app': ['jack', 'tartaruga', 'veloce', 'corvo'],
   'web-mobile-liam.vercel.app': ['jack', 'tartaruga', 'veloce', 'corvo'],
   'casa-web-mobile-liam.fly.dev': ['jack', 'tartaruga', 'veloce', 'corvo'],
+  'casa-web-mobile-jenny.netlify.app': ['agenda'],
   'casa-jenny.netlify.app': ['agenda'],
   'casa-kids-jenny.vercel.app': ['agenda'],
   'web-mobile-jenny.vercel.app': ['agenda'],
   'casa-web-mobile-jenny.fly.dev': ['agenda'],
+  'casa-web-mobile-jimmy.netlify.app': ['papa', 'gufo', 'fraggl', 'stellino', 'rocco', 'onda'],
   'casa-jimmy.netlify.app': ['papa', 'gufo', 'fraggl', 'stellino', 'rocco', 'onda'],
   'casa-kids-jimmy.vercel.app': ['papa', 'gufo', 'fraggl', 'stellino', 'rocco', 'onda'],
   'web-mobile-jimmy.vercel.app': ['papa', 'gufo', 'fraggl', 'stellino', 'rocco', 'onda'],
   'casa-web-mobile-jimmy.fly.dev': ['papa', 'gufo', 'fraggl', 'stellino', 'rocco', 'onda'],
+  'casa-web-mobile-peter.netlify.app': ['pietro', 'jack', 'corvo'],
   'casa-kids-peter.vercel.app': ['pietro', 'jack', 'corvo'],
   'web-mobile-peter.vercel.app': ['pietro', 'jack', 'corvo'],
   'casa-web-mobile-peter.fly.dev': ['pietro', 'jack', 'corvo'],

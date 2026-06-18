@@ -52,7 +52,7 @@ type Medallion = {
   character_modes?: { name: string } | null;
 };
 
-type ServerState = "idle" | "listening" | "thinking" | "speaking" | unknown;
+type ServerState = "idle" | "listening" | "thinking" | "speaking" | "unknown";
 
 interface DashboardClientProps {
   voiceServerUrl: string | null;
@@ -184,7 +184,8 @@ export default function DashboardClient({ voiceServerUrl }: DashboardClientProps
       }
     };
 
-    es.onerror = () => {
+    es.onerror = (err) => {
+      console.error("SSE error:", err);
       setConnectionStatus("error");
     };
 
@@ -508,7 +509,10 @@ export default function DashboardClient({ voiceServerUrl }: DashboardClientProps
               />
               <select
                 value={medallionCharacterId}
-                onChange={(e) => setMedallionCharacterId(e.target.value)}
+                onChange={(e) => {
+                  setMedallionCharacterId(e.target.value);
+                  setMedallionModeId("");
+                }}
                 className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none sm:col-span-1"
               >
                 <option value="">Character</option>
@@ -526,11 +530,17 @@ export default function DashboardClient({ voiceServerUrl }: DashboardClientProps
                 className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none sm:col-span-1"
               >
                 <option value="">Mode</option>
-                {characterModes.map((mode) => (
-                  <option key={mode.id} value={mode.id}>
-                    {mode.name}
-                  </option>
-                ))}
+                {characterModes
+                  .filter(
+                    (m) =>
+                      !medallionCharacterId ||
+                      m.character_key === medallionCharacterId
+                  )
+                  .map((mode) => (
+                    <option key={mode.id} value={mode.id}>
+                      {mode.name}
+                    </option>
+                  ))}
               </select>
               <button
                 type="submit"

@@ -43,13 +43,19 @@ export interface ConnectMessage {
   character: string;
 }
 
+export interface CommandMessage {
+  type: 'command';
+  command: 'sleep' | 'kill' | 'timeout';
+}
+
 export type CasaMessage =
   | VoiceStreamMessage
   | StatusMessage
   | ModeChangeMessage
   | VoiceInputMessage
   | ModeSelectMessage
-  | ConnectMessage;
+  | ConnectMessage
+  | CommandMessage;
 
 export function encodeVoiceInput(base64Pcm: string): VoiceInputMessage {
   return { type: 'voice_input', data: base64Pcm };

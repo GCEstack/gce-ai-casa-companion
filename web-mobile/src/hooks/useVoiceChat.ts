@@ -25,6 +25,22 @@ const stripBom = (s: string | undefined): string | undefined => s?.replace(/^\uF
 const ENV_DEEPGRAM_KEY = stripBom((import.meta as Record<string, any>).env.VITE_DEEPGRAM_API_KEY as string | undefined);
 const ENV_OPENAI_KEY = stripBom((import.meta as Record<string, any>).env.VITE_OPENAI_API_KEY as string | undefined);
 
+function stripEndCommandPhrases(text: string): string {
+  const endPhrases = getWakeEndPhrases()
+    .split(',')
+    .map((p) => p.trim().toLowerCase())
+    .filter(Boolean);
+  let cleaned = text.trim();
+  for (const phrase of endPhrases) {
+    if (!cleaned) break;
+    const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(?:^|[\\s\\p{P}])${escaped}(?:[\\s\\p{P}])*$`, 'iu');
+    cleaned = cleaned.replace(re, '').trim();
+  }
+  // Trim trailing sentence punctuation/spaces left behind.
+  return cleaned.replace(/[\s\p{P}]+$/u, '').trim();
+}
+
 const OPENAI_BASE = 'https://api.openai.com/v1';
 const FETCH_TIMEOUT = 25000;
 
@@ -389,7 +405,7 @@ export function useVoiceChat(character: Character | null, options: UseVoiceChatO
   }, []);
 
   const processUserText = useCallback(async (userText: string) => {
-    const trimmed = userText.trim();
+    const trimmed = stripEndCommandPhrases(userText);
     if (!trimmed) return;
 
     if (getMessageCount() === 0) {
@@ -646,8 +662,10 @@ export function useVoiceChat(character: Character | null, options: UseVoiceChatO
     if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = false;
+    // Interim results let us react to interrupt phrases as soon as they’re
+    // spoken instead of waiting for a final result.
+    recognition.continuous = false;
+    recognition.interimResults = true;
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 1;
 
@@ -660,10 +678,10 @@ export function useVoiceChat(character: Character | null, options: UseVoiceChatO
       wakeRecognitionRef.current = null;
       setWakeListening(false);
       if (intentionalWakeStopRef.current || !isWakeWordEnabled()) return;
-      if (wakeErrorCountRef.current >= 5) return;
-      const backoff = Math.min(500 * 2 ** wakeErrorCountRef.current, 4000);
+      if (wakeErrorCountRef.current >= 10) return;
+      const backoff = Math.min(300 * 2 ** wakeErrorCountRef.current, 3000);
       wakeRestartTimerRef.current = window.setTimeout(() => {
-        if (isWakeWordEnabled() && wakeErrorCountRef.current < 5) startWakeListening();
+        if (isWakeWordEnabled() && wakeErrorCountRef.current < 10) startWakeListening();
       }, backoff);
     };
 
@@ -681,7 +699,7 @@ export function useVoiceChat(character: Character | null, options: UseVoiceChatO
       }, 10000);
 
       // Hard failures: stop trying and tell the user to use the mic button.
-      if (errorType === 'not-allowed' || errorType === 'service-not-allowed' || wakeErrorCountRef.current >= 5) {
+      if (errorType === 'not-allowed' || errorType === 'service-not-allowed' || wakeErrorCountRef.current >= 10) {
         intentionalWakeStopRef.current = true;
         setErrorMessage('Wake-word mic failed. Tap the mic button to talk.');
         try {
@@ -700,18 +718,14 @@ export function useVoiceChat(character: Character | null, options: UseVoiceChatO
     };
 
     recognition.onresult = (event) => {
-      // A successful result means recognition is working; reset error counter.
+      if (intentionalWakeStopRef.current) return;
+
+      // Any result means the mic/recognition pipeline is alive.
       wakeErrorCountRef.current = 0;
       if (wakeErrorResetTimerRef.current) {
         window.clearTimeout(wakeErrorResetTimerRef.current);
         wakeErrorResetTimerRef.current = null;
       }
-
-      const result = event.results[event.resultIndex];
-      if (!result || !result.isFinal) return;
-      const alt = result[0];
-      if (!alt) return;
-      const transcript = alt.transcript.trim().toLowerCase();
 
       const phraseLists = {
         start: getWakeStartPhrases()
@@ -734,9 +748,23 @@ export function useVoiceChat(character: Character | null, options: UseVoiceChatO
         return re.test(transcript);
       };
 
-      const matchedStart = phraseLists.start.some((p) => matchesPhrase(transcript, p));
-      const matchedInterrupt = phraseLists.interrupt.some((p) => matchesPhrase(transcript, p));
-      const matchedEnd = phraseLists.end.some((p) => matchesPhrase(transcript, p));
+      let matchedStart = false;
+      let matchedInterrupt = false;
+      let matchedEnd = false;
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (!result) continue;
+        const alt = result[0];
+        if (!alt) continue;
+        const transcript = alt.transcript.trim().toLowerCase();
+
+        matchedStart = matchedStart || phraseLists.start.some((p) => matchesPhrase(transcript, p));
+        matchedInterrupt = matchedInterrupt || phraseLists.interrupt.some((p) => matchesPhrase(transcript, p));
+        if (result.isFinal) {
+          matchedEnd = matchedEnd || phraseLists.end.some((p) => matchesPhrase(transcript, p));
+        }
+      }
 
       const stopAllAudio = () => {
         window.speechSynthesis?.cancel();
@@ -764,6 +792,8 @@ export function useVoiceChat(character: Character | null, options: UseVoiceChatO
         void startRecording();
       } else if (turnStateRef.current !== 'idle' && matchedEnd) {
         // End the current turn.
+        intentionalWakeStopRef.current = true;
+        recognition.stop();
         stopRecording();
         stopAllAudio();
         setTurnState('idle');

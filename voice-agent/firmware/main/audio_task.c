@@ -21,7 +21,7 @@ static void i2s_mic_init(void)
         .sample_rate = CASA_SAMPLE_RATE,
         .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
         .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
-        .communication_format = I2S_COMM_FORMAT_I2S_MSB,
+        .communication_format = I2S_COMM_FORMAT_STAND_I2S,
         .dma_buf_count = 4,
         .dma_buf_len = CASA_SAMPLES_PER_FRAME,
         .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
@@ -46,7 +46,7 @@ static void i2s_spk_init(void)
         .sample_rate = CASA_SAMPLE_RATE,
         .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
         .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
-        .communication_format = I2S_COMM_FORMAT_I2S_MSB,
+        .communication_format = I2S_COMM_FORMAT_STAND_I2S,
         .dma_buf_count = 4,
         .dma_buf_len = CASA_SAMPLES_PER_FRAME,
         .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
@@ -97,6 +97,16 @@ static void audio_tx_task(void *pvParameters)
     }
 
     while (1) {
+        if (g_system_event_group == NULL || g_voice_tx_queue == NULL) {
+            vTaskDelay(pdMS_TO_TICKS(100));
+            continue;
+        }
+        /*
+         * NOTE: LISTENING_BIT is currently dead code — it is never set anywhere
+         * in the firmware. Only WW_DETECTED_BIT (wake word / button / NFC)
+         * triggers the microphone. If you add a server-side "start listening"
+         * command or another trigger mechanism, wire it to LISTENING_BIT here.
+         */
         xEventGroupWaitBits(g_system_event_group,
                             WW_DETECTED_BIT | LISTENING_BIT,
                             pdFALSE, pdFALSE, portMAX_DELAY);
@@ -126,6 +136,10 @@ static void audio_rx_task(void *pvParameters)
 {
     (void)pvParameters;
     while (1) {
+        if (g_pcm_rx_queue == NULL) {
+            vTaskDelay(pdMS_TO_TICKS(100));
+            continue;
+        }
         casa_message_t msg = {0};
         if (xQueueReceive(g_pcm_rx_queue, &msg, pdMS_TO_TICKS(100)) == pdTRUE) {
             size_t written = 0;
@@ -142,6 +156,9 @@ void audio_task_start(void)
 {
     i2s_mic_init();
     i2s_spk_init();
+    /* Audio TX path: microphone -> I2S RX -> base64 encode -> voice_stream JSON
+     * -> g_voice_tx_queue -> ws_tx_task -> WebSocket.
+     * Audio RX path: WebSocket -> ws_event_handler -> g_pcm_rx_queue -> I2S TX. */
 
     xTaskCreate(audio_tx_task, "audio_tx_task", 8192, NULL, 5, NULL);
     xTaskCreate(audio_rx_task, "audio_rx_task", 4096, NULL, 5, NULL);

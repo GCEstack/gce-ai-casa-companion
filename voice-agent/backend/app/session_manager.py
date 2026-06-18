@@ -10,8 +10,8 @@ from uuid import UUID
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from audio_pipeline import CartesiaTTSClient, DeepgramSTTClient, GroqLLMClient, TTSPipeline
-from coppa_layer import (
+from .audio_pipeline import CartesiaTTSClient, DeepgramSTTClient, GroqLLMClient, TTSPipeline
+from .coppa_layer import (
     ConsentError,
     DeviceNotFoundError,
     end_session,
@@ -20,8 +20,8 @@ from coppa_layer import (
     require_consent,
     touch_session,
 )
-from config import get_settings
-from prompt_router import PromptRouter
+from .config import get_settings
+from .prompt_router import PromptRouter
 
 
 @dataclass
@@ -55,6 +55,7 @@ class SessionContext:
             pass
 
     async def send_bytes(self, data: bytes):
+        self.touch()
         try:
             await self.websocket.send_bytes(data)
         except Exception:
@@ -215,7 +216,7 @@ class SessionManager:
     async def _transcript_loop(self, ctx: SessionContext):
         """Wait for finalized speech, generate a response, and stream audio back."""
         while True:
-            transcript = await ctx.deepgram.final_transcript(timeout=1.0)
+            transcript = await ctx.deepgram.final_transcript(timeout=5.0)
             if ctx.killed:
                 return
             if not transcript:

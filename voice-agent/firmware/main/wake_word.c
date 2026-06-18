@@ -21,22 +21,20 @@ typedef enum {
 static bool detect_wake_word(ww_state_t *state)
 {
     /*
-     * Hardware/project-specific wake-word detector.
+     * Wake word detection — CURRENTLY A STUB.
      *
-     * This skeleton supports two trigger sources:
-     *   1. A physical GPIO button connected to CONFIG_CASA_WAKE_GPIO.
-     *   2. A simulated/random trigger for firmware bring-up testing.
+     * A production build must replace this with an on-device wake-word model
+     * (e.g. Espressif WakeNet) that processes I2S microphone samples continuously.
      *
-     * A production build replaces this with an on-device wake-word model
-     * (e.g. Espressif WakeNet) that processes I2S microphone samples.
+     * Current trigger sources (in order of priority):
+     *   1. NFC medallion tap (handled in nfc_task.c, sets WW_DETECTED_BIT).
+     *   2. Physical GPIO button connected to CONFIG_CASA_WAKE_GPIO.
+     *
+     * The random trigger that was here has been removed — it was a privacy
+     * and safety risk for a children's product.
      */
     if (*state == WW_STATE_IDLE) {
         if (gpio_get_level(CONFIG_CASA_WAKE_GPIO) == 0) {
-            *state = WW_STATE_TRIGGERED;
-            return true;
-        }
-        /* Simulate occasional wake-word for testing (roughly every 60 s). */
-        if ((rand() % 600) == 0) {
             *state = WW_STATE_TRIGGERED;
             return true;
         }
@@ -57,8 +55,6 @@ static void wake_word_task(void *pvParameters)
         .intr_type = GPIO_INTR_DISABLE,
     };
     gpio_config(&io_conf);
-
-    srand((unsigned)xTaskGetTickCount());
 
     while (1) {
         switch (state) {

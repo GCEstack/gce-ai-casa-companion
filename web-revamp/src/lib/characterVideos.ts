@@ -31,6 +31,7 @@ const videoMap: Record<string, CharacterVideoConfig> = {
   sacco: { idle: '/videos/sacco_idle.mp4', speaking: '/videos/sacco_speaking.mp4' },
   scheletro: { idle: '/videos/scheletro_idle.mp4', speaking: '/videos/scheletro_speaking.mp4' },
   spugna: { idle: '/videos/spugna_idle.mp4', speaking: '/videos/spugna_speaking.mp4' },
+  tartaruga: { idle: '/videos/tartaruga_idle.mp4', speaking: '/videos/tartaruga_speaking.mp4' },
   veloce: { idle: '/videos/veloce_idle.mp4', speaking: '/videos/veloce_speaking.mp4' },
   verita: { idle: '/videos/verita_idle.mp4', speaking: '/videos/verita_speaking.mp4' },
   volpe: { idle: '/videos/volpe_idle.mp4', speaking: '/videos/volpe_speaking.mp4' },

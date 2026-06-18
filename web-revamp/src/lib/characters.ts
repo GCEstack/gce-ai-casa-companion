@@ -91,10 +91,10 @@ export const characters: Character[] = [
     accentHue: 155,
     category: 'animal',
     traits: ['Friendly', 'Curious', 'Supportive', 'Playful'],
-    portrait: '/characters/tartaruga.png',
-    showcase: '/characters/tartaruga.png',
+    portrait: '/characters/tartaruga.webp',
+    showcase: '/characters/tartaruga-showcase.png',
     voiceIntro: '/audio/tartaruga-intro.mp3',
-    videoSrc: undefined,
+    videoSrc: '/videos/tartaruga_idle.mp4',
     modes: {
       play: ['Story Time', 'Music & Rhythm', 'Geography', 'STEM Sparks'],
       learn: ['All Languages', 'Homework Helper', 'Coding'],

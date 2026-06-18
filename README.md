@@ -10,6 +10,7 @@ Casa Companion is a voice-first AI companion platform. Users pick a character wi
 
 ```
 casa-companion-master/
+├── web-mobile/               # Active kids' voice PWA (Vite + React + PWA)
 ├── web-next/                 # Original Next.js 14 landing + demo site
 ├── web-revamp/               # Newer Vite + React marketing frontend (evaluation)
 ├── voice-agent/              # FastAPI voice backend, Next.js dashboard, firmware, Supabase migrations
@@ -67,6 +68,24 @@ python server.py
 ```
 
 Open `http://localhost:8000` for the main demo or `http://localhost:8000/tv.html` for the TV rig.
+
+### Mobile voice PWA
+
+```bash
+cd web-mobile
+npm install
+npm run dev
+```
+
+Live deployments:
+
+- Main: https://web-mobile-omega-sable.vercel.app
+- Peter: https://web-mobile-peter.vercel.app
+- Liam: https://web-mobile-liam.vercel.app
+- Jimmy: https://web-mobile-jimmy.vercel.app
+- Jenny: https://web-mobile-jenny.vercel.app
+
+See `web-mobile/README.md` for the full mobile app docs.
 
 ---
 

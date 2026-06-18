@@ -1,0 +1,259 @@
+{
+  "_meta": {
+    "note": "Version 2 idle/speaking prompts for Casa Companion characters"
+  },
+  "heroes": {
+    "battito": {
+      "name": "Battito",
+      "category": "fantasy",
+      "idle_prompt": "A soft cute plush Battito character, tiny magical heartbeat creature gently pulsing and bobbing, soft glow, little wings fluttering, big eyes blinking. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Battito character, tiny magical heartbeat creature gently pulsing and bobbing, soft glow, little wings fluttering, big eyes blinking. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping"
+    },
+    "bear": {
+      "name": "Bear",
+      "category": "animal",
+      "idle_prompt": "A soft cute plush Bear character, mighty bear slowly turning its head, sniffing the air, thick fur ruffling, deep calm breathing. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Bear character, mighty bear slowly turning its head, sniffing the air, thick fur ruffling, deep calm breathing. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping"
+    },
+    "bella": {
+      "name": "Bella",
+      "category": "humanoid",
+      "idle_prompt": "A soft cute plush Bella character, elegant Bella gently breathing, soft blink, subtle graceful hand gesture, hair swaying slightly. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Bella character, elegant Bella gently breathing, soft blink, subtle graceful hand gesture, hair swaying slightly. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin"
+    },
+    "borsa": {
+      "name": "Borsa",
+      "category": "object",
+      "idle_prompt": "A soft cute plush Borsa character, animated bag gently swaying side to side, fabric creases shifting, soft magical shimmer. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Borsa character, animated bag gently swaying side to side, fabric creases shifting, soft magical shimmer. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "lifeless, frozen, blurry, distorted, no texture movement"
+    },
+    "bunny": {
+      "name": "Bunny",
+      "category": "animal",
+      "idle_prompt": "A soft cute plush Bunny character, cute bunny twitching nose and long ears, soft hops in place, fluffy tail wiggling. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Bunny character, cute bunny twitching nose and long ears, soft hops in place, fluffy tail wiggling. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping"
+    },
+    "costruttore": {
+      "name": "Costruttore",
+      "category": "humanoid",
+      "idle_prompt": "A soft cute plush Costruttore character, builder character looking around proudly, wiping brow, subtle tool movement, breathing. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Costruttore character, builder character looking around proudly, wiping brow, subtle tool movement, breathing. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin"
+    },
+    "crow": {
+      "name": "Crow",
+      "category": "bird",
+      "idle_prompt": "A soft cute plush Crow character, mystical black crow flapping wings slowly up and down, head turning sharply, beak opening to caw, glossy feathers ruffling. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Crow character, mystical black crow flapping wings slowly up and down, head turning sharply, beak opening to caw, glossy feathers ruffling. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "wings clipped, no wing movement, blurry feathers, frozen pose"
+    },
+    "cucita": {
+      "name": "Cucita",
+      "category": "fantasy",
+      "idle_prompt": "A soft cute plush Cucita character, stitched doll gently tilting its head, button eyes blinking, fabric seams softly shifting. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Cucita character, stitched doll gently tilting its head, button eyes blinking, fabric seams softly shifting. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping"
+    },
+    "cuoco": {
+      "name": "Cuoco",
+      "category": "humanoid",
+      "idle_prompt": "A soft cute plush Cuoco character, chef character breathing and blinking, gesturing with a spoon, warm alive expression. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Cuoco character, chef character breathing and blinking, gesturing with a spoon, warm alive expression. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin"
+    },
+    "dolphin": {
+      "name": "Dolphin",
+      "category": "animal",
+      "idle_prompt": "A soft cute plush Dolphin character, playful dolphin gliding through water, fins gently sweeping, tail flicking, subtle splash droplets. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Dolphin character, playful dolphin gliding through water, fins gently sweeping, tail flicking, subtle splash droplets. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping"
+    },
+    "dottore": {
+      "name": "Dottore",
+      "category": "humanoid",
+      "idle_prompt": "A soft cute plush Dottore character, doctor character breathing calmly, adjusting glasses, subtle nod, alive and attentive. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Dottore character, doctor character breathing calmly, adjusting glasses, subtle nod, alive and attentive. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin"
+    },
+    "dragon": {
+      "name": "Dragon",
+      "category": "fantasy",
+      "idle_prompt": "A soft cute plush Dragon character, mighty dragon breathing gentle fire puffs from nostrils, large wings slowly flapping, tail swaying side to side. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Dragon character, mighty dragon breathing gentle fire puffs from nostrils, large wings slowly flapping, tail swaying side to side. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping"
+    },
+    "elephant": {
+      "name": "Elephant",
+      "category": "animal",
+      "idle_prompt": "A soft cute plush Elephant character, wise elephant slowly flapping large ears, trunk curling and uncurling, heavy calm breathing. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Elephant character, wise elephant slowly flapping large ears, trunk curling and uncurling, heavy calm breathing. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping"
+    },
+    "forza": {
+      "name": "Forza",
+      "category": "humanoid",
+      "idle_prompt": "A soft cute plush Forza character, strong hero breathing deeply, flexing slightly, cape rustling, confident alive stance. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Forza character, strong hero breathing deeply, flexing slightly, cape rustling, confident alive stance. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin"
+    },
+    "fox": {
+      "name": "Fox",
+      "category": "animal",
+      "idle_prompt": "A soft cute plush Fox character, clever fox turning its head alertly, ears perking and swiveling, tail sweeping side to side. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Fox character, clever fox turning its head alertly, ears perking and swiveling, tail sweeping side to side. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping"
+    },
+    "lion": {
+      "name": "Lion",
+      "category": "animal",
+      "idle_prompt": "A soft cute plush Lion character, noble lion breathing deeply, mane ruffling, slow powerful head turn, majestic alive stance. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Lion character, noble lion breathing deeply, mane ruffling, slow powerful head turn, majestic alive stance. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping"
+    },
+    "maestra": {
+      "name": "Maestra",
+      "category": "humanoid",
+      "idle_prompt": "A soft cute plush Maestra character, teacher character gently gesturing, soft blink, warm smile, breathing naturally. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Maestra character, teacher character gently gesturing, soft blink, warm smile, breathing naturally. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin"
+    },
+    "mamma": {
+      "name": "Mamma",
+      "category": "humanoid",
+      "idle_prompt": "A soft cute plush Mamma character, motherly character breathing gently, soft caring smile, subtle welcoming hand gesture. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Mamma character, motherly character breathing gently, soft caring smile, subtle welcoming hand gesture. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin"
+    },
+    "nonna": {
+      "name": "Nonna",
+      "category": "humanoid",
+      "idle_prompt": "A soft cute plush Nonna character, grandmother character slowly nodding, kind eyes blinking, knitting hands moving subtly. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Nonna character, grandmother character slowly nodding, kind eyes blinking, knitting hands moving subtly. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin"
+    },
+    "octopus": {
+      "name": "Octopus",
+      "category": "animal",
+      "idle_prompt": "A soft cute plush Octopus character, curious octopus gently waving tentacles, skin texture shifting, soft underwater floating motion. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Octopus character, curious octopus gently waving tentacles, skin texture shifting, soft underwater floating motion. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping"
+    },
+    "onda": {
+      "name": "Onda",
+      "category": "fantasy",
+      "idle_prompt": "A soft cute plush Onda character, wave spirit character gently flowing and shimmering, hair like water moving, soft glowing pulse. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Onda character, wave spirit character gently flowing and shimmering, hair like water moving, soft glowing pulse. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping"
+    },
+    "owl": {
+      "name": "Owl",
+      "category": "bird",
+      "idle_prompt": "A soft cute plush Owl character, wise owl turning its head, large eyes blinking slowly, feathers fluffing, subtle wing adjustment. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Owl character, wise owl turning its head, large eyes blinking slowly, feathers fluffing, subtle wing adjustment. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "wings clipped, no wing movement, blurry feathers, frozen pose"
+    },
+    "phoenix": {
+      "name": "Phoenix",
+      "category": "bird",
+      "idle_prompt": "A soft cute plush Phoenix character, majestic phoenix slowly flapping fiery wings, flames flickering along feathers, glowing eyes opening. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Phoenix character, majestic phoenix slowly flapping fiery wings, flames flickering along feathers, glowing eyes opening. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "no wing movement, frozen, blurry flames, dull colors"
+    },
+    "pietro": {
+      "name": "Pietro",
+      "category": "humanoid",
+      "idle_prompt": "A soft cute plush Pietro character, Pietro breathing naturally, soft blink, slight friendly nod, alive expression. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Pietro character, Pietro breathing naturally, soft blink, slight friendly nod, alive expression. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin"
+    },
+    "ragno": {
+      "name": "Ragno",
+      "category": "animal",
+      "idle_prompt": "A soft cute plush Ragno character, spider character slowly moving legs, body gently bobbing, subtle web shimmer. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Ragno character, spider character slowly moving legs, body gently bobbing, subtle web shimmer. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping"
+    },
+    "rocco": {
+      "name": "Rocco",
+      "category": "humanoid",
+      "idle_prompt": "A soft cute plush Rocco character, Rocco breathing calmly, subtle confident stance, soft blink, alive expression. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Rocco character, Rocco breathing calmly, subtle confident stance, soft blink, alive expression. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin"
+    },
+    "sacco": {
+      "name": "Sacco",
+      "category": "object",
+      "idle_prompt": "A soft cute plush Sacco character, animated sack gently shifting shape, fabric rustling, soft magical wobble. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Sacco character, animated sack gently shifting shape, fabric rustling, soft magical wobble. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "lifeless, frozen, blurry, distorted, no texture movement"
+    },
+    "scheletro": {
+      "name": "Scheletro",
+      "category": "fantasy",
+      "idle_prompt": "A soft cute plush Scheletro character, skeleton gently bobbing, bones shifting subtly, empty eye sockets glowing faintly, spooky alive motion. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Scheletro character, skeleton gently bobbing, bones shifting subtly, empty eye sockets glowing faintly, spooky alive motion. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping"
+    },
+    "spugna": {
+      "name": "Spugna",
+      "category": "object",
+      "idle_prompt": "A soft cute plush Spugna character, sponge-like character softly squishing and expanding, pores shimmering, gentle wobble. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Spugna character, sponge-like character softly squishing and expanding, pores shimmering, gentle wobble. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "lifeless, frozen, blurry, distorted, no texture movement"
+    },
+    "stellino": {
+      "name": "Stellino",
+      "category": "fantasy",
+      "idle_prompt": "A soft cute plush Stellino character, little star creature gently twinkling and pulsing, soft floating motion, rays shimmering. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Stellino character, little star creature gently twinkling and pulsing, soft floating motion, rays shimmering. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping"
+    },
+    "turtle": {
+      "name": "Turtle",
+      "category": "animal",
+      "idle_prompt": "A soft cute plush Turtle character, gentle turtle slowly blinking, head peeking out, flippers moving softly, shell detail alive. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Turtle character, gentle turtle slowly blinking, head peeking out, flippers moving softly, shell detail alive. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping"
+    },
+    "veloce": {
+      "name": "Veloce",
+      "category": "humanoid",
+      "idle_prompt": "A soft cute plush Veloce character, speedy hero in ready stance, slight vibrating energy, breathing fast, cape fluttering. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Veloce character, speedy hero in ready stance, slight vibrating energy, breathing fast, cape fluttering. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin"
+    },
+    "verita": {
+      "name": "Verita",
+      "category": "humanoid",
+      "idle_prompt": "A soft cute plush Verita character, truth-teller breathing calmly, gentle open-handed gesture, wise alive eyes. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Verita character, truth-teller breathing calmly, gentle open-handed gesture, wise alive eyes. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin"
+    },
+    "vinile": {
+      "name": "Vinile",
+      "category": "object",
+      "idle_prompt": "A soft cute plush Vinile character, vinyl record character slowly spinning, grooves shimmering, subtle groove wave motion. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Vinile character, vinyl record character slowly spinning, grooves shimmering, subtle groove wave motion. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "lifeless, frozen, blurry, distorted, no texture movement"
+    },
+    "wolf": {
+      "name": "Wolf",
+      "category": "animal",
+      "idle_prompt": "A soft cute plush Wolf character, noble wolf lifting its head and howling, fur bristling in wind, ears twitching, misty breath. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Wolf character, noble wolf lifting its head and howling, fur bristling in wind, ears twitching, misty breath. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "no movement, frozen howl, blurry fur, distorted face"
+    },
+    "xolo": {
+      "name": "Xolo",
+      "category": "animal",
+      "idle_prompt": "A soft cute plush Xolo character, loyal xolo dog breathing, ears perking, tail wagging gently, skin wrinkles shifting. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+      "speaking_prompt": "A soft cute plush Xolo character, loyal xolo dog breathing, ears perking, tail wagging gently, skin wrinkles shifting. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+      "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping"
+    }
+  }
+}

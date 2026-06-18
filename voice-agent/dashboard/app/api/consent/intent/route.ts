@@ -4,9 +4,13 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-04-10",
-});
+function getStripe(): Stripe {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    throw new Error("STRIPE_SECRET_KEY is not set");
+  }
+  return new Stripe(key, { apiVersion: "2024-04-10" });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +22,13 @@ export async function POST(request: NextRequest) {
 
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
     const serviceSupabase = createServiceClient();
@@ -75,6 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!stripeCustomerId) {
+      const stripe = getStripe();
       const customer = await stripe.customers.create({
         email: parentRecord.email,
         metadata: { parent_id: parentRecord.id },
@@ -94,6 +106,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const stripe = getStripe();
     const paymentIntent = await stripe.paymentIntents.create({
       amount: 100,
       currency: "usd",

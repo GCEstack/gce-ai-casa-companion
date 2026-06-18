@@ -3,10 +3,9 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from html import escape
 from typing import Any
 
-from config import get_settings
+from .config import get_settings
 
 
 @dataclass(frozen=True)
@@ -129,14 +128,3 @@ class PromptRouter:
                 current = f"{current} {sentence}".strip()
         _flush()
         return chunks
-
-    def wrap_ssml(self, text: str, mode: CharacterMode) -> str:
-        """Escape text and inject it into the mode's SSML template."""
-        safe = escape(text)
-        template = mode.ssml_template.strip()
-        if "{{text}}" in template:
-            return template.replace("{{text}}", safe)
-        # Fallback: wrap the whole text if the template has no placeholder.
-        if template.startswith("<speak>") and template.endswith("</speak>"):
-            return f"{template[:-8]}<prosody>{safe}</prosody></speak>"
-        return f"<speak><prosody>{safe}</prosody></speak>"
