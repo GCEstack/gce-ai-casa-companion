@@ -19,10 +19,14 @@ function FeaturedCard({ character }: { character: Character }) {
         style={{ backgroundColor: character.accentColor }}
       />
       <div className="flex items-center gap-4 relative z-10">
-        <img
-          src={character.portrait}
-          alt={character.name}
+        <video
+          src={character.idleVideo}
+          autoPlay
+          muted
+          loop
+          playsInline
           className="w-24 h-24 rounded-full object-cover border-2 border-white/10"
+          poster={character.portrait}
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-1">
