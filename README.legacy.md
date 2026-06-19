@@ -2,7 +2,7 @@
 
 > **Your AI companion. Real voice. Real personality.**
 
-**Live demo:** [https://app-wheat-seven-35.vercel.app/](https://app-wheat-seven-35.vercel.app/)
+**Live demo:** [https://casa-mobile.vercel.app/](https://casa-mobile.vercel.app/)
 
 Casa Companion is a voice-first AI companion platform. Users pick a character with a distinct personality and have real-time voice conversations. The project spans a public Next.js landing/demo site, a COPPA-aware parent dashboard, a Fly.io-hosted FastAPI voice server, an ESP32-S3 firmware skeleton, and an image-to-video hero pipeline that turns static character art into animated landing-page assets.
 
@@ -28,7 +28,7 @@ Casa Companion is a voice-first AI companion platform. Users pick a character wi
 Casa Companion is an AI voice companion app centered on character selection and real-time conversation. The experience is designed around Italian/heritage-themed plush personas, each with a name, personality prompt, voice profile, and specialty.
 
 - **Product:** Real-time voice companion with character selection
-- **Live site:** [https://app-wheat-seven-35.vercel.app/](https://app-wheat-seven-35.vercel.app/)
+- **Live site:** [https://casa-mobile.vercel.app/](https://casa-mobile.vercel.app/)
 - **Tagline:** *Your AI companion. Real voice. Real personality.*
 - **Target audience:** Families, teens, and adults looking for personality-driven voice AI
 
@@ -492,8 +492,8 @@ Each character has:
 
 | Component | Platform | Current URL / artifact |
 |-----------|----------|------------------------|
-| Public landing + demo | Vercel | https://app-wheat-seven-35.vercel.app/ |
-| Parent dashboard | Vercel | Deployed from `casa-companion-voice-agent/dashboard/` |
+| Public mobile PWA | Vercel | https://casa-mobile.vercel.app/ |
+| Marketing landing page | Vercel | https://casa-landing.vercel.app/ |
 | Voice backend | Fly.io | `casa-voice-agent.fly.dev` |
 | Database + auth | Supabase | Postgres + Row Level Security |
 | Firmware relay | Node server (`ws-relay.js`) | Render / Railway / fly candidate |

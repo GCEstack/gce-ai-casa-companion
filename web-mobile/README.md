@@ -6,11 +6,11 @@ A progressive web app for kids (and grown-ups) to chat with Casa Companion chara
 
 | App | URL | Personalization |
 |-----|-----|-----------------|
-| Main | https://web-mobile-omega-sable.vercel.app | Full 46-character roster |
-| Peter | https://web-mobile-peter.vercel.app | `pietro` featured; `pietro,leone,drago,trex,volpe,ninja_cat` enabled |
-| Liam | https://web-mobile-liam.vercel.app | `tartaruga` featured; `tartaruga,corvo,veloce,jack` enabled |
-| Jimmy | https://web-mobile-jimmy.vercel.app | `papa` featured; `papa,rocco,sacco` enabled |
-| Jenny | https://web-mobile-jenny.vercel.app | `agenda` featured; `agenda,scheletro,dottore,maestra,bella` enabled |
+| Main | https://casa-mobile-main.vercel.app | Full 46-character roster |
+| Peter | https://casa-mobile-peter.vercel.app | `pietro` featured; `pietro,leone,drago,trex,volpe,ninja_cat` enabled |
+| Liam | https://casa-mobile-liam.vercel.app | `tartaruga` featured; `tartaruga,corvo,veloce,jack` enabled |
+| Jimmy | https://casa-mobile-jimmy.vercel.app | `papa` featured; `papa,rocco,sacco` enabled |
+| Jenny | https://casa-mobile-jenny.vercel.app | `agenda` featured; `agenda,scheletro,dottore,maestra,bella` enabled |
 
 ## Features
 

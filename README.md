@@ -79,11 +79,11 @@ npm run dev
 
 Live deployments:
 
-- Main: https://web-mobile-omega-sable.vercel.app
-- Peter: https://web-mobile-peter.vercel.app
-- Liam: https://web-mobile-liam.vercel.app
-- Jimmy: https://web-mobile-jimmy.vercel.app
-- Jenny: https://web-mobile-jenny.vercel.app
+- Main: https://casa-mobile-main.vercel.app
+- Peter: https://casa-mobile-peter.vercel.app
+- Liam: https://casa-mobile-liam.vercel.app
+- Jimmy: https://casa-mobile-jimmy.vercel.app
+- Jenny: https://casa-mobile-jenny.vercel.app
 
 See `web-mobile/README.md` for the full mobile app docs.
 
