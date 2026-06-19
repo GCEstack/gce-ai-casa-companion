@@ -11,3 +11,12 @@ deepgram-sdk==3.4.0
 supabase>=2.4.0
 postgrest>=0.16.0
 tenacity>=8.0.0
+
+# casa_voice V3 engine dependencies
+numpy>=1.26
+torch>=2.2
+onnxruntime>=1.17
+openai>=1.30
+azure-cognitiveservices-speech>=1.40
+pvporcupine<2.0
+qrcode[pil]>=7.0

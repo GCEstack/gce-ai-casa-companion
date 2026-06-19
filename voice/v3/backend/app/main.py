@@ -3,40 +3,60 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI, Header, HTTPException, Query, WebSocket, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from supabase import create_async_client
 from supabase._async.client import AsyncClient as SupabaseClient
 
 from .config import get_settings
 from .prompt_router import PromptRouter
 from .session_manager import SessionManager
+from .v3_manager import V3SessionManager
 
 
 settings = get_settings()
 supabase: SupabaseClient | None = None
 session_manager: SessionManager | None = None
+v3_session_manager: V3SessionManager | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    global supabase, session_manager
-    supabase = await create_async_client(settings.supabase_url, settings.supabase_service_key)
+    global supabase, session_manager, v3_session_manager
+
+    # Allow local dev without Supabase; the V3 manager will skip auth in development.
+    if settings.supabase_url and not settings.supabase_url.startswith("https://your-project"):
+        try:
+            supabase = await create_async_client(settings.supabase_url, settings.supabase_service_key)
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Supabase connection failed: {e}")
+            if settings.env != "development":
+                raise
+
     prompt_router = PromptRouter(supabase)
-    await prompt_router.load()
+    if supabase:
+        await prompt_router.load()
     session_manager = SessionManager(supabase, prompt_router)
+    v3_session_manager = V3SessionManager(supabase, prompt_router)
     yield
     # Shutdown: close active sessions gracefully.
+    if v3_session_manager:
+        for device_id in list(v3_session_manager.sessions.keys()):
+            await v3_session_manager.kill_session(device_id)
     if session_manager:
         for device_id in list(session_manager.sessions.keys()):
             await session_manager.kill_session(device_id)
 
 
-app = FastAPI(title="Casa Companion Voice Server", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Casa Companion Voice Server", version="1.1.0-v3", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -95,6 +115,15 @@ async def voice_websocket(websocket: WebSocket, device_id: str, token: str = Que
     await session_manager.handle_connection(websocket, device_id, token)
 
 
+@app.websocket("/ws/voice-v3/{device_id}")
+async def voice_v3_websocket(websocket: WebSocket, device_id: str, token: str = Query(...)):
+    """V3 voice engine endpoint (wake-word, push-to-talk, interruptible TTS)."""
+    if not v3_session_manager:
+        await websocket.close(code=1011)
+        return
+    await v3_session_manager.handle_connection(websocket, device_id, token)
+
+
 @app.get("/events/{device_id}")
 async def events_stream(
     device_id: str,
@@ -105,10 +134,17 @@ async def events_stream(
     user = await _verify_dashboard_token(authorization, token)
     await _parent_owns_device(user, device_id)
 
-    if not session_manager:
+    if not session_manager and not v3_session_manager:
         raise HTTPException(status_code=503, detail="Server not ready")
 
-    q = session_manager.subscribe_events(device_id)
+    q = None
+    manager = None
+    if v3_session_manager:
+        q = v3_session_manager.subscribe_events(device_id)
+        manager = v3_session_manager
+    if not q and session_manager:
+        q = session_manager.subscribe_events(device_id)
+        manager = session_manager
     if not q:
         raise HTTPException(status_code=404, detail="Device not connected")
 
@@ -121,7 +157,7 @@ async def events_stream(
         except asyncio.CancelledError:
             raise
         finally:
-            session_manager.unsubscribe_events(device_id, q)
+            manager.unsubscribe_events(device_id, q)
 
     return StreamingResponse(generator(), media_type="text/event-stream")
 
@@ -136,8 +172,28 @@ async def kill_device(
     user = await _verify_dashboard_token(authorization, token)
     await _parent_owns_device(user, device_id)
 
-    if not session_manager:
-        raise HTTPException(status_code=503, detail="Server not ready")
-
-    killed = await session_manager.kill_session(device_id)
+    killed = False
+    if v3_session_manager:
+        killed = await v3_session_manager.kill_session(device_id) or killed
+    if session_manager:
+        killed = await session_manager.kill_session(device_id) or killed
     return JSONResponse({"killed": killed})
+
+
+# ── V3 browser test client ───────────────────────────────────────────────────
+client_dir = Path(__file__).parent.parent / "client"
+if client_dir.exists():
+    app.mount("/client", StaticFiles(directory=str(client_dir)), name="client")
+
+
+@app.get("/", response_class=HTMLResponse)
+async def root() -> str:
+    return """
+    <!DOCTYPE html>
+    <html><head><title>Casa Companion Voice Server</title></head>
+    <body>
+        <h1>Casa Companion Voice Server</h1>
+        <p><a href="/client/index.html">V3 Browser Client</a></p>
+        <p><a href="/health">Health Check</a></p>
+    </body></html>
+    """
