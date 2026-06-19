@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pdm-python
+.pdm-build
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+*.egg-info/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.pem
+*.cert
+*.key
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ESP32 firmware build
+firmware/build/
+firmware/sdkconfig.old
+firmware/dependencies.lock
+
+# Audio test files
+scripts/*.raw
+scripts/*.wav
+scripts/*.mp3
+
+# Vercel / Fly.io
+.vercel/
+
+# TypeScript
+*.tsbuildinfo
+
+# Coverage
+coverage/
+htmlcov/

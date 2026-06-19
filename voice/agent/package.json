@@ -1,0 +1,15 @@
+{
+  "name": "casa-companion-relay",
+  "version": "1.0.0",
+  "description": "WebSocket relay for Casa Companion firmware and frontend",
+  "main": "ws-relay.js",
+  "scripts": {
+    "start": "node ws-relay.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
