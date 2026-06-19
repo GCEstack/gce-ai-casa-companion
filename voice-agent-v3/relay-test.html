@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Casa Companion Relay Test</title>
+  <style>
+    body { font-family: sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+    button { margin: 0.25rem; padding: 0.5rem 1rem; }
+    #log { border: 1px solid #ccc; height: 300px; overflow-y: auto; padding: 0.5rem; font-family: monospace; font-size: 12px; background: #f9f9f9; }
+    .connected { color: green; } .disconnected { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Casa Companion Relay Test</h1>
+  <p>
+    URI: <input id="uri" value="ws://localhost:8080" size="40">
+    Character: <input id="character" value="coniglio" size="12">
+    <button id="connect">Connect</button>
+    <span id="state" class="disconnected">disconnected</span>
+  </p>
+  <p>
+    <button id="modeStory">mode_select story-time</button>
+    <button id="modePlay">mode_select play</button>
+    <button id="sendVoice">send voice_input (dummy base64)</button>
+  </p>
+  <div id="log"></div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    let ws = null;
+
+    function log(msg) {
+      const line = document.createElement('div');
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      $('log').prepend(line);
+    }
+
+    $('connect').onclick = () => {
+      if (ws) ws.close();
+      const uri = $('uri').value;
+      ws = new WebSocket(uri);
+      ws.onopen = () => {
+        $('state').textContent = 'connected';
+        $('state').className = 'connected';
+        log('WebSocket open');
+        ws.send(JSON.stringify({ type: 'connect', character: $('character').value }));
+      };
+      ws.onclose = () => {
+        $('state').textContent = 'disconnected';
+        $('state').className = 'disconnected';
+        log('WebSocket close');
+      };
+      ws.onerror = e => log('WebSocket error');
+      ws.onmessage = e => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type === 'voice_stream' && msg.data && msg.data.length > 80) {
+            msg.data = msg.data.slice(0, 80) + '...';
+          }
+          log('RX: ' + JSON.stringify(msg));
+        } catch (err) {
+          log('RX (raw): ' + e.data.slice(0, 200));
+        }
+      };
+    };
+
+    $('modeStory').onclick = () => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return log('not connected');
+      ws.send(JSON.stringify({ type: 'mode_select', mode: 'story-time', character: $('character').value }));
+      log('TX: mode_select story-time');
+    };
+
+    $('modePlay').onclick = () => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return log('not connected');
+      ws.send(JSON.stringify({ type: 'mode_select', mode: 'play', character: $('character').value }));
+      log('TX: mode_select play');
+    };
+
+    $('sendVoice').onclick = () => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return log('not connected');
+      const dummy = btoa(String.fromCharCode(...new Uint8Array(1024).fill(0)));
+      ws.send(JSON.stringify({ type: 'voice_input', data: dummy }));
+      log('TX: voice_input dummy PCM');
+    };
+  </script>
+</body>
+</html>

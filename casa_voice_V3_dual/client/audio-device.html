@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Casa Voice — Audio Device</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #111;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow: hidden;
+    }
+    #status {
+      font-size: 1.4rem;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    #connStatus {
+      font-size: 0.9rem;
+      padding: 6px 14px;
+      border-radius: 16px;
+      margin-bottom: 24px;
+      background: #f00;
+      color: #fff;
+    }
+    #connStatus.connected { background: #0f0; color: #000; }
+    .avatar {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: #333;
+      border: 4px solid #555;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 72px;
+      margin-bottom: 24px;
+      transition: all 0.3s ease;
+    }
+    .avatar.listening { border-color: #0f0; box-shadow: 0 0 40px #0f0; }
+    .avatar.speaking { border-color: #e11; box-shadow: 0 0 40px #e11; animation: pulse 1s infinite; }
+    .avatar.wake_detected { border-color: #ff0; box-shadow: 0 0 40px #ff0; }
+    .avatar.idle { border-color: #555; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    #interruptBtn {
+      width: 100%;
+      max-width: 300px;
+      padding: 24px;
+      font-size: 1.5rem;
+      border-radius: 16px;
+      border: none;
+      background: #a11;
+      color: #fff;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    #interruptBtn:active { transform: scale(0.98); }
+    #micLevel {
+      width: 100%;
+      max-width: 300px;
+      height: 12px;
+      background: #333;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    #micLevelFill {
+      height: 100%;
+      width: 0%;
+      background: #0f0;
+      transition: width 0.05s linear;
+    }
+    #sessionInfo {
+      font-size: 0.8rem;
+      opacity: 0.6;
+      text-align: center;
+      word-break: break-all;
+    }
+    .hint {
+      font-size: 0.85rem;
+      opacity: 0.6;
+      text-align: center;
+      margin-top: 12px;
+      max-width: 300px;
+    }
+    #startOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+      text-align: center;
+    }
+    #startOverlay.hidden { display: none; }
+    #startOverlay h1 { font-size: 1.4rem; margin-bottom: 16px; }
+    #startOverlay p { opacity: 0.7; margin-bottom: 24px; max-width: 300px; }
+    #startBtn {
+      padding: 18px 36px;
+      font-size: 1.2rem;
+      border-radius: 30px;
+      border: none;
+      background: #0f0;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #startBtn:active { transform: scale(0.97); }
+  </style>
+</head>
+<body>
+  <div id="startOverlay">
+    <h1>🎙 Casa Voice Audio Device</h1>
+    <p>Tap below to connect microphone and speaker. Keep this screen on.</p>
+    <button id="startBtn">Tap to Connect</button>
+    <div class="hint">Session: <span id="startSessionId"></span></div>
+  </div>
+
+  <div id="connStatus" class="disconnected">Offline</div>
+  <div id="avatar" class="avatar idle">🐻</div>
+  <div id="status">Say "Hello" or "Wake up"</div>
+  <div id="micLevel"><div id="micLevelFill"></div></div>
+  <button id="interruptBtn">⏹ Interrupt</button>
+  <div id="sessionInfo"></div>
+  <div class="hint">This phone is the audio device. Open the dashboard on another screen with the same session ID.</div>
+
+  <script src="audio-device.js"></script>
+</body>
+</html>

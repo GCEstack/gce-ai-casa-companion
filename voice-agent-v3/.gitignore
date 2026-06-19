@@ -1,0 +1,36 @@
+# General
+.env
+.env.local
+.env.*.local
+.DS_Store
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+
+# IDEs
+.vscode/
+.idea/
+
+# ESP-IDF
+build/
+sdkconfig
+sdkconfig.old
+*.elf
+*.bin
+*.map
+
+# macOS
+Thumbs.db

@@ -1,0 +1,146 @@
+[
+  {
+    "char": "agenda",
+    "variant": "speaking",
+    "filename": "agenda_speaking.mp4",
+    "prompt": "elegant Agenda gently breathing, soft blink, subtle smile, hair swaying slightly, holding planner and snack with a graceful little gesture, castle background alive with soft light. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+    "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin, changing background",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\agenda.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\agenda_speaking.mp4"
+  },
+  {
+    "char": "alien",
+    "variant": "speaking",
+    "filename": "alien_speaking.mp4",
+    "prompt": "cute teal alien gently bobbing, three big eyes blinking one after another, glowing antennae tips pulsing, soft bubbles floating by, friendly curious expression. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+    "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping, scary, aggressive",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\alien.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\alien_speaking.mp4"
+  },
+  {
+    "char": "dragon_v2",
+    "variant": "idle",
+    "filename": "dragon_v2_idle.mp4",
+    "prompt": "A soft cute plush Dragon v2 character, friendly green dragon waving gently, small wings fluttering, nostrils puffing soft smoke, tail swaying, satchel strap shifting, warm forest light flickering. Subtle calm motion, gentle breathing, soft peaceful blinks, alive and natural. Warm cinematic lighting, soothing atmosphere, friendly and gentle. Loopable, no camera movement, centered character.",
+    "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping, fire blast, scary",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\dragon_v2.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\dragon_v2_idle.mp4"
+  },
+  {
+    "char": "dragon_v2",
+    "variant": "speaking",
+    "filename": "dragon_v2_speaking.mp4",
+    "prompt": "friendly green dragon waving gently, small wings fluttering, nostrils puffing soft smoke, tail swaying, satchel strap shifting, warm forest light flickering. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+    "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping, fire blast, scary",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\dragon_v2.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\dragon_v2_speaking.mp4"
+  },
+  {
+    "char": "fraggl",
+    "variant": "speaking",
+    "filename": "fraggl_speaking.mp4",
+    "prompt": "furry orange Fraggl gently swaying, big smile widening, fluffy red hair bouncing, large ears twitching, crystal cave lights shimmering softly. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+    "negative_prompt": "frozen still, no fur movement, blurry, distorted, warping, scary",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\fraggl.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\fraggl_speaking.mp4"
+  },
+  {
+    "char": "grouch",
+    "variant": "speaking",
+    "filename": "grouch_speaking.mp4",
+    "prompt": "grumpy green Grouch slowly blinking, shaggy fur ruffling, trash can lid wobbling, unimpressed head tilt, soft alley breeze. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+    "negative_prompt": "frozen still, no fur movement, blurry, distorted, warping, happy expression",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\grouch.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\grouch_speaking.mp4"
+  },
+  {
+    "char": "lotso",
+    "variant": "speaking",
+    "filename": "lotso_speaking.mp4",
+    "prompt": "two-toned Lotso bear slowly turning his head, serious expression shifting, suit fabric moving, cigar smoke drifting, imposing but calm stance. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+    "negative_prompt": "frozen still, no fur movement, blurry, distorted, warping, cute expression",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\lotso.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\lotso_speaking.mp4"
+  },
+  {
+    "char": "lotso_baby",
+    "variant": "speaking",
+    "filename": "lotso_baby_speaking.mp4",
+    "prompt": "adorable baby Lotso bear waving a paw, big sparkly eyes blinking, strawberry wobbling, bib swaying, soft nursery decorations floating gently. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+    "negative_prompt": "frozen still, no fur movement, blurry, distorted, warping, adult expression",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\lotso_baby.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\lotso_baby_speaking.mp4"
+  },
+  {
+    "char": "lotso_mobster",
+    "variant": "speaking",
+    "filename": "lotso_mobster_speaking.mp4",
+    "prompt": "elder Lotso bear tapping his cane gently, wise calm breathing, colorful sash swaying, scar expression shifting, warm fireplace glow flickering. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+    "negative_prompt": "frozen still, no fur movement, blurry, distorted, warping, young expression",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\lotso_mobster.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\lotso_mobster_speaking.mp4"
+  },
+  {
+    "char": "lucha_bee",
+    "variant": "speaking",
+    "filename": "lucha_bee_speaking.mp4",
+    "prompt": "mighty luchador bee flexing proudly, antennae bouncing, championship belt glinting, cape fluttering, confetti falling slowly, fist pump motion. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+    "negative_prompt": "frozen still, no wing or cape movement, blurry, distorted, warping",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\lucha_bee.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\lucha_bee_speaking.mp4"
+  },
+  {
+    "char": "mija",
+    "variant": "speaking",
+    "filename": "mija_speaking.mp4",
+    "prompt": "caring Mija gently breathing, soft warm smile, dark hair flowing, holding heart-shaped baby frame with a tender gesture, clinic lights calm and steady. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+    "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\mija.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\mija_speaking.mp4"
+  },
+  {
+    "char": "ninja_cat",
+    "variant": "speaking",
+    "filename": "ninja_cat_speaking.mp4",
+    "prompt": "stealthy ninja cat adjusting stance, headband ribbon fluttering, tail swaying, staff spinning slowly, cherry blossom petals drifting, ears twitching alertly. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+    "negative_prompt": "frozen still, no fur or fabric movement, blurry, distorted, warping",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\ninja_cat.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\ninja_cat_speaking.mp4"
+  },
+  {
+    "char": "papa",
+    "variant": "speaking",
+    "filename": "papa_speaking.mp4",
+    "prompt": "confident Papa smiling, leaning back in DJ chair, headphones shifting, tattooed arm flexing slightly, castle sunset light changing, whiskey bottle glinting. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+    "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\papa.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\papa_speaking.mp4"
+  },
+  {
+    "char": "pirate_parrot",
+    "variant": "speaking",
+    "filename": "pirate_parrot_speaking.mp4",
+    "prompt": "colorful pirate parrot squawking happily, pirate hat tipping, eye patch steady, wings flapping once, tail feathers ruffling, ocean waves rolling behind. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+    "negative_prompt": "wings clipped, no wing movement, blurry feathers, frozen pose",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\pirate_parrot.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\pirate_parrot_speaking.mp4"
+  },
+  {
+    "char": "transformer_bot",
+    "variant": "speaking",
+    "filename": "transformer_bot_speaking.mp4",
+    "prompt": "heroic robot slowly raising a hand in greeting, blue eyes glowing brighter, chest light pulsing, arm panels shifting subtly, city background alive with soft motion. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+    "negative_prompt": "lifeless, frozen, blurry, distorted, no light movement, transforming",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\transformer_bot.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\transformer_bot_speaking.mp4"
+  },
+  {
+    "char": "trex",
+    "variant": "speaking",
+    "filename": "trex_speaking.mp4",
+    "prompt": "cute baby T-Rex bouncing excitedly, tiny arms wiggling, big friendly eyes blinking, red sneakers tapping, flower field swaying in breeze. The character is speaking directly to a child — mouth opening and closing rhythmically with each word, expressive gentle facial expressions, slight head bobbing, warm friendly demeanor. Engaging, lively, cinematic lighting. Loopable talking motion, no camera movement, centered character.",
+    "negative_prompt": "frozen still, no movement, blurry, distorted, warping, scary, roaring",
+    "img_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\pipelines\\hero-video\\heroes_phase3\\trex.png",
+    "out_path": "C:\\Users\\Dekan AI Brother\\Projects\\ACTIVE\\apps-platforms\\casa-companion\\web-revamp\\public\\videos\\trex_speaking.mp4"
+  }
+]

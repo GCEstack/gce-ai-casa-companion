@@ -1,0 +1,29 @@
+[project]
+name = "casa-voice"
+version = "2.1.0"
+description = "Casa Companion Voice Agent V3 — Fast Groq/OpenAI Cloud Voice"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "httpx>=0.27",
+    "numpy>=1.26",
+    "torch>=2.2",
+    "onnxruntime>=1.17",
+    "python-dotenv>=1.0",
+    "supabase>=2.0",
+    "qrcode[pil]>=7.0",
+    "pvporcupine<2.0",
+    "openai>=1.30",
+    "azure-cognitiveservices-speech>=1.40",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "black", "ruff", "websockets", "aiohttp"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

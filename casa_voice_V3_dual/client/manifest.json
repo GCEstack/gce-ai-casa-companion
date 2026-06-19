@@ -1,0 +1,16 @@
+{
+  "name": "Casa Voice",
+  "short_name": "CasaVoice",
+  "start_url": "/client/index.html",
+  "display": "standalone",
+  "background_color": "#111",
+  "theme_color": "#e11",
+  "icons": [
+    {
+      "src": "/client/icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

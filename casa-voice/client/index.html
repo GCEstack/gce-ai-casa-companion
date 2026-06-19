@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Casa Companion</title>
+    <link rel="manifest" href="/client/manifest.json">
+    <meta name="theme-color" content="#FF6B6B">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            overflow: hidden;
+        }
+        .container {
+            width: 100%;
+            max-width: 420px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        .avatar {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+            transition: all 0.3s ease;
+            border: 4px solid rgba(255,255,255,0.3);
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .avatar:hover { transform: scale(1.05); }
+        .avatar.listening { 
+            animation: pulse 1s infinite; 
+            border-color: #FFD93D; 
+            box-shadow: 0 0 30px rgba(255,217,61,0.5);
+        }
+        .avatar.thinking { 
+            animation: bounce 0.5s infinite; 
+            border-color: #6BCB77;
+        }
+        .avatar.speaking { 
+            animation: wave 0.3s infinite; 
+            border-color: #FF6B6B;
+            box-shadow: 0 0 40px rgba(255,107,107,0.6);
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        @keyframes wave {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.05) rotate(2deg); }
+            75% { transform: scale(1.05) rotate(-2deg); }
+        }
+        .status {
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.9;
+        }
+        .talk-btn {
+            width: 100%;
+            max-width: 280px;
+            padding: 20px 40px;
+            font-size: 20px;
+            font-weight: 700;
+            border: none;
+            border-radius: 50px;
+            background: rgba(255,255,255,0.25);
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            touch-action: none;
+            -webkit-touch-callout: none;
+        }
+        .talk-btn:hover { background: rgba(255,255,255,0.35); }
+        .talk-btn:active { transform: scale(0.95); }
+        .talk-btn.recording { 
+            background: #FF6B6B; 
+            animation: pulse 0.5s infinite;
+        }
+        .characters {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .char-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.15);
+            font-size: 28px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .char-btn:hover { background: rgba(255,255,255,0.3); transform: scale(1.1); }
+        .char-btn.active { 
+            border-color: #FFD93D; 
+            background: rgba(255,217,61,0.3);
+            box-shadow: 0 0 15px rgba(255,217,61,0.4);
+        }
+        .modes {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .mode-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.15);
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .mode-btn:hover { background: rgba(255,255,255,0.3); }
+        .mode-btn.active { 
+            border-color: #6BCB77; 
+            background: rgba(107,203,119,0.3);
+        }
+        .volume {
+            width: 100%;
+            max-width: 280px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .volume input {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.3);
+            outline: none;
+        }
+        .volume input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+        }
+        .connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+        .connection-status.connected { background: rgba(107,203,119,0.4); }
+        .connection-status.disconnected { background: rgba(255,107,107,0.4); }
+        .debug-log {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            max-height: 100px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.5);
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 11px;
+            font-family: monospace;
+            display: none;
+        }
+        .debug-log.visible { display: block; }
+    </style>
+</head>
+<body>
+    <div class="connection-status disconnected" id="connStatus">Offline</div>
+    
+    <div class="container">
+        <div class="avatar idle" id="avatar">🐻</div>
+        <div class="status" id="status">Tap to talk</div>
+        
+        <button class="talk-btn" id="talkBtn" ontouchstart="return false;">
+            🎤 Hold to Talk
+        </button>
+        
+        <div class="characters" id="characters">
+            <button class="char-btn active" data-character="orsetto">🐻</button>
+            <button class="char-btn" data-character="coniglio">🐰</button>
+            <button class="char-btn" data-character="drago">🐉</button>
+        </div>
+        
+        <div class="modes" id="modes">
+            <button class="mode-btn active" data-mode="default">Chat</button>
+            <button class="mode-btn" data-mode="story">📖 Story</button>
+            <button class="mode-btn" data-mode="play">🎮 Play</button>
+            <button class="mode-btn" data-mode="bedtime">🌙 Sleep</button>
+            <button class="mode-btn" data-mode="sing">🎵 Sing</button>
+        </div>
+        
+        <div class="volume">
+            <span>🔊</span>
+            <input type="range" min="0" max="100" value="80" id="volumeSlider">
+            <span id="volumeValue">80%</span>
+        </div>
+    </div>
+    
+    <div class="debug-log" id="debugLog"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

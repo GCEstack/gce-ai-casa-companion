@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Casa Voice</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #111;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .avatar {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: #333;
+      border: 4px solid #555;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 20px;
+      user-select: none;
+    }
+    .avatar.listening { border-color: #0f0; box-shadow: 0 0 30px #0f0; }
+    .avatar.speaking { border-color: #e11; box-shadow: 0 0 30px #e11; animation: pulse 1s infinite; }
+    .avatar.wake_detected { border-color: #ff0; box-shadow: 0 0 30px #ff0; }
+    .avatar.idle { border-color: #555; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    #status { font-size: 1.2rem; margin-bottom: 12px; opacity: 0.9; text-align: center; }
+    #deviceStatus { font-size: 1rem; margin-bottom: 12px; opacity: 0.8; text-align: center; }
+    #talkBtn, #interruptBtn {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #333;
+      border: 3px solid #666;
+      color: #fff;
+      font-size: 32px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #talkBtn.recording { background: #e11; border-color: #f55; box-shadow: 0 0 20px #e11; }
+    #talkBtn:active, #interruptBtn:active { transform: scale(0.95); }
+    #interruptBtn { background: #a11; border-color: #e55; display: none; }
+    #interruptBtn.visible { display: flex; }
+    .connection-status {
+      font-size: 0.8rem;
+      padding: 4px 12px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+    .connection-status.connected { background: #0f0; color: #000; }
+    .connection-status.disconnected { background: #f00; color: #fff; }
+    .volume-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    #volumeSlider { width: 150px; }
+    #volumeValue { font-size: 0.9rem; min-width: 40px; }
+    .mode-picker {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .mode-option {
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 2px solid #555;
+      background: #222;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+    .mode-option.active {
+      border-color: #e11;
+      background: #e11;
+    }
+    .char-grid, .mode-grid {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .char-btn, .mode-btn {
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 2px solid #555;
+      background: #222;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+    .char-btn.active, .mode-btn.active {
+      border-color: #e11;
+      background: #e11;
+    }
+    #transcript {
+      max-width: 400px;
+      text-align: center;
+      opacity: 0.7;
+      min-height: 1.5rem;
+      margin-bottom: 15px;
+      font-style: italic;
+    }
+    #conversation {
+      width: 100%;
+      max-width: 500px;
+      max-height: 220px;
+      overflow-y: auto;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .msg {
+      padding: 8px 12px;
+      border-radius: 12px;
+      max-width: 85%;
+      line-height: 1.35;
+      font-size: 0.95rem;
+      word-break: break-word;
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: #2a4a2a;
+      color: #d0ffd0;
+      border-bottom-right-radius: 4px;
+    }
+    .msg.assistant {
+      align-self: flex-start;
+      background: #3a3a3a;
+      color: #fff;
+      border-bottom-left-radius: 4px;
+    }
+    .msg-meta {
+      font-size: 0.7rem;
+      opacity: 0.6;
+      margin-bottom: 2px;
+    }
+    #debugLog {
+      width: 100%;
+      max-width: 500px;
+      height: 150px;
+      overflow-y: auto;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: #aaa;
+    }
+    #debugLog div { margin-bottom: 2px; }
+    .mic-level {
+      width: 100%;
+      max-width: 300px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .mic-level.visible {
+      display: block;
+    }
+    .mic-selector {
+      width: 100%;
+      max-width: 340px;
+      margin-bottom: 16px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .mic-selector.visible {
+      display: flex;
+    }
+    .mic-selector label {
+      font-size: 0.85rem;
+      opacity: 0.8;
+    }
+    .mic-selector select {
+      flex: 1;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #555;
+      background: #222;
+      color: #fff;
+      font-size: 0.85rem;
+    }
+    .toggle-row {
+      width: 100%;
+      max-width: 340px;
+      margin-bottom: 16px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+    .toggle-row.visible {
+      display: flex;
+    }
+    .toggle-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    .mic-selector button {
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #555;
+      background: #333;
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .mic-level-label {
+      font-size: 0.75rem;
+      text-align: center;
+      margin-bottom: 4px;
+      opacity: 0.7;
+    }
+    .mic-level-bar {
+      height: 8px;
+      background: #333;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    #micLevelFill {
+      height: 100%;
+      width: 0%;
+      background: #0f0;
+      transition: width 0.05s linear;
+    }
+    #micLevelValue {
+      font-size: 0.7rem;
+      text-align: center;
+      margin-top: 2px;
+      opacity: 0.6;
+    }
+    .hint {
+      font-size: 0.75rem;
+      opacity: 0.5;
+      margin-top: 10px;
+      text-align: center;
+    }
+    .bt-controls {
+      width: 100%;
+      max-width: 340px;
+      margin-bottom: 16px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .bt-controls.visible {
+      display: flex;
+    }
+    .bt-controls button {
+      padding: 10px 16px;
+      border-radius: 20px;
+      border: 2px solid #00aaff;
+      background: #003355;
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.95rem;
+      width: 100%;
+    }
+    .bt-controls button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #btStatus {
+      font-size: 0.8rem;
+      opacity: 0.8;
+      text-align: center;
+    }
+    .action-panel {
+      width: 100%;
+      max-width: 400px;
+      border: 1px solid #444;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 16px;
+      background: #1a1a1a;
+      display: none;
+    }
+    .action-panel.visible {
+      display: block;
+    }
+    .action-panel h3 {
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      opacity: 0.8;
+    }
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .action-btn {
+      padding: 8px 4px;
+      border-radius: 8px;
+      border: 1px solid #555;
+      background: #2a2a2a;
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .action-btn:active { transform: scale(0.96); }
+    #lastAction {
+      font-size: 0.75rem;
+      opacity: 0.6;
+      text-align: center;
+      min-height: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="mode-picker">
+    <button class="mode-option active" data-client-mode="browser">🎧 Browser Audio</button>
+    <button class="mode-option" data-client-mode="bluetooth">🔷 Bluetooth Device</button>
+    <button class="mode-option" data-client-mode="dashboard">📺 External Device</button>
+  </div>
+
+  <div id="avatar" class="avatar idle">🐻</div>
+  <div id="status">Say "Hello" or "Wake up" to start</div>
+  <div id="deviceStatus"></div>
+  <div id="connStatus" class="connection-status disconnected">Offline</div>
+
+  <div class="mic-selector" id="micSelectorContainer">
+    <label for="micSelect">🎙 Mic</label>
+    <select id="micSelect"></select>
+    <button id="refreshMicsBtn" title="Refresh microphones">🔄</button>
+  </div>
+
+  <div class="toggle-row" id="autoListenRow">
+    <label for="autoListenToggle" title="When on, the mic is always hot and listens for 'Porcupine'. When off, use push-to-talk or the Wake button.">
+      <input type="checkbox" id="autoListenToggle">
+      Always listen for wake word
+    </label>
+  </div>
+
+  <div class="mic-level" id="micLevelContainer">
+    <div class="mic-level-label">Mic input</div>
+    <div class="mic-level-bar"><div id="micLevelFill"></div></div>
+    <div id="micLevelValue">0%</div>
+  </div>
+
+  <div class="volume-control" id="volumeControl">
+    <span>🔊</span>
+    <input type="range" id="volumeSlider" min="0" max="100" value="80">
+    <span id="volumeValue">80%</span>
+  </div>
+
+  <div class="char-grid">
+    <button class="char-btn active" data-character="default">🐻 Default</button>
+    <button class="char-btn" data-character="drago">🐉 Drago</button>
+    <button class="char-btn" data-character="liam">🎧 Liam</button>
+    <button class="char-btn" data-character="jenny">🎨 Jenny</button>
+  </div>
+
+  <div class="mode-grid">
+    <button class="mode-btn active" data-mode="default">Default</button>
+    <button class="mode-btn" data-mode="story">Story</button>
+    <button class="mode-btn" data-mode="play">Play</button>
+    <button class="mode-btn" data-mode="quick_chat">⚡ Quick Chat</button>
+  </div>
+
+  <div id="btControls" class="bt-controls" style="display:none;">
+    <button id="btConnectBtn">🔷 Connect Bluetooth</button>
+    <button id="btDisconnectBtn" style="display:none;">Disconnect</button>
+    <div id="btStatus">No Bluetooth device connected</div>
+  </div>
+
+  <div class="action-panel" id="actionPanel">
+    <h3>⚡ Actions</h3>
+    <div class="action-grid">
+      <button class="action-btn" data-action="interrupt">⏹ Stop</button>
+      <button class="action-btn" data-action="wake">👂 Wake</button>
+      <button class="action-btn" data-action="reset">🔄 Reset</button>
+      <button class="action-btn" data-action="volume_down">🔉 Quieter</button>
+      <button class="action-btn" data-action="volume_up">🔊 Louder</button>
+      <button class="action-btn" data-action="scene_joke">😂 Joke</button>
+      <button class="action-btn" data-action="scene_bedtime">🌙 Bedtime</button>
+      <button class="action-btn" data-action="scene_greeting">👋 Hello</button>
+    </div>
+    <div id="lastAction"></div>
+  </div>
+
+  <div id="transcript"></div>
+  <div id="conversation"></div>
+
+  <button id="talkBtn">🎤</button>
+  <button id="interruptBtn" title="Interrupt">⏹</button>
+
+  <div id="debugLog"></div>
+
+  <div class="hint" id="browserHint">
+    Hold 🎤 to talk &nbsp;|&nbsp; Say "Porcupine" &nbsp;|&nbsp; Click Wake to bypass wake word &nbsp;|&nbsp; Space / avatar = interrupt &nbsp;|&nbsp; R = reset
+  </div>
+  <div class="hint" id="dashboardHint" style="display:none;">
+    Connect an ESP32 audio device to this session &nbsp;|&nbsp; Change character/voice remotely &nbsp;|&nbsp; Click interrupt to stop the speaker
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

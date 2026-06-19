@@ -1,0 +1,156 @@
+menu "Casa Companion Voice Agent Configuration"
+
+    config CASA_WIFI_SSID
+        string "WiFi SSID"
+        default "myssid"
+        help
+            SSID of the WiFi network to connect to.
+
+    config CASA_WIFI_PASSWORD
+        string "WiFi Password"
+        default "mypassword"
+        help
+            WiFi password. Do not commit real secrets.
+
+    config CASA_DEVICE_ID
+        string "Device ID"
+        default "casa-0001"
+        help
+            Unique device identifier used in the WebSocket path.
+
+    config CASA_API_KEY
+        string "API Key"
+        default "change-me"
+        help
+            API token sent as the WebSocket query parameter.
+
+    config CASA_WEBSOCKET_URI
+        string "WebSocket Relay URI"
+        default "wss://casa-relay.onrender.com"
+        help
+            WebSocket URI of the relay server that the firmware and frontend both connect to.
+            Development: ws://192.168.1.xxx:8080
+            Production:  wss://casa-relay.onrender.com
+
+    config CASA_DEFAULT_CHARACTER
+        string "Default character"
+        default "coniglio"
+        help
+            Character selected on boot and used in voice_stream messages.
+
+    config CASA_DEFAULT_MODE
+        string "Default mode"
+        default "story-time"
+        help
+            Mode selected on boot (e.g. story-time, play, support).
+
+    config CASA_VOICE_CHUNK_SAMPLES
+        int "Voice chunk size (samples)"
+        default 512
+        help
+            Number of 16-bit mono samples per voice_stream chunk. 512 samples = 32 ms @ 16 kHz.
+
+    config CASA_VOICE_SERVER_URL
+        string "Voice Server Base URL"
+        default "wss://casa-voice-agent.fly.dev"
+        help
+            Base WebSocket URL of the Fly.io voice server (no trailing path).
+
+    config CASA_WAKE_WORD_PRIMARY
+        string "Primary wake word name"
+        default "orsetto"
+        help
+            Logical name used for NFC/character mapping.
+
+    config CASA_WAKE_WORD_SECONDARY
+        string "Secondary wake word name"
+        default "drago"
+        help
+            Secondary logical wake word name.
+
+    config CASA_WAKE_GPIO
+        int "Wake word / wake button GPIO"
+        default 0
+        help
+            GPIO connected to the wake button. Pulled up, active low.
+
+    config CASA_WAKE_HOLD_MS
+        int "Wake-word active window (ms)"
+        default 5000
+        help
+            Length of time the WW_DETECTED_BIT stays set after a trigger.
+
+    config CASA_USE_LIBOPUS
+        bool "Use libopus encoder"
+        default n
+        help
+            Enable when an external libopus component is included in the project.
+            If disabled, raw PCM frames are sent instead.
+
+    config CASA_I2S_MIC_BCK
+        int "I2S mic BCK GPIO"
+        default 4
+
+    config CASA_I2S_MIC_WS
+        int "I2S mic WS/LRCK GPIO"
+        default 5
+
+    config CASA_I2S_MIC_DATA
+        int "I2S mic DATA GPIO"
+        default 6
+
+    config CASA_I2S_SPK_BCK
+        int "I2S speaker BCK GPIO"
+        default 7
+
+    config CASA_I2S_SPK_WS
+        int "I2S speaker WS/LRCK GPIO"
+        default 15
+
+    config CASA_I2S_SPK_DATA
+        int "I2S speaker DATA GPIO"
+        default 16
+
+    config CASA_PN532_I2C_PORT
+        int "PN532 I2C port"
+        default 0
+
+    config CASA_PN532_SDA
+        int "PN532 SDA GPIO"
+        default 8
+
+    config CASA_PN532_SCL
+        int "PN532 SCL GPIO"
+        default 9
+
+    config CASA_BATTERY_ADC_CHANNEL
+        int "Battery ADC1 channel"
+        default 3
+        help
+            ADC1 channel number used for battery voltage measurement.
+
+    config CASA_BATTERY_ADC_VREF_MV
+        int "ADC reference voltage (mV)"
+        default 1100
+
+    config CASA_BATTERY_DIVIDER_R1
+        int "Battery divider R1 (kOhm)"
+        default 100
+
+    config CASA_BATTERY_DIVIDER_R2
+        int "Battery divider R2 (kOhm)"
+        default 100
+
+    config CASA_BATTERY_SLEEP_THRESHOLD
+        int "Battery sleep threshold (percent)"
+        default 10
+
+    config CASA_BATTERY_REPORT_MS
+        int "Battery report interval (ms)"
+        default 30000
+
+    config CASA_SLEEP_DURATION_MS
+        int "Deep-sleep duration before wake retry (ms)"
+        default 60000
+
+endmenu

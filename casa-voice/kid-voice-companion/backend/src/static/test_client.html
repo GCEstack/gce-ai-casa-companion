@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kid Voice Agent — Test Client</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    button { padding: 0.75rem 1.25rem; margin-right: 0.5rem; font-size: 1rem; }
+    #log { background: #111; color: #0f0; font-family: monospace; padding: 1rem; height: 300px; overflow-y: auto; margin-top: 1rem; white-space: pre-wrap; }
+    .controls { margin: 1rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Kid Voice Agent — Test Client</h1>
+  <p>Sends 16 kHz mono PCM16 audio and receives the same format.</p>
+  <div class="controls">
+    <button id="startBtn">Start Voice</button>
+    <button id="stopBtn" disabled>Stop</button>
+  </div>
+  <div>
+    <input type="text" id="textInput" placeholder="Or type a message..." style="width: 70%; padding: 0.5rem;" />
+    <button id="sendTextBtn">Send Text</button>
+  </div>
+  <div id="log"></div>
+  <script>
+    const SAMPLE_RATE = 16000;
+    const WS_URL = 'ws://localhost:8000/ws/voice';
+    let ws = null, audioCtx = null, micStream = null, scriptNode = null, sourceNode = null, playTime = 0;
+    const logEl = document.getElementById('log');
+    function log(msg) { logEl.textContent += '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n'; logEl.scrollTop = logEl.scrollHeight; }
+    function float32ToPcm16(arr) { const i16 = new Int16Array(arr.length); for (let i=0;i<arr.length;i++){ let s=Math.max(-1,Math.min(1,arr[i])); i16[i]=s<0?s*32768:s*32767; } return new Uint8Array(i16.buffer); }
+    function playPcm16(data) { if(!audioCtx)return; const i16=new Int16Array(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength)); const f32=new Float32Array(i16.length); for(let i=0;i<i16.length;i++)f32[i]=i16[i]/32768.0; const buf=audioCtx.createBuffer(1,f32.length,SAMPLE_RATE); buf.copyToChannel(f32,0); const src=audioCtx.createBufferSource(); src.buffer=buf; src.connect(audioCtx.destination); const now=audioCtx.currentTime; if(now>playTime)playTime=now; src.start(playTime); playTime+=buf.duration; }
+    async function startVoice() { try { audioCtx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:SAMPLE_RATE}); await audioCtx.resume(); ws=new WebSocket(WS_URL); ws.binaryType='arraybuffer'; ws.onopen=()=>log('WebSocket connected'); ws.onclose=()=>log('WebSocket closed'); ws.onerror=()=>log('WebSocket error'); ws.onmessage=(e)=>{ if(e.data instanceof ArrayBuffer) playPcm16(new Uint8Array(e.data)); else log('Text: '+e.data); }; micStream=await navigator.mediaDevices.getUserMedia({audio:{sampleRate:SAMPLE_RATE,channelCount:1,echoCancellation:true,noiseSuppression:true}}); sourceNode=audioCtx.createMediaStreamSource(micStream); scriptNode=audioCtx.createScriptProcessor(1024,1,1); scriptNode.onaudioprocess=(e)=>{ if(ws&&ws.readyState===WebSocket.OPEN) ws.send(float32ToPcm16(e.inputBuffer.getChannelData(0))); }; sourceNode.connect(scriptNode); scriptNode.connect(audioCtx.destination); log('Microphone started'); document.getElementById('startBtn').disabled=true; document.getElementById('stopBtn').disabled=false; } catch(err){ log('Error: '+err.message); } }
+    function stopVoice() { if(scriptNode)scriptNode.disconnect(); if(sourceNode)sourceNode.disconnect(); if(micStream)micStream.getTracks().forEach(t=>t.stop()); if(ws)ws.close(); if(audioCtx)audioCtx.close(); document
