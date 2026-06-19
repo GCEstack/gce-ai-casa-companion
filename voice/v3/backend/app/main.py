@@ -17,13 +17,12 @@ from supabase._async.client import AsyncClient as SupabaseClient
 
 from .config import get_settings
 from .prompt_router import PromptRouter
-from .session_manager import SessionManager
 from .v3_manager import V3SessionManager
 
 
 settings = get_settings()
 supabase: SupabaseClient | None = None
-session_manager: SessionManager | None = None
+session_manager: Any | None = None  # lazily imported to avoid legacy deepgram startup issues
 v3_session_manager: V3SessionManager | None = None
 
 
@@ -44,6 +43,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     prompt_router = PromptRouter(supabase)
     if supabase:
         await prompt_router.load()
+
+    # Lazy import legacy session manager so its deepgram dependency doesn't break startup.
+    from .session_manager import SessionManager
+
     session_manager = SessionManager(supabase, prompt_router)
     v3_session_manager = V3SessionManager(supabase, prompt_router)
     yield
@@ -109,6 +112,9 @@ async def health() -> JSONResponse:
 
 @app.websocket("/ws/voice/{device_id}")
 async def voice_websocket(websocket: WebSocket, device_id: str, token: str = Query(...)):
+    # Lazy import keeps legacy deepgram import optional.
+    from .session_manager import SessionManager
+
     if not session_manager:
         await websocket.close(code=1011)
         return
