@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "casa-voice-v2"
+version = "2.1.0"
+description = "Casa Companion Voice Agent V2 — Wake Phrase Edition with ESP32 + PWA"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Casa Companion Team"}
+]
+keywords = ["voice", "ai", "companion", "children", "esp32", "websocket"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.30",
+    "httpx>=0.27",
+    "numpy>=1.26",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+all = [
+    "supabase>=2.5",
+    "torch>=2.3",
+    "onnxruntime>=1.18",
+    "websockets>=12.0",
+]
+
+[project.scripts]
+casa-voice = "main:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+casa_voice = ["*.md"]

@@ -1,0 +1,9 @@
+{
+    "name": "Casa Voice V2",
+    "short_name": "Casa Voice",
+    "description": "AI companion voice agent for kids",
+    "start_url": "/client/index.html?v=2",
+    "display": "standalone",
+    "background_color": "#1a1a2e",
+    "theme_color": "#FF8C42"
+}
