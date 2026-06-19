@@ -1,0 +1,12 @@
+{
+  "backend": "pika_fal",
+  "final_duration": 15,
+  "clip_duration": 5,
+  "resolution": "720p",
+  "aspect_ratio": "16:9",
+  "concurrency": 3,
+  "max_retries": 3,
+  "seed": null,
+  "transition": "fade",
+  "transition_duration": 0.5
+}

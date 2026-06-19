@@ -298,6 +298,134 @@
       "negative_prompt": "frozen still, no fur or feather movement, blurry, distorted, warping",
       "duration": 5,
       "motion_strength": 3
+    },
+    "agenda": {
+      "name": "Agenda",
+      "category": "humanoid",
+      "motion_prompt": "elegant Agenda gently breathing, soft blink, subtle smile, hair swaying slightly, holding planner and snack with a graceful little gesture, castle background alive with soft light",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin, changing background",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "alien": {
+      "name": "Alien",
+      "category": "fantasy",
+      "motion_prompt": "cute teal alien gently bobbing, three big eyes blinking one after another, glowing antennae tips pulsing, soft bubbles floating by, friendly curious expression",
+      "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping, scary, aggressive",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "fraggl": {
+      "name": "Fraggl",
+      "category": "fantasy",
+      "motion_prompt": "furry orange Fraggl gently swaying, big smile widening, fluffy red hair bouncing, large ears twitching, crystal cave lights shimmering softly",
+      "negative_prompt": "frozen still, no fur movement, blurry, distorted, warping, scary",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "grouch": {
+      "name": "Grouch",
+      "category": "fantasy",
+      "motion_prompt": "grumpy green Grouch slowly blinking, shaggy fur ruffling, trash can lid wobbling, unimpressed head tilt, soft alley breeze",
+      "negative_prompt": "frozen still, no fur movement, blurry, distorted, warping, happy expression",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "lotso": {
+      "name": "Lotso",
+      "category": "animal",
+      "motion_prompt": "two-toned Lotso bear slowly turning his head, serious expression shifting, suit fabric moving, cigar smoke drifting, imposing but calm stance",
+      "negative_prompt": "frozen still, no fur movement, blurry, distorted, warping, cute expression",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "lotso_baby": {
+      "name": "Lotso Baby",
+      "category": "animal",
+      "motion_prompt": "adorable baby Lotso bear waving a paw, big sparkly eyes blinking, strawberry wobbling, bib swaying, soft nursery decorations floating gently",
+      "negative_prompt": "frozen still, no fur movement, blurry, distorted, warping, adult expression",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "lotso_mobster": {
+      "name": "Lotso Mobster",
+      "category": "animal",
+      "motion_prompt": "elder Lotso bear tapping his cane gently, wise calm breathing, colorful sash swaying, scar expression shifting, warm fireplace glow flickering",
+      "negative_prompt": "frozen still, no fur movement, blurry, distorted, warping, young expression",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "lucha_bee": {
+      "name": "Lucha Bee",
+      "category": "animal",
+      "motion_prompt": "mighty luchador bee flexing proudly, antennae bouncing, championship belt glinting, cape fluttering, confetti falling slowly, fist pump motion",
+      "negative_prompt": "frozen still, no wing or cape movement, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "mija": {
+      "name": "Mija",
+      "category": "humanoid",
+      "motion_prompt": "caring Mija gently breathing, soft warm smile, dark hair flowing, holding heart-shaped baby frame with a tender gesture, clinic lights calm and steady",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "ninja_cat": {
+      "name": "Ninja Cat",
+      "category": "animal",
+      "motion_prompt": "stealthy ninja cat adjusting stance, headband ribbon fluttering, tail swaying, staff spinning slowly, cherry blossom petals drifting, ears twitching alertly",
+      "negative_prompt": "frozen still, no fur or fabric movement, blurry, distorted, warping",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "papa": {
+      "name": "Papa",
+      "category": "humanoid",
+      "motion_prompt": "confident Papa smiling, leaning back in DJ chair, headphones shifting, tattooed arm flexing slightly, castle sunset light changing, whiskey bottle glinting",
+      "negative_prompt": "frozen still, no facial movement, blurry face, distorted hands, mannequin",
+      "duration": 5,
+      "motion_strength": 3
+    },
+    "pirate_parrot": {
+      "name": "Pirate Parrot",
+      "category": "bird",
+      "motion_prompt": "colorful pirate parrot squawking happily, pirate hat tipping, eye patch steady, wings flapping once, tail feathers ruffling, ocean waves rolling behind",
+      "negative_prompt": "wings clipped, no wing movement, blurry feathers, frozen pose",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "transformer_bot": {
+      "name": "Transformer Bot",
+      "category": "object",
+      "motion_prompt": "heroic robot slowly raising a hand in greeting, blue eyes glowing brighter, chest light pulsing, arm panels shifting subtly, city background alive with soft motion",
+      "negative_prompt": "lifeless, frozen, blurry, distorted, no light movement, transforming",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "trex": {
+      "name": "T-Rex",
+      "category": "animal",
+      "motion_prompt": "cute baby T-Rex bouncing excitedly, tiny arms wiggling, big friendly eyes blinking, red sneakers tapping, flower field swaying in breeze",
+      "negative_prompt": "frozen still, no movement, blurry, distorted, warping, scary, roaring",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "dragon_v2": {
+      "name": "Dragon v2",
+      "category": "fantasy",
+      "motion_prompt": "friendly green dragon waving gently, small wings fluttering, nostrils puffing soft smoke, tail swaying, satchel strap shifting, warm forest light flickering",
+      "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping, fire blast, scary",
+      "duration": 5,
+      "motion_strength": 4
+    },
+    "jack_playful_v2": {
+      "name": "Jack",
+      "category": "fantasy",
+      "motion_prompt": "playful Jack tilting his skull with a sly grin, glowing golden eyes pulsing, bony fingers gesturing elegantly, bat-wing hair swaying, tuxedo collar adjusting, spooky charming motion",
+      "negative_prompt": "no glow or magic, frozen still, blurry, distorted, warping, scary, violent",
+      "duration": 5,
+      "motion_strength": 4
     }
   }
 }
