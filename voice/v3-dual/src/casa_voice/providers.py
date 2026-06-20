@@ -486,6 +486,8 @@ class SileroVAD:
         self.peak_threshold = peak_threshold if peak_threshold is not None else float(
             os.environ.get("VAD_PEAK_THRESHOLD", "0.015")
         )
+        # Disable the neural Silero backend entirely on low-memory machines.
+        self._disabled = os.environ.get("SILERO_VAD_DISABLED", "").lower() in ("1", "true", "yes")
         self._model = None
         self._get_speech_timestamps = None
         self._load_error: Optional[Exception] = None
@@ -542,11 +544,14 @@ class SileroVAD:
 
     async def detect_speech(self, pcm_bytes: bytes) -> bool:
         """Return True if speech detected in PCM chunk."""
+        energy_result = self._energy_detect_speech(pcm_bytes)
+
+        if self._disabled:
+            return energy_result
+
         # Start background Silero load on first use, but do not wait for it.
         if not self._loading and not self._ready and self._load_error is None:
             asyncio.create_task(self._load_model())
-
-        energy_result = self._energy_detect_speech(pcm_bytes)
 
         if not self._ready:
             # Silero not ready yet — energy gate is the primary VAD.
