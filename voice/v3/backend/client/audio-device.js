@@ -5,12 +5,13 @@
  * Pair with a dashboard at /client/index.html?mode=dashboard&session_id=<same>.
  */
 
+const urlParams = new URLSearchParams(location.search);
+const serverHost = urlParams.get("server") || location.host;
 const CONFIG = {
-    SERVER_URL: "ws://" + location.host,
+    SERVER_URL: "ws://" + serverHost,
     SAMPLE_RATE: 16000,
 };
 
-const urlParams = new URLSearchParams(location.search);
 const sessionId = urlParams.get("session_id") || "phone-" + Math.random().toString(36).slice(2, 8);
 const deviceId = urlParams.get("device_id") || "phone-audio-" + Math.random().toString(36).slice(2, 6);
 
@@ -135,11 +136,14 @@ function handleServerMessage(msg) {
 }
 
 function connect() {
-    const params = new URLSearchParams();
-    params.set("device_type", "audio");
-    params.set("device_id", deviceId);
-    params.set("session_id", sessionId);
-    const url = CONFIG.SERVER_URL + "/ws/voice?" + params.toString();
+    const params = new URLSearchParams(location.search);
+    const token = params.get("token") || "dev-token";
+    const query = new URLSearchParams();
+    query.set("device_type", "audio");
+    query.set("device_id", deviceId);
+    query.set("session_id", sessionId);
+    query.set("token", token);
+    const url = CONFIG.SERVER_URL + "/ws/voice-v3/" + encodeURIComponent(deviceId) + "?" + query.toString();
 
     log("Connecting: " + url);
     ws = new WebSocket(url);

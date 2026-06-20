@@ -19,8 +19,10 @@
  *   - Interrupt button sends interrupt command to audio device.
  */
 
+const urlParams = new URLSearchParams(location.search);
+const serverHost = urlParams.get("server") || location.host;
 const CONFIG = {
-    SERVER_URL: "ws://" + location.host,
+    SERVER_URL: "ws://" + serverHost,
     SAMPLE_RATE: 16000,
     CHUNK_SIZE: 512,
 };
@@ -170,11 +172,15 @@ document.querySelectorAll(".mode-option").forEach(btn => {
 // ── WebSocket ─────────────────────────────────────────────────────────────────
 
 function buildWsUrl() {
-    const params = new URLSearchParams();
-    params.set("device_type", (clientMode === "browser" || clientMode === "bluetooth") ? "audio" : "dashboard");
-    if (sessionId) params.set("session_id", sessionId);
-    if (deviceId) params.set("device_id", deviceId);
-    return CONFIG.SERVER_URL + "/ws/voice?" + params.toString();
+    const params = new URLSearchParams(location.search);
+    const token = params.get("token") || "dev-token";
+    const pathDeviceId = deviceId || sessionId || "browser-" + Math.random().toString(36).slice(2, 8);
+    const query = new URLSearchParams();
+    query.set("device_type", (clientMode === "browser" || clientMode === "bluetooth") ? "audio" : "dashboard");
+    query.set("token", token);
+    if (sessionId) query.set("session_id", sessionId);
+    if (deviceId) query.set("device_id", deviceId);
+    return CONFIG.SERVER_URL + "/ws/voice-v3/" + encodeURIComponent(pathDeviceId) + "?" + query.toString();
 }
 
 function connect() {

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Mic, Send, Square } from 'lucide-react';
 
-type TurnState = 'idle' | 'listening' | 'processing' | 'speaking' | 'error';
+type TurnState = 'idle' | 'wake_detected' | 'listening' | 'processing' | 'speaking' | 'interrupted' | 'error';
 
 interface InputBarProps {
   turnState: TurnState;
@@ -21,7 +21,7 @@ export default function InputBar({
   bargeInEnabled = true,
 }: InputBarProps) {
   const [text, setText] = useState('');
-  const isListening = turnState === 'listening';
+  const isListening = turnState === 'listening' || turnState === 'wake_detected';
   const isProcessing = turnState === 'processing' || (turnState === 'speaking' && !bargeInEnabled);
 
   const handleSend = useCallback(() => {

@@ -61,7 +61,13 @@ class V3SessionManager:
 
     # ── Connection handling ────────────────────────────────────────────────────
 
-    async def handle_connection(self, websocket: WebSocket, device_id: str, token: str):
+    async def handle_connection(
+        self,
+        websocket: WebSocket,
+        device_id: str,
+        token: str,
+        session_id: str | None = None,
+    ):
         await websocket.accept()
 
         try:
@@ -79,23 +85,24 @@ class V3SessionManager:
             self.supabase, device_id, self.settings.fly_machine_id
         )
 
-        # Use device_id as the voice session id so the dashboard can find it.
-        session_id = device_id
-        if session_id not in self.sessions:
+        # Use an explicit session_id query param when available so multiple clients
+        # (e.g. browser + dashboard) can share the same voice session.
+        voice_session_id = session_id or device_id
+        if voice_session_id not in self.sessions:
             character = device.get("character_id") or "default"
             mode = device.get("mode_id") or "default"
             session = VoiceSession(
-                session_id=session_id,
+                session_id=voice_session_id,
                 providers=self.providers,
                 character=str(character),
                 mode=str(mode),
                 store=None,  # Supabase persistence can be wired via SessionStore later
             )
-            self.sessions[session_id] = session
+            self.sessions[voice_session_id] = session
             await session.start()
             logger.info(f"[v3 {device_id}] created session character={character} mode={mode}")
         else:
-            session = self.sessions[session_id]
+            session = self.sessions[voice_session_id]
 
         async def send_message(msg: VoiceMessage):
             try:
@@ -109,7 +116,7 @@ class V3SessionManager:
         client_id = f"{device_id}-audio-{time.time():.0f}"
         client = ClientHandle(device_id=client_id, device_type="audio", send=send_message)
         session.add_client(client)
-        self.device_index[device_id] = (session_id, client_id)
+        self.device_index[device_id] = (voice_session_id, client_id)
 
         # Legacy dashboard compatibility: push an initial idle/status event.
         await self._broadcast_dashboard_event(
@@ -152,7 +159,7 @@ class V3SessionManager:
             session.remove_client(client_id)
             if session.is_empty:
                 await session.stop()
-                self.sessions.pop(session_id, None)
+                self.sessions.pop(voice_session_id, None)
 
             self.device_index.pop(device_id, None)
             await end_session(self.supabase, session_db_id)
@@ -236,14 +243,26 @@ class V3SessionManager:
     # ── Auth helpers ───────────────────────────────────────────────────────────
 
     async def _authenticate_device(self, device_id: str, token: str) -> dict[str, Any]:
-        """Reuses existing Casa auth; falls through in local dev if Supabase missing."""
-        if self.settings.env == "development" and not self.supabase:
-            return {
-                "id": device_id,
-                "character_id": "default",
-                "mode_id": "default",
-                "battery": None,
-            }
+        """Reuses existing Casa auth; falls through in local dev if Supabase is missing or fails."""
+        if self.settings.env == "development":
+            try:
+                if not self.supabase:
+                    raise RuntimeError("Supabase not configured")
+                device = await get_device_with_parent(self.supabase, device_id)
+                if device.get("api_key") != token:
+                    raise PermissionError("Invalid device token")
+                if not device.get("is_active", True):
+                    raise PermissionError("Device is deactivated")
+                await require_consent(self.supabase, device_id)
+                return device
+            except Exception as e:
+                logger.warning(f"[v3 {device_id}] dev auth bypass after: {e}")
+                return {
+                    "id": device_id,
+                    "character_id": "default",
+                    "mode_id": "default",
+                    "battery": None,
+                }
 
         device = await get_device_with_parent(self.supabase, device_id)
         if device.get("api_key") != token:

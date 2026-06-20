@@ -15,7 +15,9 @@ A progressive web app for kids (and grown-ups) to chat with Casa Companion chara
 ## Features
 
 - **Character roster** — 46 plush companions, each with a portrait, idle/speaking videos, accent color, personality prompt, and generated intro voice line.
-- **Voice chat** — tap the mic, speak, and the character responds out loud.
+- **Voice chat** — tap the mic, speak, and the character responds out loud. The PWA now streams 16 kHz PCM to the `voice/v3-dual` backend over WebSocket for end-to-end STT/LLM/TTS.
+- **Connection status** — a small dot in the character header shows whether the voice server is connected (green), connecting (yellow), or disconnected (red).
+- **Safari/iOS audio unlock** — the Web Audio contexts are resumed from the first user tap so mic and speaker work on iPhone/iPad.
 - **Personalized builds** — per-user/child builds that filter the roster and feature a specific character via environment variables.
 - **Favorites** — heart your go-to companions and find them quickly on `/favorites`.
 - **Hands-free wake commands** — say “Hello Casa” or “Hey Casa” to start the mic, and “End Casa” to stop. Uses the browser’s built-in SpeechRecognition.
@@ -26,11 +28,16 @@ A progressive web app for kids (and grown-ups) to chat with Casa Companion chara
 
 ## Voice Pipeline
 
+The mobile PWA connects to the **`voice/v3-dual`** backend over a single WebSocket. All STT, LLM, and TTS processing happens on the server.
+
 | Step | Provider | Notes |
 |------|----------|-------|
-| Speech-to-text | **Deepgram** (`nova-2`) or **browser SpeechRecognition** | Deepgram by default; browser speech can be enabled in Settings or auto-switched after a failed Deepgram call |
-| Language model | **OpenAI** (`gpt-4o-mini`) | Per-character system prompt + current mode instruction |
-| Text-to-speech | **OpenAI** (`tts-1`) | Per-character OpenAI voice; falls back to browser speech synthesis on failure |
+| Transport | **WebSocket** (`ws://`/`wss://`) | 16 kHz s16le PCM in both directions; AudioWorklet capture with ScriptProcessorNode fallback |
+| Speech-to-text | **OpenRouter / Groq** (server-side) | Configured in the backend; mobile only sends raw PCM |
+| Language model | **OpenRouter / Groq** (server-side) | Per-character system prompt + current mode instruction |
+| Text-to-speech | **OpenRouter** (server-side) | Server streams PCM back to the PWA for playback |
+
+The legacy browser-only pipeline (`useVoiceChat.ts` + Deepgram/OpenAI browser keys) is still in the repo but is no longer used by `CharacterDetail`.
 
 ## Tech Stack
 
@@ -62,7 +69,10 @@ web-mobile/
 ├── src/
 │   ├── components/        # UI components (CharacterCard, MicButton, etc.)
 │   ├── hooks/
-│   │   └── useVoiceChat.ts     # Deepgram + OpenAI voice pipeline
+│   │   ├── useV3VoiceChat.ts   # v3-dual WebSocket voice orchestrator
+│   │   ├── useVoiceSocket.ts   # WebSocket client for the v3-dual protocol
+│   │   ├── useAudioWorklet.ts  # Mic capture + PCM playback
+│   │   └── useVoiceChat.ts     # Legacy Deepgram + OpenAI browser pipeline (unused)
 │   ├── lib/
 │   │   ├── characters.ts       # Character data (including idle/speaking videos)
 │   │   ├── characterConfig.ts  # Per-character prompts + OpenAI voices
@@ -90,14 +100,16 @@ web-mobile/
 
 ## Environment Variables
 
-Create a `.env` file in `web-mobile/` or set them in your hosting dashboard. Never commit `.env` or `.env.local`.
+Create a `.env` file in `apps/mobile/` or set them in your hosting dashboard. Never commit `.env` or `.env.local`.
 
 ### Runtime / build variables
 
 | Variable | Purpose | Required? |
 |----------|---------|-----------|
-| `VITE_OPENAI_API_KEY` | OpenAI chat + TTS API key | Optional if users paste key in Settings |
-| `VITE_DEEPGRAM_API_KEY` | Deepgram STT API key | Optional if users paste key in Settings |
+| `VITE_VOICE_SERVER_URL` | WebSocket URL of the `voice/v3-dual` backend | Optional; defaults to current host (`ws://`/`wss://`) |
+| `VITE_VOICE_SERVER_API_KEY` | API key the backend expects on the WebSocket query string | Optional; only required if the backend is configured with `API_KEY` |
+| `VITE_OPENAI_API_KEY` | OpenAI chat + TTS API key | Legacy hook only; optional if users paste key in Settings |
+| `VITE_DEEPGRAM_API_KEY` | Deepgram STT API key | Legacy hook only; optional if users paste key in Settings |
 | `VITE_GROQ_API_KEY` | Groq API key (legacy hook support) | Optional |
 | `VITE_SENTRY_DSN` | Sentry DSN for error monitoring | Optional; SDK disabled if missing |
 | `VITE_APP_VERSION` | App version used for Sentry `release` | Optional; falls back to `0.0.0` |
@@ -126,8 +138,8 @@ The Vite plugin only activates when all three are present, so builds still work 
 ## Local Development
 
 ```bash
-# From the web-mobile directory
-cd casa-companion-master/web-mobile
+# From the mobile app directory
+cd apps/mobile
 
 # Install dependencies
 npm install
@@ -185,11 +197,10 @@ Current precache is approximately **150+ MB** (idle/speaking videos + character 
 
 | Issue | Fix |
 |-------|-----|
-| "OpenAI API key missing" | Add `VITE_OPENAI_API_KEY` env var or paste key in Settings |
-| "Deepgram API key missing" | Add `VITE_DEEPGRAM_API_KEY` env var or paste key in Settings |
-| "Deepgram connection error" | Make sure the Deepgram key has no BOM/whitespace; the app strips BOMs automatically |
-| `Failed to fetch (api.deepgram.com)` / `net::ERR_FAILED` | Deepgram may be blocked on your network. The app auto-switches to browser speech after one failure, or you can toggle **Use browser speech for input** in Settings |
-| Character speaks but no audio | Check OpenAI TTS key and browser autoplay permissions |
+| "Not connected to voice server" | Set `VITE_VOICE_SERVER_URL` to the running `voice/v3-dual` WebSocket endpoint and ensure the backend is reachable |
+| "OpenAI API key missing" | Legacy hook only — add `VITE_OPENAI_API_KEY` env var or paste key in Settings |
+| "Deepgram API key missing" | Legacy hook only — add `VITE_DEEPGRAM_API_KEY` env var or paste key in Settings |
+| Character speaks but no audio | Check backend TTS config and browser autoplay permissions |
 | Old version still showing | Clear site data / app storage and reload; or tap **Clear All Data** in Settings |
 | Mic not working | Grant microphone permission in browser/OS settings |
 | Character page 404s | Ensure `vercel.json` rewrites are deployed |

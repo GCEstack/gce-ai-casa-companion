@@ -17,6 +17,7 @@ from supabase._async.client import AsyncClient as SupabaseClient
 
 from .config import get_settings
 from .prompt_router import PromptRouter
+from .simple_voice import router as simple_voice_router
 from .v3_manager import V3SessionManager
 
 
@@ -41,13 +42,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 raise
 
     prompt_router = PromptRouter(supabase)
-    if supabase:
+    if supabase and settings.env != "development":
         await prompt_router.load()
 
-    # Lazy import legacy session manager so its deepgram dependency doesn't break startup.
-    from .session_manager import SessionManager
+    # Legacy endpoint is optional; skip it in development if deepgram SDK mismatches.
+    if settings.env != "development":
+        from .session_manager import SessionManager
+        session_manager = SessionManager(supabase, prompt_router)
 
-    session_manager = SessionManager(supabase, prompt_router)
     v3_session_manager = V3SessionManager(supabase, prompt_router)
     yield
     # Shutdown: close active sessions gracefully.
@@ -59,7 +61,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             await session_manager.kill_session(device_id)
 
 
-app = FastAPI(title="Casa Companion Voice Server", version="1.1.0-v3", lifespan=lifespan)
+app = FastAPI(title="Casa Companion Voice Server", version="1.2.0-v3+simple", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -68,6 +70,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(simple_voice_router)
 
 
 async def _verify_dashboard_token(authorization: str | None = None, token: str | None = None) -> dict[str, Any]:
@@ -122,12 +126,19 @@ async def voice_websocket(websocket: WebSocket, device_id: str, token: str = Que
 
 
 @app.websocket("/ws/voice-v3/{device_id}")
-async def voice_v3_websocket(websocket: WebSocket, device_id: str, token: str = Query(...)):
+async def voice_v3_websocket(
+    websocket: WebSocket,
+    device_id: str,
+    token: str = Query(...),
+    session_id: str | None = Query(None),
+):
     """V3 voice engine endpoint (wake-word, push-to-talk, interruptible TTS)."""
     if not v3_session_manager:
         await websocket.close(code=1011)
         return
-    await v3_session_manager.handle_connection(websocket, device_id, token)
+    await v3_session_manager.handle_connection(
+        websocket, device_id, token, session_id=session_id
+    )
 
 
 @app.get("/events/{device_id}")
@@ -166,6 +177,30 @@ async def events_stream(
             manager.unsubscribe_events(device_id, q)
 
     return StreamingResponse(generator(), media_type="text/event-stream")
+
+
+@app.get("/api/sessions")
+async def list_sessions() -> JSONResponse:
+    """Admin-style list of active V3 sessions."""
+    if not v3_session_manager:
+        raise HTTPException(status_code=503, detail="Server not ready")
+    return JSONResponse(
+        {
+            "sessions": [
+                {
+                    "session_id": sid,
+                    "clients": [
+                        {"device_id": c.device_id, "device_type": c.device_type}
+                        for c in s.clients.values()
+                    ],
+                    "state": s.state.value,
+                    "character": s.character,
+                    "mode": s.mode,
+                }
+                for sid, s in v3_session_manager.sessions.items()
+            ]
+        }
+    )
 
 
 @app.post("/api/kill/{device_id}")

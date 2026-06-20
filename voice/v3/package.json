@@ -4,12 +4,23 @@
   "description": "WebSocket relay for Casa Companion firmware and frontend",
   "main": "ws-relay.js",
   "scripts": {
-    "start": "node ws-relay.js"
+    "start": "node ws-relay.js",
+    "cap:sync": "npx cap sync",
+    "cap:android": "npx cap open android",
+    "cap:build:apk": "cd android && ./gradlew assembleDebug",
+    "tauri:dev": "npx tauri dev",
+    "tauri:build": "npx tauri build"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
     "ws": "^8.18.0"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.3"
   }
 }
