@@ -48,7 +48,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     prompt_router = PromptRouter(supabase)
     if supabase and settings.env != "development":
-        await prompt_router.load()
+        try:
+            await prompt_router.load()
+        except Exception as e:
+            logger.warning(f"Prompt router load failed, continuing without Supabase mode cache: {e}")
 
     # Legacy endpoint is optional; skip it in development if deepgram SDK mismatches.
     if settings.env != "development":
