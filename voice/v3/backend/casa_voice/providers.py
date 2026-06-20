@@ -297,12 +297,14 @@ class OpenRouterTTS:
         self,
         api_key: Optional[str] = None,
         model: str = DEFAULT_TTS,
-        voice: str = "Kore",  # Gemini voice
+        voice: Optional[str] = None,
         sample_rate: int = 16000,
     ):
         self.api_key = api_key or os.environ.get("OPENROUTER_API_KEY", "")
         self.model = model
-        self.voice = voice
+        # Gemini Flash TTS only supports a small set of voices (e.g. Kore, Fenrir, Leda).
+        # Ignore per-character OpenAI voice ids and always use the configured Gemini voice.
+        self.voice = voice or os.environ.get("OPENROUTER_TTS_VOICE", "Kore")
         self.sample_rate = sample_rate
         self.client = httpx.AsyncClient(timeout=60.0)
         self.voice_router = CharacterVoiceRouter(model)
@@ -312,7 +314,7 @@ class OpenRouterTTS:
         self.cache = TTSCache(cache_dir) if cache_enabled else None
 
     def _voice_for_character(self, character: str) -> str:
-        return get_character_profile(character).voice_id
+        return self.voice
 
     async def synthesize_stream(
         self,
@@ -845,14 +847,14 @@ class VoiceProviders:
                 model=os.environ.get("OPENAI_TTS_MODEL", "tts-1"),
                 voice=os.environ.get("OPENAI_TTS_VOICE", "nova"),
             )
-        elif cartesia_key:
-            logger.info("Using Cartesia TTS")
-            self.tts = CartesiaTTS(api_key=cartesia_key)
         elif openrouter_key:
             logger.info("Using OpenRouter TTS fallback")
             self.tts = OpenRouterTTS(api_key=openrouter_key)
+        elif cartesia_key:
+            logger.info("Using Cartesia TTS")
+            self.tts = CartesiaTTS(api_key=cartesia_key)
         else:
-            logging.warning("No TTS API key found. Set OPENAI_API_KEY, CARTESIA_API_KEY, or OPENROUTER_API_KEY.")
+            logging.warning("No TTS API key found. Set OPENAI_API_KEY, OPENROUTER_API_KEY, or CARTESIA_API_KEY.")
             self.tts = OpenRouterTTS(api_key="")
 
         self.vad = SileroVAD()
