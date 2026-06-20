@@ -32,7 +32,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     global supabase, session_manager, v3_session_manager
 
     # Allow local dev without Supabase; the V3 manager will skip auth in development.
-    if settings.supabase_url and not settings.supabase_url.startswith("https://your-project"):
+    has_supabase = (
+        settings.supabase_url
+        and not settings.supabase_url.startswith("https://your-project")
+        and settings.supabase_service_key
+    )
+    if has_supabase:
         try:
             supabase = await create_async_client(settings.supabase_url, settings.supabase_service_key)
         except Exception as e:

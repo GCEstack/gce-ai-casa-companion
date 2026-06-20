@@ -6,7 +6,7 @@ import os
 from functools import lru_cache
 from typing import Any
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,14 +17,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    @model_validator(mode="before")
-    @classmethod
-    def _map_legacy_supabase_key(cls, data: Any) -> Any:
-        """Accept the legacy SUPABASE_KEY secret as SUPABASE_SERVICE_KEY."""
-        if isinstance(data, dict):
-            if not data.get("SUPABASE_SERVICE_KEY") and data.get("SUPABASE_KEY"):
-                data["SUPABASE_SERVICE_KEY"] = data["SUPABASE_KEY"]
-        return data
+
 
     # Runtime
     env: str = Field(default="production", alias="ENV")
@@ -98,6 +91,9 @@ class Settings(BaseSettings):
         super().__init__(**data)
         if not self.fly_machine_id:
             self.fly_machine_id = os.environ.get("FLY_MACHINE_ID", "unknown")
+        # Accept the legacy SUPABASE_KEY secret if SUPABASE_SERVICE_KEY is missing.
+        if not self.supabase_service_key:
+            self.supabase_service_key = os.environ.get("SUPABASE_KEY", "")
 
 
 @lru_cache
