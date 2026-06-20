@@ -266,10 +266,8 @@ class VoiceSession:
         text = text.strip()
         logger.info(f"[{self.session_id}] TEXT INPUT: '{text}'")
 
-        async with self._lock:
-            self.state = VoiceState.LISTENING
-            await self._broadcast(VoiceMessage.state_change(VoiceState.LISTENING))
-
+        self.state = VoiceState.LISTENING
+        await self._broadcast(VoiceMessage.state_change(VoiceState.LISTENING))
         await self._broadcast(VoiceMessage.transcript(text))
 
         # Fast-path trigger responses.
