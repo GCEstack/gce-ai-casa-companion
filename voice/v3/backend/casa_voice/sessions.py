@@ -31,6 +31,7 @@ from .persistence import SessionStore
 from .wakeword import create_wake_word_detector
 from .story_queue import StoryQueue
 from .characters import get_character_profile
+from .fillers import FillerGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +118,8 @@ class VoiceSession:
         self._pending_audio: bytes = b""
         self._utterance_start_time: float = 0.0
         self._native_history: list = []  # text-only context for native audio quick-chat mode
+        self._tts_sequence: int = 0
+        self.filler_generator = FillerGenerator()
 
         # Tuning: shorter timeouts = snappier responses, but too short clips speech.
         self.wake_max_seconds = float(os.environ.get("WAKE_MAX_SECONDS", "1.5"))
@@ -424,7 +427,7 @@ class VoiceSession:
                         if handled:
                             continue
 
-                    await self._process_and_speak(transcript)
+                    await self._process_and_speak(transcript, play_filler=True)
                     continue
 
                 if self.state == VoiceState.SPEAKING:
@@ -667,7 +670,7 @@ class VoiceSession:
 
         return False
 
-    async def _process_and_speak(self, text: str, skip_history: bool = False):
+    async def _process_and_speak(self, text: str, skip_history: bool = False, play_filler: bool = False):
         async with self._lock:
             self.state = VoiceState.PROCESSING
             await self._broadcast(VoiceMessage.state_change(VoiceState.PROCESSING))
@@ -687,7 +690,15 @@ class VoiceSession:
                 and self.providers.llm is not None
                 and hasattr(self.providers.llm, "chat_stream")
             ):
-                return await self._process_and_speak_streaming(text)
+                return await self._process_and_speak_streaming(text, play_filler=play_filler)
+
+            # Non-streaming path: reset sequence, play filler, then call LLM.
+            self._tts_sequence = 0
+            if play_filler:
+                await self._play_filler(text)
+                if self._interrupted.is_set():
+                    await self._return_to_idle()
+                    return
 
             # Compress long transcripts to keywords to cut tokens and latency.
             llm_input = self.providers.commands.keyword_compressor.compress(text)
@@ -716,12 +727,14 @@ class VoiceSession:
 
         await self._speak(llm_response)
 
-    async def _process_and_speak_streaming(self, text: str):
+    async def _process_and_speak_streaming(self, text: str, play_filler: bool = False):
         """Stream LLM sentences to TTS as they arrive.
 
         Instead of waiting for the full LLM response, we split it into sentences
         and start TTS on the first sentence while the model is still generating
         the rest. This cuts the time-to-first-audio for fresh LLM responses.
+        A short filler is optionally played first so the user hears something
+        while the LLM is still generating.
         """
         # Compress long transcripts to keywords to cut tokens and latency.
         llm_input = self.providers.commands.keyword_compressor.compress(text)
@@ -736,7 +749,6 @@ class VoiceSession:
         full_response = ""
         sentence_queue: asyncio.Queue[Optional[str]] = asyncio.Queue()
         llm_done = asyncio.Event()
-        tts_seq = 0
         first_audio = True
 
         async def llm_producer():
@@ -772,7 +784,7 @@ class VoiceSession:
                 llm_done.set()
 
         async def tts_consumer():
-            nonlocal tts_seq, first_audio
+            nonlocal first_audio
             try:
                 while True:
                     sentence = await sentence_queue.get()
@@ -795,16 +807,35 @@ class VoiceSession:
                     async for chunk in self.providers.tts.synthesize_stream(sentence, self.character, self.mode):
                         if self._interrupted.is_set():
                             break
-                        await self._broadcast(VoiceMessage.tts_chunk(chunk, sequence=tts_seq))
-                        tts_seq += 1
+                        await self._broadcast(VoiceMessage.tts_chunk(chunk, sequence=self._next_tts_seq()))
 
                     if self._interrupted.is_set():
                         break
             except Exception as e:
                 logger.error(f"[{self.session_id}] TTS streaming error: {e}", exc_info=True)
 
+        async with self._lock:
+            self.state = VoiceState.PROCESSING
+            await self._broadcast(VoiceMessage.state_change(VoiceState.PROCESSING))
+            self._tts_sequence = 0
+
+        # Start LLM generation immediately so it runs in parallel with the filler.
+        llm_task = asyncio.create_task(llm_producer())
+
+        if play_filler:
+            await self._play_filler(text)
+            if self._interrupted.is_set():
+                llm_task.cancel()
+                try:
+                    await llm_task
+                except asyncio.CancelledError:
+                    pass
+                await self._return_to_idle()
+                return
+
         try:
-            await asyncio.gather(llm_producer(), tts_consumer())
+            await tts_consumer()
+            await llm_task
         except Exception as e:
             logger.error(f"[{self.session_id}] Streaming pipeline error: {e}", exc_info=True)
 
@@ -946,7 +977,43 @@ class VoiceSession:
         prompt = prompts.get(scene, "Say something fun and in character.")
         logger.info(f"[{self.session_id}] Running scene: {scene}")
         await self._broadcast(VoiceMessage.transcript(f"[scene: {scene}]"))
-        await self._process_and_speak(prompt)
+        await self._process_and_speak(prompt, play_filler=True)
+
+    def _next_tts_seq(self) -> int:
+        seq = self._tts_sequence
+        self._tts_sequence += 1
+        return seq
+
+    async def _play_filler(self, transcript: str):
+        """Play a short filler utterance while the LLM is generating.
+
+        Sets state to SPEAKING so the VAD loop is active and the user can barge in.
+        Filler chunks share the turn's TTS sequence numbers with the real response.
+        """
+        if not self.filler_generator.should_play_filler(transcript):
+            return
+
+        filler_text = self.filler_generator.generate(transcript, self.character, self.mode)
+        logger.info(f"[{self.session_id}] Filler: '{filler_text}'")
+
+        async with self._lock:
+            self.state = VoiceState.SPEAKING
+            await self._broadcast(VoiceMessage.state_change(VoiceState.SPEAKING))
+            self._speaking.set()
+            self._interrupted.clear()
+            # Drop any leftover input audio so barge-in doesn't false-trigger
+            # from audio that arrived before the filler started.
+            self.input_buffer.get_and_clear()
+            self.vad_buffer.get_and_clear()
+
+        try:
+            async for chunk in self.providers.tts.synthesize_stream(filler_text, self.character, self.mode):
+                if self._interrupted.is_set():
+                    logger.info(f"[{self.session_id}] Filler interrupted")
+                    break
+                await self._broadcast(VoiceMessage.tts_chunk(chunk, sequence=self._next_tts_seq()))
+        except Exception as e:
+            logger.warning(f"[{self.session_id}] Filler playback failed: {e}")
 
     async def _speak(self, text: str):
         async with self._lock:
@@ -962,7 +1029,6 @@ class VoiceSession:
 
         logger.info(f"[{self.session_id}] SPEAKING: streaming TTS ({len(text)} chars)")
         t0 = time.perf_counter()
-        seq = 0
         first_byte = True
         try:
             async for chunk in self.providers.tts.synthesize_stream(text, self.character, self.mode):
@@ -974,10 +1040,9 @@ class VoiceSession:
                 if self._interrupted.is_set():
                     logger.info("TTS interrupted")
                     break
-                msg = VoiceMessage.tts_chunk(chunk, sequence=seq)
+                msg = VoiceMessage.tts_chunk(chunk, sequence=self._next_tts_seq())
                 await self._broadcast(msg)
-                seq += 1
-            logger.info(f"[{self.session_id}] SPEAKING: streamed {seq} TTS chunks in {(time.perf_counter() - t0):.2f}s")
+            logger.info(f"[{self.session_id}] SPEAKING: streamed {self._tts_sequence} TTS chunks in {(time.perf_counter() - t0):.2f}s")
         except asyncio.CancelledError:
             logger.info("TTS cancelled")
         except Exception as e:
