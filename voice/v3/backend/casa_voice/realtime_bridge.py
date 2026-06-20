@@ -65,6 +65,7 @@ class RealtimeBridge:
         payload = {
             "type": "session.update",
             "session": {
+                "type": "voice",
                 "modalities": ["text", "audio"],
                 "instructions": profile.prompt,
                 "voice": profile.voice_id,
