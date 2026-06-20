@@ -6,7 +6,7 @@ import os
 from functools import lru_cache
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +16,15 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _map_legacy_supabase_key(cls, data: Any) -> Any:
+        """Accept the legacy SUPABASE_KEY secret as SUPABASE_SERVICE_KEY."""
+        if isinstance(data, dict):
+            if not data.get("SUPABASE_SERVICE_KEY") and data.get("SUPABASE_KEY"):
+                data["SUPABASE_SERVICE_KEY"] = data["SUPABASE_KEY"]
+        return data
 
     # Runtime
     env: str = Field(default="production", alias="ENV")
