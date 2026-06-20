@@ -12,9 +12,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ ./app/
+COPY casa_voice/ ./casa_voice/
 
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app/app
+ENV PYTHONPATH=/app
 
 EXPOSE 8080
 
