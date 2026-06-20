@@ -8,6 +8,7 @@ primary_region = "iad"
   ENV = "production"
   OPENAI_TTS_MODEL = "gpt-4o-mini-tts"
   OPENAI_TTS_VOICE = "coral"
+  USE_OPENAI_REALTIME = "1"
 
 [http_service]
   internal_port = 8080
