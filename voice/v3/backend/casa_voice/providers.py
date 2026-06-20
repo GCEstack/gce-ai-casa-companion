@@ -22,6 +22,8 @@ from dataclasses import dataclass
 import httpx
 import numpy as np
 
+from .characters import get_character_profile
+
 logger = logging.getLogger(__name__)
 
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
@@ -175,33 +177,6 @@ class CharacterVoiceRouter:
         "trembling": "[trembling]",
     }
 
-    PROFILES = {
-        "drago": VoiceProfile(
-            name="Drago the Dragon",
-            prompt_prefix="You are Drago, a friendly dragon. Speak with enthusiasm and warmth.",
-            tags={"story": "[excited]", "play": "[laughs]", "calm": "[sighs]", "secret": "[whispers]"},
-            default_tag="[excited]",
-        ),
-        "liam": VoiceProfile(
-            name="Liam",
-            prompt_prefix="You are Liam, a cool teen DJ. Use casual language, be energetic.",
-            tags={"story": "[singing]", "play": "[excited]", "calm": "[sighs]", "secret": "[whispers]"},
-            default_tag="[excited]",
-        ),
-        "jenny": VoiceProfile(
-            name="Jenny",
-            prompt_prefix="You are Jenny, a creative artist. Be expressive and imaginative.",
-            tags={"story": "[excited]", "play": "[laughs]", "calm": "[sighs]", "secret": "[whispers]"},
-            default_tag="[excited]",
-        ),
-        "default": VoiceProfile(
-            name="Casa Companion",
-            prompt_prefix="You are a friendly companion for kids. Be warm, encouraging, and fun.",
-            tags={"story": "[excited]", "play": "[laughs]", "calm": "[sighs]", "secret": "[whispers]"},
-            default_tag="[excited]",
-        ),
-    }
-
     MAX_TAGGED_LENGTH = 500  # chars — beyond this, Gemini may read tags aloud
 
     def __init__(self, tts_model: str = DEFAULT_TTS):
@@ -213,7 +188,13 @@ class CharacterVoiceRouter:
             )
 
     def get_profile(self, character: str) -> VoiceProfile:
-        return self.PROFILES.get(character, self.PROFILES["default"])
+        profile = get_character_profile(character)
+        return VoiceProfile(
+            name=profile.name,
+            prompt_prefix=profile.prompt,
+            tags=profile.tags,
+            default_tag=profile.default_tag,
+        )
 
     def apply_tags(self, text: str, character: str, mode: str = "default") -> str:
         """Wrap text with appropriate Gemini audio tags."""
@@ -330,6 +311,9 @@ class OpenRouterTTS:
         cache_dir = os.environ.get("TTS_CACHE_DIR", "tts_cache")
         self.cache = TTSCache(cache_dir) if cache_enabled else None
 
+    def _voice_for_character(self, character: str) -> str:
+        return get_character_profile(character).voice_id
+
     async def synthesize_stream(
         self,
         text: str,
@@ -338,19 +322,20 @@ class OpenRouterTTS:
     ) -> AsyncIterator[bytes]:
         """Yield PCM chunks as they arrive from the wire or from cache."""
         tagged_text = self.voice_router.apply_tags(text, character, mode)
-        logger.info(f"TTS: synthesizing {len(tagged_text)} chars for character={character}, mode={mode}")
+        voice = self._voice_for_character(character)
+        logger.info(f"TTS: synthesizing {len(tagged_text)} chars for character={character}, mode={mode}, voice={voice}")
 
         # Cache hit: serve the pre-generated PCM instantly.
-        if self.cache is not None and self.cache.exists(tagged_text, self.model, self.voice):
+        if self.cache is not None and self.cache.exists(tagged_text, self.model, voice):
             logger.info("TTS: cache hit")
-            async for chunk in self.cache.read_stream(tagged_text, self.model, self.voice):
+            async for chunk in self.cache.read_stream(tagged_text, self.model, voice):
                 yield chunk
             return
 
         payload = {
             "model": self.model,
             "input": tagged_text,
-            "voice": self.voice,
+            "voice": voice,
             "response_format": "pcm",  # KEY: skip WAV header parsing
             "sample_rate": self.sample_rate,
         }
@@ -383,7 +368,7 @@ class OpenRouterTTS:
 
             # Cache the full response for instant replay next time.
             if self.cache is not None and collected:
-                await self.cache.write(tagged_text, self.model, self.voice, b"".join(collected))
+                await self.cache.write(tagged_text, self.model, voice, b"".join(collected))
         except Exception as e:
             logger.error(f"TTS failed: {e}", exc_info=True)
             raise

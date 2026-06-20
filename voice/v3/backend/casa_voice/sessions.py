@@ -30,6 +30,7 @@ from .providers import VoiceProviders, DEFAULT_LLM
 from .persistence import SessionStore
 from .wakeword import create_wake_word_detector
 from .story_queue import StoryQueue
+from .characters import get_character_profile
 
 logger = logging.getLogger(__name__)
 
@@ -1040,9 +1041,10 @@ class VoiceSession:
         return audio
 
     def _build_system_prompt(self) -> str:
+        profile = get_character_profile(self.character)
         parts = [
-            f"You are {self.character}. Friendly companion for kids. "
-            "Respond briefly (1-2 sentences). Be warm and fun."
+            profile.prompt,
+            "Respond briefly (1-2 sentences). Be warm and fun. Keep language simple for kids aged 4-10.",
         ]
         if self._interests:
             summary_parts = []
