@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     # Server-to-server secret used by the dashboard kill switch
     voice_server_api_key: str = Field(default="", alias="VOICE_SERVER_API_KEY")
 
+    # Shared key for mobile/web clients that are not provisioned as physical devices.
+    mobile_api_key: str = Field(default="", alias="MOBILE_API_KEY")
+
     # Models / voices
     deepgram_model: str = Field(default="nova-3", alias="DEEPGRAM_MODEL")
     deepgram_language: str = Field(default="en-US", alias="DEEPGRAM_LANGUAGE")

@@ -243,7 +243,21 @@ class V3SessionManager:
     # ── Auth helpers ───────────────────────────────────────────────────────────
 
     async def _authenticate_device(self, device_id: str, token: str) -> dict[str, Any]:
-        """Reuses existing Casa auth; falls through in local dev if Supabase is missing or fails."""
+        """Reuses existing Casa auth; falls through in local dev if Supabase is missing or fails.
+
+        Mobile/web clients may authenticate with the shared MOBILE_API_KEY instead of a
+        per-device api_key. These clients skip per-device provisioning and consent checks.
+        """
+        if self.settings.mobile_api_key and token == self.settings.mobile_api_key:
+            logger.info(f"[v3 {device_id}] mobile auth accepted")
+            return {
+                "id": device_id,
+                "character_id": "default",
+                "mode_id": "default",
+                "battery": None,
+                "is_active": True,
+            }
+
         if self.settings.env == "development":
             try:
                 if not self.supabase:
