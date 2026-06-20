@@ -795,14 +795,24 @@ class OpenAIDirectTTS:
         self.sample_rate = sample_rate
         self.client = httpx.AsyncClient(timeout=60.0)
 
+    def _voice_for_character(self, character: str) -> str:
+        profile = get_character_profile(character)
+        return profile.voice_id or self.voice
+
+    def _output_sample_rate(self) -> int:
+        # OpenAI TTS-1 outputs PCM at 24 kHz.
+        return 24000
+
     async def synthesize_stream(
         self,
         text: str,
         character: str = "default",
         mode: str = "default",
     ) -> AsyncIterator[bytes]:
-        logger.info(f"OpenAI TTS: synthesizing {len(text)} chars")
+        voice = self._voice_for_character(character)
+        logger.info(f"OpenAI TTS: synthesizing {len(text)} chars voice={voice}")
         try:
+            collected: List[bytes] = []
             async with self.client.stream(
                 "POST",
                 "https://api.openai.com/v1/audio/speech",
@@ -813,9 +823,8 @@ class OpenAIDirectTTS:
                 json={
                     "model": self.model,
                     "input": text,
-                    "voice": self.voice,
+                    "voice": voice,
                     "response_format": self.response_format,
-                    "sample_rate": self.sample_rate,
                 },
             ) as resp:
                 resp.raise_for_status()
@@ -823,8 +832,20 @@ class OpenAIDirectTTS:
                 async for chunk in resp.aiter_bytes(chunk_size=4096):
                     if chunk:
                         total += len(chunk)
-                        yield chunk
+                        collected.append(chunk)
                 logger.info(f"OpenAI TTS: streamed {total} bytes")
+
+            if not collected:
+                return
+
+            pcm = b"".join(collected)
+            src_rate = self._output_sample_rate()
+            if src_rate != self.sample_rate:
+                pcm = resample_pcm(pcm, src_rate, self.sample_rate)
+                logger.info(f"OpenAI TTS: resampled {src_rate}Hz -> {self.sample_rate}Hz")
+
+            for i in range(0, len(pcm), 4096):
+                yield pcm[i : i + 4096]
         except Exception as e:
             logger.error(f"OpenAI TTS failed: {e}", exc_info=True)
             raise
