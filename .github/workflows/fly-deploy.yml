@@ -29,10 +29,14 @@ jobs:
 
       - name: Install dependencies
         working-directory: web-revamp
+        env:
+          NODE_ENV: development
         run: npm ci
 
       - name: Build static site
         working-directory: web-revamp
+        env:
+          NODE_ENV: development
         run: npm run build
 
       - name: Set up flyctl
