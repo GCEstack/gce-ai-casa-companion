@@ -742,6 +742,108 @@ class GroqLLM:
 
 
 # ────────────────────────────────
+# Gemini LLM
+# ────────────────────────────────
+
+class GeminiLLM:
+    """LLM via Google Gemini (generativelanguage API)."""
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "gemini-2.5-flash-preview-05-20",
+    ):
+        self.api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
+        self.model = model
+        self.client = httpx.AsyncClient(timeout=60.0)
+
+    def _to_gemini_contents(
+        self, messages: List[Dict[str, str]]
+    ) -> tuple[Optional[str], List[Dict[str, Any]]]:
+        """Split OpenAI-style messages into Gemini systemInstruction + contents."""
+        system_instruction = None
+        contents: List[Dict[str, Any]] = []
+        for m in messages:
+            role = m.get("role")
+            text = m.get("content", "")
+            if role == "system":
+                system_instruction = text
+                continue
+            gemini_role = "user" if role == "user" else "model"
+            contents.append({
+                "role": gemini_role,
+                "parts": [{"text": text}],
+            })
+        return system_instruction, contents
+
+    async def chat(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.7,
+        max_tokens: int = 512,
+    ) -> str:
+        system_instruction, contents = self._to_gemini_contents(messages)
+        payload: Dict[str, Any] = {
+            "contents": contents,
+            "generationConfig": {
+                "temperature": temperature,
+                "maxOutputTokens": max_tokens,
+            },
+        }
+        if system_instruction:
+            payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+        try:
+            resp = await self.client.post(url, json=payload, timeout=60.0)
+            resp.raise_for_status()
+            data = resp.json()
+            candidate = data.get("candidates", [{}])[0]
+            text = candidate.get("content", {}).get("parts", [{}])[0].get("text", "")
+            return text.strip()
+        except Exception as e:
+            logger.error(f"Gemini LLM failed: {e}", exc_info=True)
+            return ""
+
+    async def chat_stream(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.7,
+        max_tokens: int = 512,
+    ) -> AsyncIterator[str]:
+        system_instruction, contents = self._to_gemini_contents(messages)
+        payload: Dict[str, Any] = {
+            "contents": contents,
+            "generationConfig": {
+                "temperature": temperature,
+                "maxOutputTokens": max_tokens,
+            },
+        }
+        if system_instruction:
+            payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:streamGenerateContent?key={self.api_key}"
+        try:
+            async with self.client.stream("POST", url, json=payload, timeout=60.0) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if not line or line.startswith("[") or line.startswith("]"):
+                        continue
+                    line = line.rstrip(",")
+                    try:
+                        chunk = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    candidate = chunk.get("candidates", [{}])[0]
+                    text = candidate.get("content", {}).get("parts", [{}])[0].get("text", "")
+                    if text:
+                        yield text
+        except Exception as e:
+            logger.error(f"Gemini LLM stream failed: {e}", exc_info=True)
+            raise
+
+
+# ────────────────────────────────
 # OpenAI Direct TTS
 # ────────────────────────────────
 
@@ -821,6 +923,7 @@ class VoiceProviders:
         openrouter_key = api_key or os.environ.get("OPENROUTER_API_KEY", "")
         groq_key = os.environ.get("GROQ_API_KEY", "")
         openai_key = os.environ.get("OPENAI_API_KEY", "")
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
 
         # Keep the OpenRouter key explicit so fallback paths don't accidentally
         # use an empty string when only Groq is configured.
@@ -832,12 +935,19 @@ class VoiceProviders:
                 api_key=groq_key,
                 model=os.environ.get("GROQ_LLM_MODEL", "llama-3.3-70b-versatile"),
             )
+        elif gemini_key:
+            logger.info("Using Groq STT + Gemini LLM")
+            self.stt = GroqSTT(api_key=groq_key) if groq_key else None
+            self.llm = GeminiLLM(
+                api_key=gemini_key,
+                model=os.environ.get("GEMINI_MODEL", "gemini-2.5-flash-preview-05-20"),
+            )
         elif openrouter_key:
             logger.info("Using OpenRouter STT stack")
             self.stt = OpenRouterSTT(api_key=openrouter_key)
             self.llm = None
         else:
-            logging.warning("No STT/LLM API key found. Set GROQ_API_KEY or OPENROUTER_API_KEY.")
+            logging.warning("No STT/LLM API key found. Set GROQ_API_KEY, GEMINI_API_KEY, or OPENROUTER_API_KEY.")
             self.stt = None
             self.llm = None
 
