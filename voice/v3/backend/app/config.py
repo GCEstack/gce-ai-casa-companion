@@ -27,9 +27,10 @@ class Settings(BaseSettings):
     groq_api_key: str = Field(alias="GROQ_API_KEY")
     cartesia_api_key: str = Field(alias="CARTESIA_API_KEY")
 
-    # Supabase (service role for the voice server)
-    supabase_url: str = Field(alias="SUPABASE_URL")
-    supabase_service_key: str = Field(alias="SUPABASE_SERVICE_KEY")
+    # Supabase (service role for the voice server). Optional so the server can
+    # start in environments where only the V3 engine (no persistence) is needed.
+    supabase_url: str = Field(default="", alias="SUPABASE_URL")
+    supabase_service_key: str = Field(default="", alias="SUPABASE_SERVICE_KEY")
 
     # Server-to-server secret used by the dashboard kill switch
     voice_server_api_key: str = Field(default="", alias="VOICE_SERVER_API_KEY")
