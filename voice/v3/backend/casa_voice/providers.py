@@ -321,6 +321,10 @@ class OpenRouterTTS:
         self.cache = TTSCache(cache_dir) if cache_enabled else None
 
     def _voice_for_character(self, character: str) -> str:
+        # Gemini Flash TTS only supports its own voices (e.g. Kore, Sulafat).
+        # For other models we can use the per-character voice from the mobile config.
+        if "gemini-3.1" in self.model:
+            return self.voice
         profile = get_character_profile(character)
         return profile.voice_id or self.voice
 
