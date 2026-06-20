@@ -382,6 +382,81 @@ class OpenRouterTTS:
 
 
 # ────────────────────────────────
+# Cartesia TTS — PCM s16le 16kHz
+# ────────────────────────────────
+
+class CartesiaTTS:
+    """Stream TTS audio from Cartesia Sonic as raw PCM s16le chunks.
+
+    Defaults to 16 kHz to match the browser playback pipeline.
+    """
+
+    CARTESIA_DEFAULT_VOICE = "f786b574-daa5-4673-aa0c-cbe3e8534c02"
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: Optional[str] = None,
+        voice_id: Optional[str] = None,
+        sample_rate: int = 16000,
+    ):
+        self.api_key = api_key or os.environ.get("CARTESIA_API_KEY", "")
+        self.model = model or os.environ.get("CARTESIA_MODEL", "sonic-3")
+        self.voice_id = voice_id or os.environ.get("CARTESIA_VOICE_ID", self.CARTESIA_DEFAULT_VOICE)
+        self.sample_rate = sample_rate
+        self.language = os.environ.get("CARTESIA_LANGUAGE", "en")
+        self.client = httpx.AsyncClient(timeout=60.0)
+
+    async def synthesize_stream(
+        self,
+        text: str,
+        character: str = "default",
+        mode: str = "default",
+    ) -> AsyncIterator[bytes]:
+        """Yield PCM s16le chunks as they arrive from Cartesia."""
+        if not text.strip():
+            return
+
+        payload = {
+            "model_id": self.model,
+            "transcript": text.strip(),
+            "voice": {"mode": "id", "id": self.voice_id},
+            "output_format": {
+                "container": "raw",
+                "encoding": "pcm_s16le",
+                "sample_rate": self.sample_rate,
+            },
+            "language": self.language,
+        }
+        headers = {
+            "X-API-Key": self.api_key,
+            "Cartesia-Version": "2024-06-10",
+            "Content-Type": "application/json",
+        }
+
+        logger.info(
+            f"TTS: Cartesia synthesizing {len(text)} chars "
+            f"model={self.model} voice={self.voice_id} rate={self.sample_rate}"
+        )
+        total = 0
+        async with self.client.stream("POST", "https://api.cartesia.ai/tts/bytes", headers=headers, json=payload) as resp:
+            if resp.status_code >= 400:
+                body = await resp.aread()
+                raise RuntimeError(f"Cartesia TTS {resp.status_code}: {body.decode('utf-8', errors='ignore')}")
+            async for chunk in resp.aiter_bytes(chunk_size=4096):
+                if chunk:
+                    total += len(chunk)
+                    yield chunk
+        logger.info(f"TTS: Cartesia streamed {total} bytes")
+
+    async def synthesize(self, text: str, character: str = "default", mode: str = "default") -> bytes:
+        chunks = []
+        async for chunk in self.synthesize_stream(text, character, mode):
+            chunks.append(chunk)
+        return b"".join(chunks)
+
+
+# ────────────────────────────────
 # Silero VAD (Backend)
 # ────────────────────────────────
 
@@ -744,6 +819,7 @@ class VoiceProviders:
         openrouter_key = api_key or os.environ.get("OPENROUTER_API_KEY", "")
         groq_key = os.environ.get("GROQ_API_KEY", "")
         openai_key = os.environ.get("OPENAI_API_KEY", "")
+        cartesia_key = os.environ.get("CARTESIA_API_KEY", "")
 
         self.api_key = openrouter_key  # used by OpenRouter fallback paths
         if groq_key:
@@ -769,11 +845,14 @@ class VoiceProviders:
                 model=os.environ.get("OPENAI_TTS_MODEL", "tts-1"),
                 voice=os.environ.get("OPENAI_TTS_VOICE", "nova"),
             )
+        elif cartesia_key:
+            logger.info("Using Cartesia TTS")
+            self.tts = CartesiaTTS(api_key=cartesia_key)
         elif openrouter_key:
             logger.info("Using OpenRouter TTS fallback")
             self.tts = OpenRouterTTS(api_key=openrouter_key)
         else:
-            logging.warning("No TTS API key found. Set OPENAI_API_KEY or OPENROUTER_API_KEY.")
+            logging.warning("No TTS API key found. Set OPENAI_API_KEY, CARTESIA_API_KEY, or OPENROUTER_API_KEY.")
             self.tts = OpenRouterTTS(api_key="")
 
         self.vad = SileroVAD()
