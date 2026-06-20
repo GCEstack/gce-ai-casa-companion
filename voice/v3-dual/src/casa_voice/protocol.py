@@ -64,6 +64,8 @@ class CommandType(Enum):
     CHARACTER_JENNY = "character_jenny"
     CHARACTER_DEFAULT = "character_default"
     BUTTON_PRESS = "button_press"
+    START_LISTENING = "start_listening"
+    STOP_LISTENING = "stop_listening"
     SCENE_BEDTIME = "scene_bedtime"
     SCENE_GREETING = "scene_greeting"
     SCENE_JOKE = "scene_joke"

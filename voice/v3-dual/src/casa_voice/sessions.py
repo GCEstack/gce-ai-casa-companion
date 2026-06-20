@@ -109,6 +109,7 @@ class VoiceSession:
         self._interrupted = asyncio.Event()
         self._lock = asyncio.Lock()
         self._wake_event = asyncio.Event()
+        self._manual_stop = False
 
         self._conversation_history: list = []
         self._interests: Dict[str, List[str]] = {}
@@ -396,6 +397,23 @@ class VoiceSession:
                 async with self._lock:
                     self.state = VoiceState.WAKE_DETECTED
                     await self._broadcast(VoiceMessage.state_change(VoiceState.WAKE_DETECTED))
+        elif cmd == CommandType.START_LISTENING:
+            # Push-to-talk: start a new listening turn from any state.
+            self._manual_stop = False
+            if self.state == VoiceState.SPEAKING:
+                await self._trigger_interrupt()
+            async with self._lock:
+                if self.state in (VoiceState.IDLE, VoiceState.INTERRUPTED):
+                    self.state = VoiceState.WAKE_DETECTED
+                    await self._broadcast(VoiceMessage.state_change(VoiceState.WAKE_DETECTED))
+                elif self.state == VoiceState.LISTENING:
+                    # Already listening; extend the current turn.
+                    pass
+        elif cmd == CommandType.STOP_LISTENING:
+            # Push-to-talk release: stop collecting audio and process what we have.
+            if self.state in (VoiceState.WAKE_DETECTED, VoiceState.LISTENING):
+                self._manual_stop = True
+                self._wake_event.set()
         elif cmd == CommandType.LOUDER or cmd == CommandType.VOLUME_UP:
             await self.handle_config_change(volume=self.volume + 0.1)
         elif cmd == CommandType.SOFTER or cmd == CommandType.VOLUME_DOWN:
@@ -1163,6 +1181,7 @@ class VoiceSession:
         async with self._lock:
             self.state = VoiceState.IDLE
             self._interrupted.clear()
+            self._manual_stop = False
             self._current_utterance = ""
             self._clear_request_id()
             await self._broadcast(VoiceMessage.state_change(VoiceState.IDLE))
@@ -1180,6 +1199,12 @@ class VoiceSession:
                 await asyncio.wait_for(self._wake_event.wait(), timeout=0.05)
             except asyncio.TimeoutError:
                 pass
+
+            # Manual push-to-talk stop: finish collecting immediately.
+            if self._manual_stop:
+                logger.info(f"[{self.session_id}] LISTENING: manual stop, collected {len(audio)} bytes")
+                break
+
             chunk = self.input_buffer.get_and_clear()
             if not chunk:
                 silence_frames += 1
