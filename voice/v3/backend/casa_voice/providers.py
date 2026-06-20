@@ -197,7 +197,14 @@ class CharacterVoiceRouter:
         )
 
     def apply_tags(self, text: str, character: str, mode: str = "default") -> str:
-        """Wrap text with appropriate Gemini audio tags."""
+        """Wrap text with appropriate Gemini audio tags.
+
+        Only Gemini Flash TTS supports these tags; for other models (e.g. OpenAI
+        voices via OpenRouter) return the text unchanged so tags aren't spoken.
+        """
+        if "gemini-3.1" not in self.tts_model:
+            return text
+
         profile = self.get_profile(character)
         tag = profile.tags.get(mode, profile.default_tag)
 
@@ -314,7 +321,15 @@ class OpenRouterTTS:
         self.cache = TTSCache(cache_dir) if cache_enabled else None
 
     def _voice_for_character(self, character: str) -> str:
-        return self.voice
+        profile = get_character_profile(character)
+        return profile.voice_id or self.voice
+
+    def _output_sample_rate(self) -> int:
+        """Return the native PCM sample rate returned by the chosen TTS model."""
+        if self.model.startswith("openai/tts"):
+            return 24000
+        # Gemini Flash TTS returns the requested sample rate.
+        return self.sample_rate
 
     async def synthesize_stream(
         self,
@@ -334,13 +349,15 @@ class OpenRouterTTS:
                 yield chunk
             return
 
-        payload = {
+        payload: Dict[str, Any] = {
             "model": self.model,
             "input": tagged_text,
             "voice": voice,
             "response_format": "pcm",  # KEY: skip WAV header parsing
-            "sample_rate": self.sample_rate,
         }
+        # Only Gemini Flash TTS accepts an explicit sample_rate parameter.
+        if "gemini-3.1" in self.model:
+            payload["sample_rate"] = self.sample_rate
         routing = _get_openrouter_provider_routing()
         if routing:
             payload["provider"] = routing
@@ -365,12 +382,23 @@ class OpenRouterTTS:
                     if chunk:
                         total += len(chunk)
                         collected.append(chunk)
-                        yield chunk
                 logger.info(f"TTS: streamed {total} bytes")
 
-            # Cache the full response for instant replay next time.
-            if self.cache is not None and collected:
-                await self.cache.write(tagged_text, self.model, voice, b"".join(collected))
+            if not collected:
+                return
+
+            pcm = b"".join(collected)
+            src_rate = self._output_sample_rate()
+            if src_rate != self.sample_rate:
+                pcm = resample_pcm(pcm, src_rate, self.sample_rate)
+                logger.info(f"TTS: resampled {src_rate}Hz -> {self.sample_rate}Hz")
+
+            # Cache and yield the final (resampled) PCM.
+            if self.cache is not None:
+                await self.cache.write(tagged_text, self.model, voice, pcm)
+
+            for i in range(0, len(pcm), self.cache.CHUNK_SIZE if self.cache else 4096):
+                yield pcm[i : i + (self.cache.CHUNK_SIZE if self.cache else 4096)]
         except Exception as e:
             logger.error(f"TTS failed: {e}", exc_info=True)
             raise
