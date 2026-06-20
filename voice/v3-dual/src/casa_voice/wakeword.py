@@ -79,15 +79,26 @@ class PorcupineWakeWord:
         pos = 0
         while pos + frame_len <= len(samples):
             frame = samples[pos : pos + frame_len]
-            pos += frame_len
             # Porcupine v1.x expects a sequence of frame_length int16 samples.
             result = self._porcupine.process(frame)
             if result >= 0:
                 detected = self.keywords[result]
                 logger.info(f"Wake-word detected: '{detected}'")
+                # Include the current wake-word frame in the consumed audio.
+                pos += frame_len
+                break
+            pos += frame_len
 
         self._remainder = samples[pos:]
         return detected
+
+    def get_remainder(self) -> bytes:
+        """Return unconsumed audio samples after the wake word.
+
+        Useful for carrying over the audio that arrived immediately after the
+        wake word into the listening phase, without including pre-wake noise.
+        """
+        return self._remainder.tobytes()
 
     def reset(self):
         """Clear any pending audio."""

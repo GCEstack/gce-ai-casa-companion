@@ -18,6 +18,7 @@ Multi-client support:
 import os
 import re
 import time
+import uuid
 import asyncio
 import logging
 from typing import Optional, Callable, Dict, List, Awaitable
@@ -30,6 +31,7 @@ from .providers import VoiceProviders, DEFAULT_LLM
 from .persistence import SessionStore
 from .wakeword import create_wake_word_detector
 from .story_queue import StoryQueue
+from .filler_generator import filler_generator
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +97,6 @@ class VoiceSession:
         self.mode = mode
         self.volume = 1.0
         self.store = store
-        self.state = VoiceState.IDLE
 
         self.clients: Dict[str, ClientHandle] = {}
         self.input_buffer = AudioBuffer(max_seconds=10.0)
@@ -107,6 +108,7 @@ class VoiceSession:
         self._speaking = asyncio.Event()
         self._interrupted = asyncio.Event()
         self._lock = asyncio.Lock()
+        self._wake_event = asyncio.Event()
 
         self._conversation_history: list = []
         self._interests: Dict[str, List[str]] = {}
@@ -116,6 +118,10 @@ class VoiceSession:
         self._pending_audio: bytes = b""
         self._utterance_start_time: float = 0.0
         self._native_history: list = []  # text-only context for native audio quick-chat mode
+        self._current_request_id: Optional[str] = None  # per-turn tracing ID
+
+        # Must be set last so the setter has access to _wake_event.
+        self.state = VoiceState.IDLE
 
         # Tuning: shorter timeouts = snappier responses, but too short clips speech.
         self.wake_max_seconds = float(os.environ.get("WAKE_MAX_SECONDS", "1.5"))
@@ -129,6 +135,29 @@ class VoiceSession:
         except Exception as e:
             logger.warning(f"Wake-word detector failed to load, falling back to STT: {e}")
             self.wake_word_detector = None
+
+    @property
+    def state(self) -> VoiceState:
+        return self._state
+
+    @state.setter
+    def state(self, value: VoiceState) -> None:
+        self._state = value
+        self._wake_event.set()
+
+    def _new_request_id(self) -> str:
+        """Start a new per-turn request ID for tracing."""
+        self._current_request_id = uuid.uuid4().hex[:12]
+        return self._current_request_id
+
+    def _clear_request_id(self):
+        self._current_request_id = None
+
+    @property
+    def _ctx(self) -> str:
+        """Log prefix including session and current request ID."""
+        rid = self._current_request_id or "-"
+        return f"[{self.session_id}/{rid}]"
 
     # ── Client management ───────────────────────────────────────────────────────
 
@@ -211,7 +240,11 @@ class VoiceSession:
         try:
             await client.send(msg)
         except Exception as e:
-            logger.warning(f"[{self.session_id}] Failed to send to {client.device_id}: {e}")
+            logger.warning(
+                f"[{self.session_id}] Failed to send to {client.device_id}: {e}; removing client"
+            )
+            self.remove_client(client.device_id)
+            return
 
         # Also enqueue non-binary messages for SSE listeners
         if not msg.binary:
@@ -254,6 +287,66 @@ class VoiceSession:
     async def handle_audio(self, pcm: bytes):
         self.input_buffer.append(pcm)
         self.vad_buffer.append(pcm)
+        self._wake_event.set()
+
+    async def handle_text_input(self, text: str):
+        """Process typed text from dashboard/mobile clients as if it were a transcript."""
+        text = text.strip()
+        if not text:
+            return
+        self._new_request_id()
+        logger.info(f"{self._ctx} TEXT_INPUT: '{text}'")
+
+        # Wake the session if it's dormant, then process the text immediately.
+        if self.state == VoiceState.IDLE:
+            await self._broadcast(VoiceMessage.state_change(VoiceState.WAKE_DETECTED))
+            await self._broadcast(VoiceMessage.state_change(VoiceState.LISTENING))
+        elif self.state == VoiceState.SPEAKING:
+            await self._trigger_interrupt()
+
+        await self._broadcast(VoiceMessage.transcript(text))
+        await self._process_text_turn(text)
+
+    async def _process_text_turn(self, text: str):
+        """Run the same pipeline used for voice transcripts on typed text."""
+        # Fast-path trigger responses.
+        trigger_reply = self.providers.commands.trigger_responder.match(text)
+        if trigger_reply:
+            await self._process_and_speak(trigger_reply, skip_history=True)
+            return
+
+        # Voice echo.
+        echo = self.providers.commands.echo_responder.match(text)
+        if echo:
+            await self._echo_and_learn(text, echo)
+            return
+
+        # Story mode continuation.
+        if self.mode == "story" and self._story_queue.is_continuation(text):
+            segment = self._story_queue.next()
+            if segment:
+                self._conversation_history.append({"role": "user", "content": text})
+                self._conversation_history.append({"role": "assistant", "content": segment})
+                if self.store:
+                    await self.store.save(
+                        self.session_id,
+                        self._conversation_history,
+                        character=self.character,
+                        mode=self.mode,
+                        kid_profile={"interests": self._interests},
+                    )
+                if self.providers.llm:
+                    asyncio.create_task(self._story_queue.prefill(self._interests))
+                await self._speak(segment)
+                return
+
+        cmd_result = self.providers.commands.classifier.classify(text)
+        if cmd_result.is_command:
+            handled = await self._handle_command_in_transcript(cmd_result, text)
+            if handled:
+                return
+
+        await self._process_and_speak(text)
 
     async def handle_config_change(
         self,
@@ -359,14 +452,14 @@ class VoiceSession:
 
                         # Quick Chat mode: bypass STT/LLM/TTS pipeline and use native audio -> audio.
                         if self.mode == "quick_chat" and self.providers.native_audio is not None:
-                            logger.info(f"[{self.session_id}] LISTENING: quick-chat native audio ({len(audio)} bytes)")
+                            logger.info(f"{self._ctx} LISTENING: quick-chat native audio ({len(audio)} bytes)")
                             await self._process_native_audio(audio)
                             continue
 
-                        logger.info(f"[{self.session_id}] LISTENING: sending {len(audio)} bytes to STT")
+                        logger.info(f"{self._ctx} LISTENING: sending {len(audio)} bytes to STT")
                         t0 = time.perf_counter()
                         transcript = await self.providers.stt.transcribe(audio)
-                        logger.info(f"[{self.session_id}] LISTENING: STT took {(time.perf_counter() - t0):.2f}s -> '{transcript}'")
+                        logger.info(f"{self._ctx} LISTENING: STT took {(time.perf_counter() - t0):.2f}s -> '{transcript}'")
                         if not transcript:
                             await self._return_to_idle()
                             continue
@@ -382,7 +475,7 @@ class VoiceSession:
                     # Fast-path trigger responses — zero LLM latency for common phrases.
                     trigger_reply = self.providers.commands.trigger_responder.match(transcript)
                     if trigger_reply:
-                        logger.info(f"[{self.session_id}] Trigger response matched for '{transcript}'")
+                        logger.info(f"{self._ctx} Trigger response matched for '{transcript}'")
                         await self._process_and_speak(trigger_reply, skip_history=True)
                         continue
 
@@ -390,7 +483,7 @@ class VoiceSession:
                     echo = self.providers.commands.echo_responder.match(transcript)
                     if echo:
                         logger.info(
-                            f"[{self.session_id}] Voice echo matched for '{transcript}': {echo.interests}"
+                            f"{self._ctx} Voice echo matched for '{transcript}': {echo.interests}"
                         )
                         await self._echo_and_learn(transcript, echo)
                         continue
@@ -399,7 +492,7 @@ class VoiceSession:
                     if self.mode == "story" and self._story_queue.is_continuation(transcript):
                         segment = self._story_queue.next()
                         if segment:
-                            logger.info(f"[{self.session_id}] Story queue segment: '{segment}'")
+                            logger.info(f"{self._ctx} Story queue segment: '{segment}'")
                             self._conversation_history.append({"role": "user", "content": transcript})
                             self._conversation_history.append({"role": "assistant", "content": segment})
                             if self.store:
@@ -415,10 +508,11 @@ class VoiceSession:
                                 asyncio.create_task(self._story_queue.prefill(self._interests))
                             await self._speak(segment)
                             continue
-                        logger.info(f"[{self.session_id}] Story continuation requested but queue empty")
+                        logger.info(f"{self._ctx} Story continuation requested but queue empty")
 
                     cmd_result = self.providers.commands.classifier.classify(transcript)
                     if cmd_result.is_command:
+                        logger.info(f"{self._ctx} Command classified: {cmd_result.command.value}")
                         handled = await self._handle_command_in_transcript(cmd_result, transcript)
                         if handled:
                             continue
@@ -427,7 +521,11 @@ class VoiceSession:
                     continue
 
                 if self.state == VoiceState.SPEAKING:
-                    await self._speaking.wait()
+                    # _speaking is set while audio is playing. asyncio.Event.wait()
+                    # returns immediately when already set, so we must yield manually
+                    # to avoid starving the event loop (and TTS network I/O).
+                    if self._speaking.is_set():
+                        await asyncio.sleep(0.05)
                     continue
 
                 if self.state == VoiceState.INTERRUPTED:
@@ -497,31 +595,37 @@ class VoiceSession:
         logger.info(f"[{self.session_id}] IDLE: Porcupine wake-word listener active")
         self.wake_word_detector.reset()
         detected_keyword = None
-        wake_audio = bytearray()
 
         while not detected_keyword:
-            await asyncio.sleep(0.05)
+            self._wake_event.clear()
+            try:
+                await asyncio.wait_for(self._wake_event.wait(), timeout=0.05)
+            except asyncio.TimeoutError:
+                pass
 
             # A manual wake command (e.g. push-to-talk button) can move us out of IDLE.
             if self.state != VoiceState.IDLE:
                 logger.info(f"[{self.session_id}] IDLE: wake listener aborted by state change")
                 return None
 
-            # Feed raw audio to Porcupine. Also keep a copy so we can hand any
-            # trailing audio (the command) straight to the listening phase.
             chunk = self.input_buffer.get_and_clear()
             if chunk:
-                wake_audio.extend(chunk)
                 detected_keyword = self.wake_word_detector.process(chunk)
 
         logger.info(f"[{self.session_id}] IDLE: Porcupine detected '{detected_keyword}'")
         await self._broadcast(VoiceMessage.state_change(VoiceState.WAKE_DETECTED))
+        self._new_request_id()
+        logger.info(f"{self._ctx} Turn started (wake-word)")
 
-        # The audio already captured after the wake word is likely the start of
-        # the command. Keep it for the listening phase.
-        if len(wake_audio) > 0:
-            self._pending_audio = bytes(wake_audio)
-            logger.info(f"[{self.session_id}] IDLE: carrying over {len(self._pending_audio)} bytes of audio")
+        # Carry over only the audio that arrived after the wake-word frame.
+        # The detector's remainder is exactly that; any newer audio is still in
+        # the input buffer and will be collected during the listening phase.
+        pending = self.wake_word_detector.get_remainder()
+        post_wake_audio = bytearray(pending)
+        post_wake_audio.extend(self.input_buffer.get_and_clear())
+        if len(post_wake_audio) > 0:
+            self._pending_audio = bytes(post_wake_audio)
+            logger.info(f"[{self.session_id}] IDLE: carrying over {len(self._pending_audio)} bytes of post-wake audio")
 
         return detected_keyword
 
@@ -529,7 +633,11 @@ class VoiceSession:
         """Legacy STT-based wake phrase detection."""
         logger.info(f"[{self.session_id}] IDLE: STT-based wake listener active")
         while True:
-            await asyncio.sleep(0.05)
+            self._wake_event.clear()
+            try:
+                await asyncio.wait_for(self._wake_event.wait(), timeout=0.05)
+            except asyncio.TimeoutError:
+                pass
 
             # A manual wake command (e.g. push-to-talk button) can move us out of IDLE.
             if self.state != VoiceState.IDLE:
@@ -573,6 +681,8 @@ class VoiceSession:
             if cmd_result.is_command and cmd_result.command == CommandType.WAKE:
                 logger.info(f"Wake phrase: '{cmd_result.matched_phrase}'")
                 await self._broadcast(VoiceMessage.state_change(VoiceState.WAKE_DETECTED))
+                self._new_request_id()
+                logger.info(f"{self._ctx} Turn started (wake phrase)")
 
                 # Use the last matched wake phrase as the cut-off point so we don't
                 # send the junk that came before it to the LLM.
@@ -602,7 +712,11 @@ class VoiceSession:
         silence_limit = max(1, self.wake_silence_ms // 50)
 
         for _ in range(max_frames):
-            await asyncio.sleep(0.05)
+            self._wake_event.clear()
+            try:
+                await asyncio.wait_for(self._wake_event.wait(), timeout=0.05)
+            except asyncio.TimeoutError:
+                pass
             chunk = self.input_buffer.get_and_clear()
             if not chunk:
                 silence_frames += 1
@@ -674,7 +788,7 @@ class VoiceSession:
         # Trigger responses are already final text — bypass LLM entirely.
         if skip_history:
             llm_response = text
-            logger.info(f"[{self.session_id}] PROCESSING: trigger response (LLM skipped)")
+            logger.info(f"{self._ctx} PROCESSING: trigger response (LLM skipped)")
         else:
             streaming_enabled = os.environ.get("STREAMING_TTS_ENABLED", "1").strip().lower() not in (
                 "0",
@@ -688,14 +802,25 @@ class VoiceSession:
             ):
                 return await self._process_and_speak_streaming(text)
 
+            # Speak a short filler while the LLM thinks. Skip for instant
+            # trigger responses and when filler_generator returns None.
+            filler = filler_generator.select(text, character=self.character, mode=self.mode)
+            if filler:
+                logger.info(f"{self._ctx} PROCESSING: filler -> '{filler}'")
+                await self._speak(filler)
+                # Return to PROCESSING while the LLM runs.
+                async with self._lock:
+                    self.state = VoiceState.PROCESSING
+                    await self._broadcast(VoiceMessage.state_change(VoiceState.PROCESSING))
+
             # Compress long transcripts to keywords to cut tokens and latency.
             llm_input = self.providers.commands.keyword_compressor.compress(text)
-            logger.info(f"[{self.session_id}] PROCESSING: calling LLM for '{text}' (compressed: '{llm_input}')")
+            logger.info(f"{self._ctx} PROCESSING: calling LLM for '{text}' (compressed: '{llm_input}')")
             t0 = time.perf_counter()
             llm_response = await self._call_llm(llm_input)
             t1 = time.perf_counter()
-            logger.info(f"[{self.session_id}] PROCESSING: LLM took {(t1 - t0):.2f}s")
-            logger.info(f"[{self.session_id}] PROCESSING: LLM response = '{llm_response[:120]}...'")
+            logger.info(f"{self._ctx} PROCESSING: LLM took {(t1 - t0):.2f}s")
+            logger.info(f"{self._ctx} PROCESSING: LLM response = '{llm_response[:120]}...'")
 
         if not llm_response:
             await self._return_to_idle()
@@ -722,9 +847,25 @@ class VoiceSession:
         and start TTS on the first sentence while the model is still generating
         the rest. This cuts the time-to-first-audio for fresh LLM responses.
         """
+        if self.providers.tts is None:
+            logger.error(f"{self._ctx} PROCESSING (streaming): no TTS provider configured")
+            await self._broadcast(VoiceMessage.error("tts", "No TTS provider configured"))
+            await self._return_to_idle()
+            return
+
+        # Speak a short filler while the LLM thinks.
+        filler = filler_generator.select(text, character=self.character, mode=self.mode)
+        if filler:
+            logger.info(f"{self._ctx} PROCESSING (streaming): filler -> '{filler}'")
+            await self._speak(filler)
+            # _speak returns to IDLE, so return to PROCESSING for the LLM stream.
+            async with self._lock:
+                self.state = VoiceState.PROCESSING
+                await self._broadcast(VoiceMessage.state_change(VoiceState.PROCESSING))
+
         # Compress long transcripts to keywords to cut tokens and latency.
         llm_input = self.providers.commands.keyword_compressor.compress(text)
-        logger.info(f"[{self.session_id}] PROCESSING (streaming): calling LLM for '{text}' (compressed: '{llm_input}')")
+        logger.info(f"{self._ctx} PROCESSING (streaming): calling LLM for '{text}' (compressed: '{llm_input}')")
 
         system_prompt = self._build_system_prompt()
         messages = [{"role": "system", "content": system_prompt}]
@@ -849,7 +990,7 @@ class VoiceSession:
                 conversation_history=self._native_history,
             ):
                 if self._interrupted.is_set():
-                    logger.info("Native audio turn interrupted")
+                    logger.info(f"{self._ctx} Native audio turn interrupted")
                     break
 
                 chunk_type = chunk.get("type")
@@ -887,7 +1028,7 @@ class VoiceSession:
                         full_assistant_text = final
 
         except Exception as e:
-            logger.error(f"[{self.session_id}] Native audio turn failed: {e}", exc_info=True)
+            logger.error(f"{self._ctx} Native audio turn failed: {e}", exc_info=True)
             await self._broadcast(VoiceMessage.error("native_audio_failed", "Sorry, I had trouble hearing you. Try again!"))
         finally:
             self._speaking.clear()
@@ -959,7 +1100,14 @@ class VoiceSession:
             self.input_buffer.get_and_clear()
             self.vad_buffer.get_and_clear()
 
-        logger.info(f"[{self.session_id}] SPEAKING: streaming TTS ({len(text)} chars)")
+        if self.providers.tts is None:
+            logger.error(f"{self._ctx} SPEAKING: no TTS provider configured")
+            await self._broadcast(VoiceMessage.error("tts", "No TTS provider configured"))
+            self._speaking.clear()
+            await self._return_to_idle()
+            return
+
+        logger.info(f"{self._ctx} SPEAKING: streaming TTS ({len(text)} chars)")
         t0 = time.perf_counter()
         seq = 0
         first_byte = True
@@ -969,18 +1117,18 @@ class VoiceSession:
                     first_byte = False
                     tts_latency = time.perf_counter() - t0
                     total_latency = time.perf_counter() - self._utterance_start_time
-                    logger.info(f"[{self.session_id}] SPEAKING: TTS first byte after {tts_latency:.2f}s (total {total_latency:.2f}s from wake)")
+                    logger.info(f"{self._ctx} SPEAKING: TTS first byte after {tts_latency:.2f}s (total {total_latency:.2f}s from wake)")
                 if self._interrupted.is_set():
-                    logger.info("TTS interrupted")
+                    logger.info(f"{self._ctx} TTS interrupted")
                     break
                 msg = VoiceMessage.tts_chunk(chunk, sequence=seq)
                 await self._broadcast(msg)
                 seq += 1
-            logger.info(f"[{self.session_id}] SPEAKING: streamed {seq} TTS chunks in {(time.perf_counter() - t0):.2f}s")
+            logger.info(f"{self._ctx} SPEAKING: streamed {seq} TTS chunks in {(time.perf_counter() - t0):.2f}s")
         except asyncio.CancelledError:
-            logger.info("TTS cancelled")
+            logger.info(f"{self._ctx} TTS cancelled")
         except Exception as e:
-            logger.error(f"[{self.session_id}] TTS error: {e}", exc_info=True)
+            logger.error(f"{self._ctx} TTS error: {e}", exc_info=True)
         finally:
             self._speaking.clear()
             if not self._interrupted.is_set():
@@ -1016,6 +1164,7 @@ class VoiceSession:
             self.state = VoiceState.IDLE
             self._interrupted.clear()
             self._current_utterance = ""
+            self._clear_request_id()
             await self._broadcast(VoiceMessage.state_change(VoiceState.IDLE))
             logger.info(f"[{self.session_id}] → IDLE")
 
@@ -1026,7 +1175,11 @@ class VoiceSession:
         silence_limit = max(1, self.command_silence_ms // 50)
 
         for _ in range(max_frames):
-            await asyncio.sleep(0.05)
+            self._wake_event.clear()
+            try:
+                await asyncio.wait_for(self._wake_event.wait(), timeout=0.05)
+            except asyncio.TimeoutError:
+                pass
             chunk = self.input_buffer.get_and_clear()
             if not chunk:
                 silence_frames += 1
@@ -1090,7 +1243,7 @@ class VoiceSession:
                 resp = await client.post(
                     "https://openrouter.ai/api/v1/chat/completions",
                     headers={
-                        "Authorization": f"Bearer {self.providers.api_key}",
+                        "Authorization": f"Bearer {self.providers.openrouter_api_key}",
                         "Content-Type": "application/json",
                         "HTTP-Referer": "https://casa-companion.io",
                         "X-Title": "Casa Companion Voice",

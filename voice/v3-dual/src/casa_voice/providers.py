@@ -79,29 +79,22 @@ class OpenRouterSTT:
     async def transcribe(self, pcm_bytes: bytes, sample_rate: int = 16000) -> str:
         """Transcribe 16kHz PCM to text via OpenRouter STT.
 
-        OpenRouter's /audio/transcriptions endpoint expects a JSON body with
-        base64-encoded audio under input_audio, not a multipart/form upload.
+        Uses OpenAI-compatible multipart/form-data upload, which OpenRouter proxies.
         """
         if not pcm_bytes:
             return ""
         logger.info(f"STT: transcribing {len(pcm_bytes)} bytes")
-        # Wrap PCM in a WAV header and base64-encode it for OpenRouter.
         wav_bytes = self._pcm_to_wav(pcm_bytes, sample_rate)
-        audio_b64 = base64.b64encode(wav_bytes).decode("ascii")
 
-        payload = {
+        data = {
             "model": self.model,
-            "input_audio": {
-                "data": audio_b64,
-                "format": "wav",
-            },
+            "language": "en",
         }
         routing = _get_openrouter_provider_routing()
         if routing:
-            payload["provider"] = routing
+            data["provider"] = routing
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
             "HTTP-Referer": "https://casa-companion.io",
             "X-Title": "Casa Companion Voice",
         }
@@ -109,11 +102,12 @@ class OpenRouterSTT:
             resp = await self.client.post(
                 f"{OPENROUTER_BASE}/audio/transcriptions",
                 headers=headers,
-                json=payload,
+                data=data,
+                files={"file": ("audio.wav", io.BytesIO(wav_bytes), "audio/wav")},
             )
             resp.raise_for_status()
-            data = resp.json()
-            text = data.get("text", "").strip()
+            result = resp.json()
+            text = result.get("text", "").strip()
             logger.info(f"STT: result = '{text}'")
             return text
         except Exception as e:
@@ -202,6 +196,51 @@ class CharacterVoiceRouter:
         ),
     }
 
+    # Per-character Gemini TTS voices. 30 voices available; a few similar characters
+    # intentionally share a voice so every character still sounds distinct.
+    GEMINI_VOICES: Dict[str, str] = {
+        # Founder
+        "pietro": "Orus",
+        # Animals
+        "coniglio": "Puck",
+        "corvo": "Charon",
+        "gufo": "Enceladus",
+        "orsetto": "Algieba",
+        "tartaruga": "Schedar",
+        "elefante": "Iapetus",
+        "leone": "Alnilam",
+        "delfino": "Sadachbia",
+        "drago": "Fenrir",
+        # Musicians
+        "rocco": "Zubenelgenubi",
+        "vinile": "Achird",
+        "battito": "Sadaltager",
+        "onda": "Umbriel",
+        # Teachers
+        "maestra": "Leda",
+        "costruttore": "Rasalgethi",
+        "dottore": "Charon",
+        # Family
+        "mamma": "Sulafat",
+        "nonna": "Gacrux",
+        # Creatures
+        "cucita": "Despina",
+        "polpo": "Iapetus",
+        "xolo": "Fenrir",
+        "scheletro": "Algenib",
+        "ragno": "Erinome",
+        # Additional
+        "sacco": "Zubenelgenubi",
+        "spugna": "Autonoe",
+        "borsa": "Achernar",
+        "forza": "Pulcherrima",
+        "bella": "Vindemiatrix",
+        "cuoco": "Sadaltager",
+        "veloce": "Laomedeia",
+        "stellino": "Zephyr",
+        "verita": "Kore",
+    }
+
     MAX_TAGGED_LENGTH = 500  # chars — beyond this, Gemini may read tags aloud
 
     def __init__(self, tts_model: str = DEFAULT_TTS):
@@ -215,6 +254,10 @@ class CharacterVoiceRouter:
     def get_profile(self, character: str) -> VoiceProfile:
         return self.PROFILES.get(character, self.PROFILES["default"])
 
+    def get_voice(self, character: str, default_voice: str = "Kore") -> str:
+        """Return the Gemini TTS voice for a character."""
+        return self.GEMINI_VOICES.get(character, default_voice)
+
     def apply_tags(self, text: str, character: str, mode: str = "default") -> str:
         """Wrap text with appropriate Gemini audio tags."""
         profile = self.get_profile(character)
@@ -223,7 +266,11 @@ class CharacterVoiceRouter:
         # Chunk if too long
         if len(text) > self.MAX_TAGGED_LENGTH:
             chunks = self._chunk_text(text)
-            tagged = " ".join([f"{tag} {chunk}" for chunk in chunks])
+            # Only tag the first chunk so the model doesn't read a tag before
+            # every sentence segment.
+            tagged = f"{tag} {chunks[0]}"
+            if len(chunks) > 1:
+                tagged += " " + " ".join(chunks[1:])
         else:
             tagged = f"{tag} {text}"
 
@@ -338,19 +385,23 @@ class OpenRouterTTS:
     ) -> AsyncIterator[bytes]:
         """Yield PCM chunks as they arrive from the wire or from cache."""
         tagged_text = self.voice_router.apply_tags(text, character, mode)
-        logger.info(f"TTS: synthesizing {len(tagged_text)} chars for character={character}, mode={mode}")
+        voice = self.voice_router.get_voice(character, self.voice)
+        logger.info(
+            f"TTS: synthesizing {len(tagged_text)} chars for character={character}, "
+            f"mode={mode}, voice={voice}"
+        )
 
         # Cache hit: serve the pre-generated PCM instantly.
-        if self.cache is not None and self.cache.exists(tagged_text, self.model, self.voice):
+        if self.cache is not None and self.cache.exists(tagged_text, self.model, voice):
             logger.info("TTS: cache hit")
-            async for chunk in self.cache.read_stream(tagged_text, self.model, self.voice):
+            async for chunk in self.cache.read_stream(tagged_text, self.model, voice):
                 yield chunk
             return
 
         payload = {
             "model": self.model,
             "input": tagged_text,
-            "voice": self.voice,
+            "voice": voice,
             "response_format": "pcm",  # KEY: skip WAV header parsing
             "sample_rate": self.sample_rate,
         }
@@ -382,8 +433,14 @@ class OpenRouterTTS:
                 logger.info(f"TTS: streamed {total} bytes")
 
             # Cache the full response for instant replay next time.
+            # Cache write failures must not crash the active turn.
             if self.cache is not None and collected:
-                await self.cache.write(tagged_text, self.model, self.voice, b"".join(collected))
+                try:
+                    await self.cache.write(tagged_text, self.model, voice, b"".join(collected))
+                except Exception as cache_err:
+                    logger.warning(
+                        f"TTS cache write failed (turn continuing): {cache_err}", exc_info=True
+                    )
         except Exception as e:
             logger.error(f"TTS failed: {e}", exc_info=True)
             raise
@@ -760,7 +817,9 @@ class VoiceProviders:
         groq_key = os.environ.get("GROQ_API_KEY", "")
         openai_key = os.environ.get("OPENAI_API_KEY", "")
 
-        self.api_key = openrouter_key  # used by OpenRouter fallback paths
+        # Keep the OpenRouter key explicit so fallback paths don't accidentally
+        # use an empty string when only Groq is configured.
+        self.openrouter_api_key = openrouter_key
         if groq_key:
             logger.info("Using Groq STT/LLM")
             self.stt = GroqSTT(api_key=groq_key)
@@ -774,7 +833,7 @@ class VoiceProviders:
             self.llm = None
         else:
             logging.warning("No STT/LLM API key found. Set GROQ_API_KEY or OPENROUTER_API_KEY.")
-            self.stt = OpenRouterSTT(api_key="")
+            self.stt = None
             self.llm = None
 
         if openai_key:
@@ -789,7 +848,7 @@ class VoiceProviders:
             self.tts = OpenRouterTTS(api_key=openrouter_key)
         else:
             logging.warning("No TTS API key found. Set OPENAI_API_KEY or OPENROUTER_API_KEY.")
-            self.tts = OpenRouterTTS(api_key="")
+            self.tts = None
 
         self.vad = SileroVAD()
         self.commands = __import__("casa_voice.commands", fromlist=["classifier", "trigger_responder", "echo_responder", "keyword_compressor"])

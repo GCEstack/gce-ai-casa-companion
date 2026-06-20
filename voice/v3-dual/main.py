@@ -29,7 +29,7 @@ from contextlib import asynccontextmanager
 from typing import Dict, Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request, HTTPException, Body
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request, HTTPException, Body, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -123,10 +123,27 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS (open for local/PWA use; tighten for production)
+# CORS: allow-list from environment, with sensible local-development defaults.
+# In production set CORS_ALLOWED_ORIGINS to a comma-separated list of trusted origins.
+_cors_env = os.environ.get("CORS_ALLOWED_ORIGINS", "")
+if _cors_env.strip():
+    ALLOWED_ORIGINS = [o.strip() for o in _cors_env.split(",") if o.strip()]
+else:
+    ALLOWED_ORIGINS = [
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:4173",
+    ]
+    logger.warning(
+        "CORS_ALLOWED_ORIGINS not set; using local-development allow-list. "
+        "Set CORS_ALLOWED_ORIGINS in production."
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -190,6 +207,16 @@ class SessionManager:
         return None, None
 
 
+# ── Admin auth helper ─────────────────────────────────────────────────────────
+
+def _require_admin_token(token: Optional[str] = Query(None)):
+    """Require the configured VOICE_SERVER_API_KEY for admin endpoints."""
+    expected_token = os.environ.get("VOICE_SERVER_API_KEY")
+    if expected_token and token != expected_token:
+        raise HTTPException(status_code=403, detail="Invalid or missing token")
+    return token
+
+
 # ── API Routes ────────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -217,8 +244,8 @@ async def health():
 
 
 @app.get("/api/sessions")
-async def list_sessions():
-    """Admin-style list of active sessions (no auth in test build)."""
+async def list_sessions(token: str = Depends(_require_admin_token)):
+    """Admin-style list of active sessions. Requires VOICE_SERVER_API_KEY."""
     return {
         "sessions": [
             {
@@ -236,8 +263,8 @@ async def list_sessions():
 
 
 @app.get("/api/kill/{device_id}")
-async def kill_device(device_id: str):
-    """Admin endpoint: kick a device from its session."""
+async def kill_device(device_id: str, token: str = Depends(_require_admin_token)):
+    """Admin endpoint: kick a device from its session. Requires VOICE_SERVER_API_KEY."""
     for sid, session in list(app.state.session_manager.sessions.items()):
         if device_id in session.clients:
             await session.handle_command(CommandType.RESET)
@@ -475,6 +502,12 @@ async def _handle_voice_websocket(
                             f"[{assigned_session_id}/{assigned_device_id}] Config change: character={character}, mode={mode}"
                         )
                         await session.handle_config_change(character=character, mode=mode)
+                    elif msg.type == MessageType.TEXT_INPUT:
+                        text = msg.payload.get("text", "")
+                        logger.info(
+                            f"[{assigned_session_id}/{assigned_device_id}] Text input: {text[:80]}"
+                        )
+                        await session.handle_text_input(text)
                     elif msg.type == MessageType.PING:
                         await send_message(VoiceMessage(type=MessageType.PONG))
                     else:
@@ -536,7 +569,7 @@ async def root():
         <h1>Casa Voice V3 Dual</h1>
         <p><a href="/client/index.html">Open PWA Client</a></p>
         <p><a href="/health">Health Check</a></p>
-        <p><a href="/api/sessions">Active Sessions</a></p>
+        <p><a href="/api/sessions?token=VOICE_SERVER_API_KEY">Active Sessions</a></p>
     </body></html>
     """
 

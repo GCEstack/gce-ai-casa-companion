@@ -11,7 +11,7 @@
 #
 # Note: localtunnel is a public relay — don't use it for real conversations.
 
-$project = "C:\Users\Dekan AI Brother\Projects\ACTIVE\apps-platforms\casa-companion\casa_voice_V3_dual"
+$project = "C:\Users\Dekan AI Brother\Projects\ACTIVE\apps-platforms\casa-companion\voice\v3-dual"
 Set-Location $project
 
 # Start uvicorn in a minimized window so it keeps running.

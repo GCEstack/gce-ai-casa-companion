@@ -32,7 +32,7 @@ class CommandClassifier:
     # Order matters: more specific / higher priority first
     PATTERNS = [
         # --- INTERRUPT (highest priority — can cut off TTS) ---
-        (r"\b(yo\b|wtf|what the fuck|hold on|one sec|one second|wait up|cut it|shut it)\b", CommandType.INTERRUPT),
+        (r"\b(yo\b|hold on|one sec|one second|wait up|cut it|shush|hush|quiet|enough|stop talking)\b", CommandType.INTERRUPT),
 
         # --- END TURN (force process current utterance) ---
         (r"\b(send it|send|end turn|end it|that\'s it|capische|capisce|done|over and out)\b", CommandType.END_TURN),
@@ -319,15 +319,44 @@ class KeywordCompressor:
         "below", "up", "down", "in", "out", "on", "off", "over", "under", "again",
         "further", "then", "once", "here", "there", "when", "where", "why", "how",
         "all", "any", "both", "each", "few", "more", "most", "other", "some",
-        "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too",
-        "very", "s", "t", "can", "will", "just", "don", "should", "now", "to",
-        "about", "also", "like", "would", "could", "should", "may", "might",
-        "um", "uh", "oh", "ok", "okay", "yeah", "yes", "no",
+        "such", "only", "own", "same", "so", "than", "too",
+        "very", "s", "t", "can", "will", "just", "should", "now", "to",
+        "about", "also", "would", "could", "may", "might",
+        "um", "uh", "oh", "ok", "okay", "yeah", "yes",
+    }
+
+    # Expand common contractions so negation isn't lost when the apostrophe is stripped.
+    CONTRACTIONS = {
+        "don't": "do not",
+        "doesn't": "does not",
+        "didn't": "did not",
+        "won't": "will not",
+        "wouldn't": "would not",
+        "couldn't": "could not",
+        "shouldn't": "should not",
+        "can't": "can not",
+        "isn't": "is not",
+        "aren't": "are not",
+        "wasn't": "was not",
+        "weren't": "were not",
+        "haven't": "have not",
+        "hasn't": "has not",
+        "hadn't": "had not",
+        "i'm": "i am",
+        "it's": "it is",
+        "that's": "that is",
+        "what's": "what is",
+        "let's": "let us",
     }
 
     def compress(self, transcript: str) -> str:
+        # Expand contractions first so negation and meaning are preserved.
+        text = transcript.lower()
+        for contraction, expansion in self.CONTRACTIONS.items():
+            text = re.sub(r"\b" + re.escape(contraction) + r"\b", expansion, text)
+
         # Remove punctuation and split.
-        cleaned = re.sub(r"[^\w\s]", " ", transcript.lower())
+        cleaned = re.sub(r"[^\w\s]", " ", text)
         words = cleaned.split()
         kept = [
             w for w in words

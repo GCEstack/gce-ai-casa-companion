@@ -1,21 +1,22 @@
-# Casa Voice V3
+# Casa Voice V3 Dual
 
-Phone-as-microphone → Wi-Fi router → this PC → Bluetooth speaker.
+> **Dual-mode voice companion for kids.**
+> Browser as audio device **or** browser as dashboard + external audio device (phone / ESP32).
 
 ## What you need
 
 - A Windows PC on your home Wi-Fi.
-- An Android phone on the same Wi-Fi.
-- A Bluetooth speaker paired to the phone.
+- An Android phone on the same Wi-Fi (for Mode B / phone-as-speaker).
+- A Bluetooth speaker paired to the phone (Mode B).
 - API keys for the cloud stack (recommended):
-  - [Groq](https://console.groq.com/) — for fast Whisper STT and LLM inference.
-  - [OpenAI](https://platform.openai.com/) — for TTS (Groq does not offer TTS yet).
+  - [Groq](https://console.groq.com/) — fast Whisper STT and LLM inference.
+  - [OpenRouter](https://openrouter.ai/) — TTS and fallback for STT/LLM.
 - Or a single [OpenRouter](https://openrouter.ai/) API key as a fallback.
 
 ## One-time setup
 
 1. Copy `.env.example` to `.env` and add your keys.
-   - **Fastest stack:** `GROQ_API_KEY` + `OPENAI_API_KEY`.
+   - **Fastest stack:** `GROQ_API_KEY` + `OPENROUTER_API_KEY`.
    - **Fallback stack:** `OPENROUTER_API_KEY` only.
 2. Right-click `scripts/Install Casa Voice.bat` → **Run as administrator**.
 3. The installer:
@@ -43,6 +44,14 @@ Audio comes out of your phone → Bluetooth speaker.
 
 The dashboard (`client/index.html`) shows a live text conversation: what the kid said and what Casa is about to say. The phone audio page only handles microphone + speaker audio.
 
+## Modes
+
+- **Mode A — Browser Audio:** The browser is the audio device (mic + speaker). Good for testing on laptops/tablets.
+- **Mode B — External Audio:** The browser is a dashboard only. A phone (`audio-device.html`) or ESP32 handles all audio.
+- **Mode B — Bluetooth Audio (experimental):** Browser dashboard + Web Bluetooth audio receiver (Chrome/Edge only).
+
+Multiple clients can share the same `session_id`. Audio-capable clients receive TTS PCM; dashboard clients receive transcripts and state changes.
+
 ## Trigger responses (fastest)
 
 Common phrases bypass the LLM entirely and speak instantly:
@@ -67,6 +76,8 @@ becomes:
 > `wondering maybe tell really fun story dragon knight become friends adventures together`
 
 The original transcript is still stored in the conversation history; only the LLM call uses the compressed version.
+
+> ⚠️ **Known issue:** The compressor strips negation words like "not" and "don't", which can invert meaning (e.g. "I don't like spiders" → "like spiders"). See `BACKLOG.md`.
 
 ## Story queue (story mode)
 
@@ -100,6 +111,8 @@ The server automatically picks the fastest configured stack. No OpenAI key is re
 
 You can override models and voices in `.env`.
 
+> ⚠️ **Known issue:** If only `GROQ_API_KEY` is set, the OpenRouter fallback LLM path uses an empty bearer token and fails. See `BACKLOG.md`.
+
 ### OpenRouter routing
 
 When using the OpenRouter fallback for STT, TTS, or LLM, you can bias provider selection with `OPENROUTER_PROVIDER_SORT`:
@@ -121,5 +134,56 @@ You can also set `OPENROUTER_LLM_MODEL=openrouter/auto` to let OpenRouter choose
 - `scripts/setup-casa.ps1` — one-time setup (dependencies, shortcut, env check).
 - `scripts/start-casa.ps1` — start the server and show the phone QR code.
 - `scripts/Install Casa Voice.bat` — right-click installer entry point.
+- `scripts/create_supabase_table.py` — create the `voice_sessions` table in Supabase.
+- `client/index.html` — the main PWA / dashboard page.
+- `client/app.js` — Mode A + Mode B dashboard logic.
 - `client/audio-device.html` — the page you open on the phone.
-- `client/index.html` — dashboard (open on the PC or another device).
+- `client/audio-device.js` — phone audio-device logic.
+- `client/tap.html` — NFC tag confirmation page.
+- `src/casa_voice/` — backend engine (protocol, commands, providers, sessions, persistence, wakeword, story queue).
+- `esp32/` — ESP-IDF firmware skeleton (dual I2S, energy VAD, Wi-Fi, WebSocket stub).
+- `tests/` — integration, synthetic audio, SSE, persistence, tap tests.
+
+## Quick start (developer)
+
+```powershell
+cd "C:\Users\Dekan AI Brother\Projects\ACTIVE\apps-platforms\casa-companion\voice\v3-dual"
+pip install -e .
+$env:OPENROUTER_API_KEY="sk-or-v1-..."
+uvicorn main:app --host 0.0.0.0 --port 8080
+```
+
+Open `http://localhost:8080/client/index.html` in Chrome for Mode A, or open `http://<your-pc-ip>:8080/client/audio-device.html?session_id=kitchen` on a phone for Mode B.
+
+## Running tests
+
+```powershell
+# Terminal 1: start the server
+uvicorn main:app --host 127.0.0.1 --port 8080
+
+# Terminal 2
+pytest tests/
+```
+
+## Security reminders
+
+- **Never commit `.env`.** If you accidentally committed it, rotate the exposed keys immediately and purge the file from Git history.
+- Set `VOICE_SERVER_API_KEY` in production and pass `?token=...` on WebSocket connections.
+- The `/api/sessions` and `/api/kill/{device_id}` endpoints currently have no auth in the test build; protect them before any real deployment.
+
+## Known issues (high-level)
+
+See `BACKLOG.md` for the full list.
+
+- Committed `.env` / cache files need to be purged from Git history.
+- Provider fallback auth bug when only Groq key is set.
+- Keyword compression can strip negations and change meaning.
+- Interrupt regex includes adult language (`wtf`, etc.) that should be removed for a kids' product.
+- `OpenRouterSTT` uses a JSON/base64 audio payload; verify it matches OpenRouter's actual endpoint.
+- Wake-word audio carry-over may include pre-wake noise.
+- ESP32 `websocket.c` is still a stub; real `esp_websocket_client` implementation needed.
+- Wi-Fi credentials are hardcoded in ESP32 firmware.
+
+## License
+
+Private / proprietary — Casa Companion.

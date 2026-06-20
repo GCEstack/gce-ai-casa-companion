@@ -58,8 +58,12 @@
 #define MIC_BUTTON_GPIO         18
 #define BUTTON_LONG_PRESS_MS    1000
 
-/* WebSocket server — update to your server IP/hostname */
-#define CASA_SERVER_URI         "ws://192.168.1.100:8080/ws/voice?device_type=audio"
+/* WebSocket server — update to your server IP/hostname and device token */
+#define CASA_SERVER_HOST        "192.168.1.100"
+#define CASA_SERVER_PORT        "8080"
+#define CASA_DEVICE_ID          "esp32-01"
+#define CASA_DEVICE_TOKEN       "test"
+#define CASA_SERVER_URI         "ws://" CASA_SERVER_HOST ":" CASA_SERVER_PORT "/ws/voice-v3/" CASA_DEVICE_ID "?device_type=audio&token=" CASA_DEVICE_TOKEN
 
 /* Message types for button → audio task communication */
 typedef enum {

@@ -35,8 +35,8 @@ static const char *command_to_string(ws_command_t cmd)
         case WS_CMD_LOUDER: return "louder";
         case WS_CMD_SOFTER: return "softer";
         case WS_CMD_RESET: return "reset";
-        case WS_CMD_START_LISTENING: return "start_listening";
-        case WS_CMD_STOP_LISTENING: return "stop_listening";
+        case WS_CMD_START_LISTENING: return "wake";
+        case WS_CMD_STOP_LISTENING: return "stop";
         default: return "none";
     }
 }

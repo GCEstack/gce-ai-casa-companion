@@ -23,6 +23,7 @@ class MessageType(Enum):
     AUDIO_CHUNK = "audio_chunk"
     COMMAND = "command"
     CONFIG_CHANGE = "config_change"  # character / mode update
+    TEXT_INPUT = "text_input"  # typed text from dashboard/mobile clients
     STATE_CHANGE = "state_change"
     TRANSCRIPT = "transcript"
     ASSISTANT_TEXT = "assistant_text"
@@ -90,6 +91,10 @@ class VoiceMessage:
     @classmethod
     def command(cls, cmd: CommandType) -> "VoiceMessage":
         return cls(type=MessageType.COMMAND, payload={"command": cmd.value})
+
+    @classmethod
+    def text_input(cls, text: str) -> "VoiceMessage":
+        return cls(type=MessageType.TEXT_INPUT, payload={"text": text})
 
     @classmethod
     def config_change(
