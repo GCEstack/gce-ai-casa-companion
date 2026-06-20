@@ -222,6 +222,11 @@ class V3SessionManager:
                     )
             return
 
+        # Typed/text fallback (useful for browser testing and accessibility).
+        if msg_type == "text_input":
+            await session.handle_text_input(raw.get("text", ""))
+            return
+
         # V3 protocol messages
         try:
             msg = VoiceMessage.from_json(text)

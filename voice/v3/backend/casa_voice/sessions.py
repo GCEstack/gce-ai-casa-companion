@@ -259,6 +259,37 @@ class VoiceSession:
         self.input_buffer.append(pcm)
         self.vad_buffer.append(pcm)
 
+    async def handle_text_input(self, text: str):
+        """Process a typed/text message directly (bypasses audio/STT)."""
+        if not text.strip():
+            return
+        text = text.strip()
+        logger.info(f"[{self.session_id}] TEXT INPUT: '{text}'")
+
+        async with self._lock:
+            self.state = VoiceState.LISTENING
+            await self._broadcast(VoiceMessage.state_change(VoiceState.LISTENING))
+
+        await self._broadcast(VoiceMessage.transcript(text))
+
+        # Fast-path trigger responses.
+        stripped = self.providers.commands.classifier.strip_wake_phrase(text)
+        if not stripped:
+            await self._return_to_idle()
+            return
+
+        trigger_reply = self.providers.commands.trigger_responder.match(text)
+        if trigger_reply:
+            await self._process_and_speak(trigger_reply, skip_history=True)
+            return
+
+        echo = self.providers.commands.echo_responder.match(text)
+        if echo:
+            await self._echo_and_learn(text, echo)
+            return
+
+        await self._process_and_speak(text)
+
     async def handle_config_change(
         self,
         character: Optional[str] = None,
