@@ -415,12 +415,7 @@ async def _handle_voice_websocket(
     token: Optional[str],
 ):
     """Shared WebSocket handler for /ws/voice and /ws/voice/{device_id}."""
-    # Auth check
-    expected_token = os.environ.get("VOICE_SERVER_API_KEY")
-    if expected_token and token != expected_token:
-        await websocket.close(code=1008, reason="Invalid token")
-        return
-
+    # Note: WebSocket voice endpoint is public; admin HTTP endpoints still require VOICE_SERVER_API_KEY.
     await websocket.accept()
 
     assigned_device_id = device_id or f"{device_type}-{secrets.token_hex(4)}"
