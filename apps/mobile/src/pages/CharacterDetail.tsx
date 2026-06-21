@@ -5,7 +5,7 @@ import CharacterShowcase from '@/components/CharacterShowcase';
 import ChatTranscript from '@/components/ChatTranscript';
 import InputBar from '@/components/InputBar';
 import { getCharacterBySlug } from '@/lib/characters';
-import { useV3VoiceChat } from '@/hooks/useV3VoiceChat';
+import { useVoiceChat } from '@/hooks/useVoiceChat';
 import { useAvailableCharacters } from '@/hooks/useAvailableCharacters';
 import { useFavorites, useAppSettings } from '@/lib/settings';
 
@@ -14,7 +14,7 @@ export default function CharacterDetail() {
   const navigate = useNavigate();
   const character = getCharacterBySlug(slug ?? '');
   const { settings } = useAppSettings();
-  const voice = useV3VoiceChat(character ?? null, { mode: settings.activeMode });
+  const voice = useVoiceChat(character ?? null, { mode: settings.activeMode });
   const [favorites, toggleFavorite] = useFavorites();
   const isFav = character ? favorites.includes(character.slug) : false;
   const { isEnabled } = useAvailableCharacters();
@@ -45,29 +45,6 @@ export default function CharacterDetail() {
         </div>
 
         <div className="flex items-center gap-0.5">
-          <div
-            className={`w-2 h-2 rounded-full mx-1 ${
-              voice.isConnected
-                ? 'bg-green-500'
-                : voice.isConnecting
-                  ? 'bg-yellow-500 animate-pulse'
-                  : 'bg-red-500'
-            }`}
-            title={
-              voice.isConnected
-                ? 'Voice server connected'
-                : voice.isConnecting
-                  ? 'Connecting to voice server...'
-                  : 'Voice server disconnected'
-            }
-            aria-label={
-              voice.isConnected
-                ? 'Voice server connected'
-                : voice.isConnecting
-                  ? 'Connecting to voice server'
-                  : 'Voice server disconnected'
-            }
-          />
           <button
             onClick={() => toggleFavorite(character.slug)}
             className={`p-2 rounded-full transition-colors ${
@@ -116,11 +93,9 @@ export default function CharacterDetail() {
         <p className="text-sm font-medium" style={{ color: character.accentColor }}>
           {voice.turnState === 'idle' &&
             (voice.wakeListening ? 'Listening for wake word...' : 'Tap mic or type below')}
-          {voice.turnState === 'wake_detected' && 'Wake word detected...'}
           {voice.turnState === 'listening' && 'Listening...'}
           {voice.turnState === 'processing' && 'Thinking...'}
           {voice.turnState === 'speaking' && 'Speaking...'}
-          {voice.turnState === 'interrupted' && 'Interrupted'}
         </p>
         {voice.errorMessage && (
           <p className="text-xs text-red-400 mt-0.5 px-4">{voice.errorMessage}</p>

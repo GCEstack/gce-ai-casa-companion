@@ -6,7 +6,6 @@ import {
   getSttProvider,
   getWakeEndPhrases,
   incrementMessageCount,
-  isVoiceEnabled,
   isWakeWordEnabled,
   resetSessionStart,
   setSessionStart,
@@ -77,7 +76,6 @@ export function useVoiceChat(
 
   const characterRef = useRef(character);
   const modeRef = useRef(mode);
-  const voiceEnabledRef = useRef(isVoiceEnabled());
   const turnStateRef = useRef(turnState);
   const startRecordingRef = useRef<() => Promise<void>>(async () => {});
 
@@ -91,13 +89,6 @@ export function useVoiceChat(
 
   useEffect(() => {
     turnStateRef.current = turnState;
-  }, [turnState]);
-
-  // Keep voice toggle in sync with settings when not mid-turn
-  useEffect(() => {
-    if (turnState === 'idle' || turnState === 'error') {
-      voiceEnabledRef.current = isVoiceEnabled();
-    }
   }, [turnState]);
 
   // Live session timer
@@ -116,8 +107,7 @@ export function useVoiceChat(
     setMessageCount(getMessageCount());
   }, []);
 
-  const handleAudioStart = useCallback(() => setTurnState('speaking'), []);
-  const handleAudioEnd = useCallback(() => setTurnState('idle'), []);
+  const handleComplete = useCallback(() => setTurnState('idle'), []);
   const handleSpeechError = useCallback((msg: string) => {
     setErrorMessage(msg);
     setTurnState('error');
@@ -126,10 +116,8 @@ export function useVoiceChat(
   const speech = useSpeech({
     characterRef,
     modeRef,
-    voiceEnabledRef,
     onResponseText: handleResponseText,
-    onAudioStart: handleAudioStart,
-    onAudioEnd: handleAudioEnd,
+    onComplete: handleComplete,
     onError: handleSpeechError,
   });
 
@@ -212,7 +200,7 @@ export function useVoiceChat(
 
   const handleWakeEnd = useCallback(() => {
     recorder.stopRecording();
-    speech.stopAudio();
+    speech.stop();
     setTurnState('idle');
   }, [recorder, speech]);
 
@@ -226,13 +214,12 @@ export function useVoiceChat(
     onWakeStart: handleWakeStart,
     onWakeEnd: handleWakeEnd,
     onError: handleWakeError,
-    stopAudio: () => speech.stopAudio(),
+    stopAudio: () => speech.stop(),
   });
 
   // Start recording (mic button or wake word)
   const startRecording = useCallback(async () => {
     wakeWord.stopWakeListening();
-    await speech.unlockAudioContext();
     setErrorMessage('');
     setLastTranscript('');
     setLastResponse('');
@@ -263,7 +250,7 @@ export function useVoiceChat(
     } catch {
       // Error state is handled by useRecorder via onError
     }
-  }, [wakeWord, speech, transcription, processUserText, recorder]);
+  }, [wakeWord, transcription, processUserText, recorder]);
 
   useEffect(() => {
     startRecordingRef.current = startRecording;
@@ -276,8 +263,7 @@ export function useVoiceChat(
       }
       // Browser STT active: original did nothing (let it finish/timeout)
     } else if (['idle', 'error', 'speaking'].includes(turnStateRef.current)) {
-      speech.stopAudio();
-      window.speechSynthesis?.cancel();
+      speech.stop();
       setLastTranscript('');
       setLastResponse('');
       void startRecording();
@@ -286,8 +272,7 @@ export function useVoiceChat(
 
   const sendText = useCallback(
     async (text: string) => {
-      speech.stopAudio();
-      window.speechSynthesis?.cancel();
+      speech.stop();
       await processUserText(text);
     },
     [speech, processUserText]
