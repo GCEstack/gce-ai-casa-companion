@@ -18,6 +18,7 @@ const initialState: AppState = {
   bargeInEnabled: false,
   isWakeWordListening: false,
   isBargeInActive: false,
+  connectionMode: 'local',
 };
 
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -50,6 +51,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, isWakeWordListening: action.payload };
     case 'SET_BARGE_IN_ACTIVE':
       return { ...state, isBargeInActive: action.payload };
+    case 'SET_CONNECTION_MODE':
+      return { ...state, connectionMode: action.payload };
     default:
       return state;
   }

@@ -67,6 +67,7 @@ export interface AppState {
   bargeInEnabled: boolean;
   isWakeWordListening: boolean;
   isBargeInActive: boolean;
+  connectionMode: 'local' | 'relay';
 }
 
 export type AppAction =
@@ -83,4 +84,5 @@ export type AppAction =
   | { type: 'TOGGLE_WAKE_WORD' }
   | { type: 'TOGGLE_BARGE_IN' }
   | { type: 'SET_WAKE_WORD_LISTENING'; payload: boolean }
-  | { type: 'SET_BARGE_IN_ACTIVE'; payload: boolean };
+  | { type: 'SET_BARGE_IN_ACTIVE'; payload: boolean }
+  | { type: 'SET_CONNECTION_MODE'; payload: 'local' | 'relay' };

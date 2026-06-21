@@ -49,6 +49,32 @@ const MENU_ITEMS: Record<string, MenuItem[]> = {
 };
 
 export default function TopToolbar() {
+  const { state, dispatch } = useApp();
+
+  if (state.connectionMode === 'relay') {
+    return (
+      <header className="top-toolbar">
+        <div className="toolbar-brand">Casa Companion</div>
+        <div className="flex items-center gap-2 text-xs text-white/70">
+          <span className="w-2 h-2 rounded-full bg-green-500" />
+          Phone mic mode
+        </div>
+        <button
+          type="button"
+          className="connect-btn disconnected flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold border"
+          onClick={() => dispatch({ type: 'SET_CONNECTION_MODE', payload: 'local' })}
+        >
+          <Power className="w-3 h-3" />
+          Exit phone mic
+        </button>
+      </header>
+    );
+  }
+
+  return <LocalToolbar />;
+}
+
+function LocalToolbar() {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
