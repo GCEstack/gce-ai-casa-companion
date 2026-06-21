@@ -30,6 +30,7 @@ if os.path.exists(_env_path):
 from casa_voice.providers import VoiceProviders
 from casa_voice.protocol import VoiceMessage, MessageType, CommandType
 from casa_voice.sessions import VoiceSession, ClientHandle
+from casa_voice.realtime_session import RealtimeSession
 
 from .coppa_layer import (
     ConsentError,
@@ -53,7 +54,8 @@ class V3SessionManager:
         self.prompt_router = prompt_router
         self.settings = get_settings()
         self.providers = VoiceProviders()
-        self.sessions: Dict[str, VoiceSession] = {}
+        self.use_realtime = os.environ.get("USE_OPENAI_REALTIME", "0") == "1"
+        self.sessions: Dict[str, VoiceSession | RealtimeSession] = {}
         # device_id -> (session_id, audio_client_id)
         self.device_index: Dict[str, tuple[str, str]] = {}
         # device_id -> legacy dashboard SSE queues
@@ -95,16 +97,25 @@ class V3SessionManager:
         if voice_session_id not in self.sessions:
             character = device.get("character_id") or "default"
             mode = device.get("mode_id") or "default"
-            session = VoiceSession(
-                session_id=voice_session_id,
-                providers=self.providers,
-                character=str(character),
-                mode=str(mode),
-                store=None,  # Supabase persistence can be wired via SessionStore later
-            )
+            if self.use_realtime:
+                session = RealtimeSession(
+                    session_id=voice_session_id,
+                    providers=self.providers,
+                    character=str(character),
+                    mode=str(mode),
+                    store=None,
+                )
+            else:
+                session = VoiceSession(
+                    session_id=voice_session_id,
+                    providers=self.providers,
+                    character=str(character),
+                    mode=str(mode),
+                    store=None,  # Supabase persistence can be wired via SessionStore later
+                )
             self.sessions[voice_session_id] = session
             await session.start()
-            logger.info(f"[v3 {device_id}] created session character={character} mode={mode}")
+            logger.info(f"[v3 {device_id}] created {'realtime' if self.use_realtime else 'voice'} session character={character} mode={mode}")
         else:
             session = self.sessions[voice_session_id]
 
@@ -178,7 +189,7 @@ class V3SessionManager:
 
     async def _handle_text(
         self,
-        session: VoiceSession,
+        session: VoiceSession | RealtimeSession,
         device: dict[str, Any],
         text: str,
         send_message,
@@ -298,7 +309,7 @@ class V3SessionManager:
 
     # ── Dashboard / SSE integration ────────────────────────────────────────────
 
-    async def _dashboard_forwarder(self, session: VoiceSession, device_id: str, session_db_id: UUID):
+    async def _dashboard_forwarder(self, session: VoiceSession | RealtimeSession, device_id: str, session_db_id: UUID):
         """Translate V3 messages into legacy dashboard events."""
         try:
             while True:
@@ -391,7 +402,7 @@ class V3SessionManager:
         self.device_index.pop(device_id, None)
         return True
 
-    def find_client(self, device_id: str) -> Optional[tuple[VoiceSession, ClientHandle]]:
+    def find_client(self, device_id: str) -> Optional[tuple[VoiceSession | RealtimeSession, ClientHandle]]:
         session_id, client_id = self.device_index.get(device_id, (None, None))
         if not session_id:
             return None

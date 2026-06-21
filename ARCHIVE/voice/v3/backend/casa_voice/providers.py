@@ -197,7 +197,14 @@ class CharacterVoiceRouter:
         )
 
     def apply_tags(self, text: str, character: str, mode: str = "default") -> str:
-        """Wrap text with appropriate Gemini audio tags."""
+        """Wrap text with appropriate Gemini audio tags.
+
+        Only Gemini Flash TTS supports these tags; for other models (e.g. OpenAI
+        voices via OpenRouter) return the text unchanged so tags aren't spoken.
+        """
+        if "gemini-3.1" not in self.tts_model:
+            return text
+
         profile = self.get_profile(character)
         tag = profile.tags.get(mode, profile.default_tag)
 
@@ -314,7 +321,19 @@ class OpenRouterTTS:
         self.cache = TTSCache(cache_dir) if cache_enabled else None
 
     def _voice_for_character(self, character: str) -> str:
-        return self.voice
+        # Gemini Flash TTS only supports its own voices (e.g. Kore, Sulafat).
+        # For other models we can use the per-character voice from the mobile config.
+        if "gemini-3.1" in self.model:
+            return self.voice
+        profile = get_character_profile(character)
+        return profile.voice_id or self.voice
+
+    def _output_sample_rate(self) -> int:
+        """Return the native PCM sample rate returned by the chosen TTS model."""
+        if self.model.startswith("openai/tts"):
+            return 24000
+        # Gemini Flash TTS returns the requested sample rate.
+        return self.sample_rate
 
     async def synthesize_stream(
         self,
@@ -334,13 +353,15 @@ class OpenRouterTTS:
                 yield chunk
             return
 
-        payload = {
+        payload: Dict[str, Any] = {
             "model": self.model,
             "input": tagged_text,
             "voice": voice,
             "response_format": "pcm",  # KEY: skip WAV header parsing
-            "sample_rate": self.sample_rate,
         }
+        # Only Gemini Flash TTS accepts an explicit sample_rate parameter.
+        if "gemini-3.1" in self.model:
+            payload["sample_rate"] = self.sample_rate
         routing = _get_openrouter_provider_routing()
         if routing:
             payload["provider"] = routing
@@ -365,12 +386,23 @@ class OpenRouterTTS:
                     if chunk:
                         total += len(chunk)
                         collected.append(chunk)
-                        yield chunk
                 logger.info(f"TTS: streamed {total} bytes")
 
-            # Cache the full response for instant replay next time.
-            if self.cache is not None and collected:
-                await self.cache.write(tagged_text, self.model, voice, b"".join(collected))
+            if not collected:
+                return
+
+            pcm = b"".join(collected)
+            src_rate = self._output_sample_rate()
+            if src_rate != self.sample_rate:
+                pcm = resample_pcm(pcm, src_rate, self.sample_rate)
+                logger.info(f"TTS: resampled {src_rate}Hz -> {self.sample_rate}Hz")
+
+            # Cache and yield the final (resampled) PCM.
+            if self.cache is not None:
+                await self.cache.write(tagged_text, self.model, voice, pcm)
+
+            for i in range(0, len(pcm), self.cache.CHUNK_SIZE if self.cache else 4096):
+                yield pcm[i : i + (self.cache.CHUNK_SIZE if self.cache else 4096)]
         except Exception as e:
             logger.error(f"TTS failed: {e}", exc_info=True)
             raise
@@ -746,22 +778,43 @@ class GroqLLM:
 # ────────────────────────────────
 
 class OpenAIDirectTTS:
-    """TTS directly from OpenAI (bypassing OpenRouter)."""
+    """TTS directly from OpenAI (bypassing OpenRouter).
+
+    Defaults to gpt-4o-mini-tts: a fast, expressive model that accepts
+    instructions and streams PCM audio.
+    """
 
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "tts-1",
-        voice: str = "nova",
+        model: Optional[str] = None,
+        voice: Optional[str] = None,
+        instructions: Optional[str] = None,
         response_format: str = "pcm",
         sample_rate: int = 16000,
     ):
         self.api_key = api_key or os.environ.get("OPENAI_API_KEY", "")
-        self.model = model
-        self.voice = voice
+        self.model = model or os.environ.get("OPENAI_TTS_MODEL", "gpt-4o-mini-tts")
+        self.voice = voice or os.environ.get("OPENAI_TTS_VOICE", "coral")
+        self.instructions = instructions or os.environ.get("OPENAI_TTS_INSTRUCTIONS", "")
         self.response_format = response_format
         self.sample_rate = sample_rate
         self.client = httpx.AsyncClient(timeout=60.0)
+
+    def _voice_for_character(self, character: str) -> str:
+        profile = get_character_profile(character)
+        return profile.voice_id or self.voice
+
+    def _instructions_for_character(self, character: str) -> str:
+        if self.instructions:
+            return self.instructions
+        profile = get_character_profile(character)
+        # Keep instructions short; gpt-4o-mini-tts accepts up to ~512 chars.
+        return (profile.prompt or "").replace("\n", " ").strip()[:480]
+
+    def _output_sample_rate(self) -> int:
+        # OpenAI TTS models (tts-1, tts-1-hd, gpt-4o-mini-tts) output PCM at 24 kHz.
+        return 24000
 
     async def synthesize_stream(
         self,
@@ -769,8 +822,20 @@ class OpenAIDirectTTS:
         character: str = "default",
         mode: str = "default",
     ) -> AsyncIterator[bytes]:
-        logger.info(f"OpenAI TTS: synthesizing {len(text)} chars")
+        voice = self._voice_for_character(character)
+        instructions = self._instructions_for_character(character)
+        logger.info(f"OpenAI TTS: synthesizing {len(text)} chars voice={voice} model={self.model}")
         try:
+            collected: List[bytes] = []
+            payload: Dict[str, Any] = {
+                "model": self.model,
+                "input": text,
+                "voice": voice,
+                "response_format": self.response_format,
+            }
+            if instructions:
+                payload["instructions"] = instructions
+
             async with self.client.stream(
                 "POST",
                 "https://api.openai.com/v1/audio/speech",
@@ -778,21 +843,27 @@ class OpenAIDirectTTS:
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
                 },
-                json={
-                    "model": self.model,
-                    "input": text,
-                    "voice": self.voice,
-                    "response_format": self.response_format,
-                    "sample_rate": self.sample_rate,
-                },
+                json=payload,
             ) as resp:
                 resp.raise_for_status()
                 total = 0
                 async for chunk in resp.aiter_bytes(chunk_size=4096):
                     if chunk:
                         total += len(chunk)
-                        yield chunk
+                        collected.append(chunk)
                 logger.info(f"OpenAI TTS: streamed {total} bytes")
+
+            if not collected:
+                return
+
+            pcm = b"".join(collected)
+            src_rate = self._output_sample_rate()
+            if src_rate != self.sample_rate:
+                pcm = resample_pcm(pcm, src_rate, self.sample_rate)
+                logger.info(f"OpenAI TTS: resampled {src_rate}Hz -> {self.sample_rate}Hz")
+
+            for i in range(0, len(pcm), 4096):
+                yield pcm[i : i + 4096]
         except Exception as e:
             logger.error(f"OpenAI TTS failed: {e}", exc_info=True)
             raise
@@ -844,8 +915,9 @@ class VoiceProviders:
             logger.info("Using OpenAI direct TTS")
             self.tts = OpenAIDirectTTS(
                 api_key=openai_key,
-                model=os.environ.get("OPENAI_TTS_MODEL", "tts-1"),
-                voice=os.environ.get("OPENAI_TTS_VOICE", "nova"),
+                model=os.environ.get("OPENAI_TTS_MODEL") or None,
+                voice=os.environ.get("OPENAI_TTS_VOICE") or None,
+                instructions=os.environ.get("OPENAI_TTS_INSTRUCTIONS") or None,
             )
         elif openrouter_key:
             logger.info("Using OpenRouter TTS fallback")

@@ -16,6 +16,7 @@ from .providers import (
     VoiceProviders, resample_pcm
 )
 from .sessions import VoiceSession, AudioBuffer
+from .realtime_session import RealtimeSession
 
 __all__ = [
     "MessageType", "VoiceState", "CommandType", "VoiceMessage", "StateMachine",
@@ -23,4 +24,5 @@ __all__ = [
     "OpenRouterSTT", "OpenRouterTTS", "SileroVAD", "CharacterVoiceRouter",
     "VoiceProviders", "resample_pcm",
     "VoiceSession", "AudioBuffer",
+    "RealtimeSession",
 ]
