@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import type React from 'react';
 import type { Character, ModeConfig } from '@/types';
 import { characterConfigs } from '@/lib/characterConfig';
@@ -9,7 +9,7 @@ function logError(message: string, error?: unknown, extra?: Record<string, unkno
 }
 
 const stripBom = (s: string | undefined): string | undefined => s?.replace(/^\uFEFF/, '');
-const ENV_OPENAI_KEY = stripBom((import.meta as Record<string, any>).env.VITE_OPENAI_API_KEY as string | undefined);
+const ENV_OPENAI_KEY = stripBom(import.meta.env.VITE_OPENAI_API_KEY as string | undefined);
 
 const OPENAI_BASE = 'https://api.openai.com/v1';
 const FETCH_TIMEOUT = 25000;
@@ -127,8 +127,5 @@ export function useSpeech(options: UseSpeechOptions): UseSpeechReturn {
     abortRef.current?.abort();
   }, []);
 
-  return {
-    speak,
-    stop,
-  };
+  return useMemo(() => ({ speak, stop }), [speak, stop]);
 }

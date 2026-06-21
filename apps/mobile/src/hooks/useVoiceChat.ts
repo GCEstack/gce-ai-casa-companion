@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Character, ModeConfig } from '@/types';
 import {
   getMessageCount,
@@ -261,7 +261,7 @@ export function useVoiceChat(
       if (recorder.isRecording) {
         recorder.stopRecording();
       }
-      // Browser STT active: original did nothing (let it finish/timeout)
+      // Browser STT handles stop internally (let it finish/timeout)
     } else if (['idle', 'error', 'speaking'].includes(turnStateRef.current)) {
       speech.stop();
       setLastTranscript('');
@@ -298,17 +298,32 @@ export function useVoiceChat(
     };
   }, [recorder, wakeWord, speech]);
 
-  return {
-    turnState,
-    lastTranscript,
-    lastResponse,
-    errorMessage,
-    messages,
-    messageCount,
-    sessionDurationSeconds,
-    toggleRecording,
-    reset,
-    sendText,
-    wakeListening: wakeWord.wakeListening,
-  };
+  return useMemo(
+    () => ({
+      turnState,
+      lastTranscript,
+      lastResponse,
+      errorMessage,
+      messages,
+      messageCount,
+      sessionDurationSeconds,
+      toggleRecording,
+      reset,
+      sendText,
+      wakeListening: wakeWord.wakeListening,
+    }),
+    [
+      turnState,
+      lastTranscript,
+      lastResponse,
+      errorMessage,
+      messages,
+      messageCount,
+      sessionDurationSeconds,
+      toggleRecording,
+      reset,
+      sendText,
+      wakeWord.wakeListening,
+    ]
+  );
 }
