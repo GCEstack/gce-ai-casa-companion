@@ -10,6 +10,8 @@ import { characterConfigs } from '@/lib/characterConfig';
 import type { Character, ModeConfig } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { useVoiceChat } from '@/hooks/useVoiceChat';
+import { useRelayVoiceChat } from '@/hooks/useRelayVoiceChat';
+import PairingPanel from '@/components/PairingPanel';
 import { hasOnboarded, markOnboarded } from '@/hooks/useOnboarding';
 
 const WELCOME_SCRIPT =
@@ -63,9 +65,20 @@ function CompanionStrip({ activeSlug }: { activeSlug: string }) {
 }
 
 function CharacterDetailContent({ character, activeMode, onModeChange }: CharacterDetailContentProps) {
-  const voiceChat = useVoiceChat(character.slug, activeMode);
+  const [relaySession, setRelaySession] = useState<{ sessionId: string; token: string } | null>(null);
+  const { state, dispatch } = useApp();
+  const isRelay = state.connectionMode === 'relay';
+
+  const localVoice = useVoiceChat(character.slug, activeMode);
+  const relayVoice = useRelayVoiceChat({
+    sessionId: relaySession?.sessionId || '',
+    token: relaySession?.token || '',
+    deviceId: `web-${character.slug}-${Math.random().toString(36).slice(2, 8)}`,
+    characterSlug: character.slug,
+  });
+
+  const voice = isRelay ? relayVoice : localVoice;
   const [searchParams] = useSearchParams();
-  const { dispatch } = useApp();
   const hasTriggeredRef = useRef(false);
 
   // Pietro auto-onboarding
@@ -83,7 +96,7 @@ function CharacterDetailContent({ character, activeMode, onModeChange }: Charact
       await new Promise((r) => setTimeout(r, 800));
       if (cancelled) return;
 
-      await voiceChat.connect();
+      await voice.connect();
       await new Promise((r) => setTimeout(r, 500));
       if (cancelled) return;
 
@@ -125,19 +138,19 @@ function CharacterDetailContent({ character, activeMode, onModeChange }: Charact
       }
       markOnboarded();
     };
-  }, [character.slug, searchParams, voiceChat, dispatch]);
+  }, [character.slug, searchParams, voice, dispatch]);
 
   // Listen for toolbar mode-switch events
   useEffect(() => {
     const handler = (e: Event) => {
       const mode = (e as CustomEvent<string>)?.detail;
       if (mode && typeof mode === 'string') {
-        voiceChat.sendText(mode).catch(() => {});
+        voice.sendText(mode).catch(() => {});
       }
     };
     window.addEventListener('modeswitch', handler);
     return () => window.removeEventListener('modeswitch', handler);
-  }, [voiceChat]);
+  }, [voice]);
 
   return (
     <div className="relative min-h-full flex flex-col pb-16" style={{ background: '#0a0a0f' }}>
@@ -154,16 +167,26 @@ function CharacterDetailContent({ character, activeMode, onModeChange }: Charact
         hueMax={character.accentHue + 10}
       />
 
+      {isRelay && !relaySession && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center p-4">
+          <PairingPanel
+            characterSlug={character.slug}
+            modeSlug={activeMode.slug}
+            onSessionReady={setRelaySession}
+          />
+        </div>
+      )}
+
       {/* Center Stage - Character Showcase */}
       <CenterStage
         character={character}
         activeMode={activeMode}
         onModeChange={onModeChange}
-        voice={voiceChat}
+        voice={voice}
       />
 
       {/* Bottom Bar */}
-      <BottomBar voice={voiceChat} />
+      <BottomBar voice={voice} />
     </div>
   );
 }

@@ -64,7 +64,7 @@ const categoryColor: Record<string, string> = {
 };
 
 export default function CenterStage({ character, activeMode, onModeChange, voice }: CenterStageProps) {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const portraitRef = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLHeadingElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
@@ -313,6 +313,14 @@ export default function CenterStage({ character, activeMode, onModeChange, voice
               <span>Turn-based</span>
             </>
           )}
+        </button>
+
+        {/* Phone mic toggle */}
+        <button
+          onClick={() => dispatch({ type: 'SET_CONNECTION_MODE', payload: state.connectionMode === 'relay' ? 'local' : 'relay' })}
+          className="text-xs px-3 py-1.5 rounded-full border border-white/10 text-white/70 hover:bg-white/5"
+        >
+          {state.connectionMode === 'relay' ? 'Use this device' : 'Use phone mic'}
         </button>
 
         {/* Mode icon row */}
