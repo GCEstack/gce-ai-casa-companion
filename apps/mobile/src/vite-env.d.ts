@@ -6,6 +6,8 @@ interface ImportMetaEnv {
   readonly VITE_VERCEL_ENV?: string;
   readonly VITE_VOICE_SERVER_URL?: string;
   readonly VITE_VOICE_SERVER_API_KEY?: string;
+  readonly VITE_OPENAI_API_KEY?: string;
+  readonly VITE_DEEPGRAM_API_KEY?: string;
 }
 
 interface ImportMeta {
