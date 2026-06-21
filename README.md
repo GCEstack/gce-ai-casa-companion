@@ -1,5 +1,8 @@
 # Casa Companion
 
+> **Active voice stack:** `voice/v3-dual` + `apps/mobile`.  
+> Legacy folders (`voice/v1`, `voice/v2`, `voice/v3`, `voice/agent`, `voice-agent`, `kimi_agent_mic`) have been moved to `ARCHIVE/`.
+
 > **Your AI companion. Real voice. Real personality.**
 
 Casa Companion is a voice-first AI companion platform. Users pick a character with a distinct personality and have real-time voice conversations. This repo contains the consolidated monorepo: landing sites, parent dashboard, voice backend, firmware skeleton, and content pipelines.
