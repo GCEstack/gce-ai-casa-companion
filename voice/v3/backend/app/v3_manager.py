@@ -8,6 +8,7 @@ are reused from the existing coppa_layer.
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -178,7 +179,9 @@ class V3SessionManager:
                 await session.stop()
                 self.sessions.pop(voice_session_id, None)
 
-            self.device_index.pop(device_id, None)
+            indexed = self.device_index.get(device_id)
+            if indexed and indexed[1] == client_id:
+                self.device_index.pop(device_id, None)
             await end_session(self.supabase, session_db_id)
             await self._broadcast_dashboard_event(
                 device_id,
@@ -288,7 +291,7 @@ class V3SessionManager:
 
         if self.pairing_manager:
             pairing = self.pairing_manager.get_by_token(token)
-            if pairing and pairing.session_id == session_id:
+            if pairing and hmac.compare_digest(pairing.session_id, session_id or ""):
                 logger.info(f"[v3 {device_id}] pairing auth accepted session={session_id}")
                 return {
                     "id": device_id,
@@ -411,14 +414,19 @@ class V3SessionManager:
     # ── Kill switch / cleanup ──────────────────────────────────────────────────
 
     async def kill_session(self, device_id: str) -> bool:
-        session = self.sessions.get(device_id)
+        indexed = self.device_index.get(device_id)
+        if indexed:
+            voice_session_id = indexed[0]
+        else:
+            voice_session_id = device_id
+        session = self.sessions.get(voice_session_id)
         if not session:
             return False
         await session.handle_command(CommandType.RESET)
         for client_id in list(session.clients.keys()):
             session.remove_client(client_id)
         await session.stop()
-        self.sessions.pop(device_id, None)
+        self.sessions.pop(voice_session_id, None)
         self.device_index.pop(device_id, None)
         return True
 

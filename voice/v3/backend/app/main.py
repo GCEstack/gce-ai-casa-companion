@@ -236,7 +236,7 @@ async def kill_device(
 
 
 @app.post("/api/pairing")
-async def create_pairing(body: dict = Body(default={})) -> JSONResponse:
+async def create_pairing(body: dict = Body(default_factory=dict)) -> JSONResponse:
     if not v3_session_manager:
         raise HTTPException(status_code=503, detail="Server not ready")
     if pairing_manager is None:
@@ -263,7 +263,6 @@ async def create_pairing(body: dict = Body(default={})) -> JSONResponse:
                 f"?token={pairing.join_token}"
                 f"&session_id={pairing.session_id}"
                 f"&client_type=audio"
-                f"&character={pairing.character}"
             ),
             "expires_at": pairing.expires_at,
         }
