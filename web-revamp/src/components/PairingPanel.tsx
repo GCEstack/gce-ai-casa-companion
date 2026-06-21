@@ -44,7 +44,7 @@ export default function PairingPanel({ characterSlug, modeSlug, onSessionReady }
     );
   }
 
-  const qrValue = `https://casa-frontend.fly.dev/pair?code=${code}`;
+  const qrValue = `https://casa-companion-app.fly.dev/pair?code=${code}`;
 
   return (
     <div className="flex flex-col items-center gap-4 p-6 rounded-2xl bg-black/60 border border-white/10">
