@@ -1,4 +1,4 @@
-app = "casa-companion-app"
+app = "casa-frontend"
 primary_region = "iad"
 
 [build]
