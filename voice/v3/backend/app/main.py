@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncGenerator
 
-from fastapi import FastAPI, Header, HTTPException, Query, WebSocket, status
+from fastapi import FastAPI, Header, HTTPException, Query, WebSocket, status, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +16,7 @@ from supabase import create_async_client
 from supabase._async.client import AsyncClient as SupabaseClient
 
 from .config import get_settings
+from .pairing import PairingManager
 from .prompt_router import PromptRouter
 from .simple_voice import router as simple_voice_router
 from .v3_manager import V3SessionManager
@@ -25,11 +26,12 @@ settings = get_settings()
 supabase: SupabaseClient | None = None
 session_manager: Any | None = None  # lazily imported to avoid legacy deepgram startup issues
 v3_session_manager: V3SessionManager | None = None
+pairing_manager: PairingManager | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    global supabase, session_manager, v3_session_manager
+    global supabase, session_manager, v3_session_manager, pairing_manager
 
     # Allow local dev without Supabase; the V3 manager will skip auth in development.
     has_supabase = (
@@ -60,7 +62,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from .session_manager import SessionManager
         session_manager = SessionManager(supabase, prompt_router)
 
-    v3_session_manager = V3SessionManager(supabase, prompt_router)
+    pairing_manager = PairingManager()
+    v3_session_manager = V3SessionManager(supabase, prompt_router, pairing_manager=pairing_manager)
     yield
     # Shutdown: close active sessions gracefully.
     if v3_session_manager:
@@ -135,19 +138,20 @@ async def voice_websocket(websocket: WebSocket, device_id: str, token: str = Que
     await session_manager.handle_connection(websocket, device_id, token)
 
 
-@app.websocket("/ws/voice-v3/{device_id}")
-async def voice_v3_websocket(
+@app.websocket("/ws/voice/realtime/{device_id}")
+async def voice_realtime_websocket(
     websocket: WebSocket,
     device_id: str,
     token: str = Query(...),
     session_id: str | None = Query(None),
+    client_type: str = Query("audio"),
 ):
     """V3 voice engine endpoint (wake-word, push-to-talk, interruptible TTS)."""
     if not v3_session_manager:
         await websocket.close(code=1011)
         return
     await v3_session_manager.handle_connection(
-        websocket, device_id, token, session_id=session_id
+        websocket, device_id, token, session_id=session_id, client_type=client_type
     )
 
 
@@ -229,6 +233,58 @@ async def kill_device(
     if session_manager:
         killed = await session_manager.kill_session(device_id) or killed
     return JSONResponse({"killed": killed})
+
+
+@app.post("/api/pairing")
+async def create_pairing(body: dict = Body(default={})) -> JSONResponse:
+    if not v3_session_manager:
+        raise HTTPException(status_code=503, detail="Server not ready")
+    if pairing_manager is None:
+        raise HTTPException(status_code=503, detail="Pairing not available")
+
+    character = body.get("character", "default")
+    mode = body.get("mode", "default")
+    pairing = pairing_manager.create(character=character, mode=mode)
+
+    base_ws = settings.cors_origins[0] if settings.cors_origins and settings.cors_origins[0] != "*" else "wss://casa-voice-agent.fly.dev"
+    base_ws = base_ws.replace("http://", "ws://").replace("https://", "wss://")
+    if not base_ws.startswith("ws"):
+        base_ws = "wss://casa-voice-agent.fly.dev"
+
+    return JSONResponse(
+        {
+            "code": pairing.code,
+            "session_id": pairing.session_id,
+            "join_token": pairing.join_token,
+            "character": pairing.character,
+            "mode": pairing.mode,
+            "ws_url": (
+                f"{base_ws}/ws/voice/realtime/web-{pairing.session_id[:8]}"
+                f"?token={pairing.join_token}"
+                f"&session_id={pairing.session_id}"
+                f"&client_type=audio"
+                f"&character={pairing.character}"
+            ),
+            "expires_at": pairing.expires_at,
+        }
+    )
+
+
+@app.get("/api/pairing/{code}")
+async def get_pairing(code: str) -> JSONResponse:
+    if pairing_manager is None:
+        raise HTTPException(status_code=503, detail="Pairing not available")
+    pairing = pairing_manager.get(code)
+    if not pairing:
+        raise HTTPException(status_code=404, detail="Pairing not found")
+    return JSONResponse(
+        {
+            "code": pairing.code,
+            "session_id": pairing.session_id,
+            "character": pairing.character,
+            "mode": pairing.mode,
+        }
+    )
 
 
 # ── V3 browser test client ───────────────────────────────────────────────────

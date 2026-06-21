@@ -41,6 +41,7 @@ from .coppa_layer import (
     touch_session,
 )
 from .config import get_settings
+from .pairing import PairingManager
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +49,12 @@ logger = logging.getLogger(__name__)
 class V3SessionManager:
     """Wraps the casa_voice V3 engine with Casa Companion auth/event shapes."""
 
-    def __init__(self, supabase: Any, prompt_router: Any):
+    def __init__(self, supabase: Any, prompt_router: Any, pairing_manager: Optional[PairingManager] = None):
         self.supabase = supabase
         self.prompt_router = prompt_router
         self.settings = get_settings()
         self.providers = VoiceProviders()
+        self.pairing_manager = pairing_manager
         self.sessions: Dict[str, VoiceSession] = {}
         # device_id -> (session_id, audio_client_id)
         self.device_index: Dict[str, tuple[str, str]] = {}
@@ -67,11 +69,12 @@ class V3SessionManager:
         device_id: str,
         token: str,
         session_id: str | None = None,
+        client_type: str = "audio",
     ):
         await websocket.accept()
 
         try:
-            device = await self._authenticate_device(device_id, token)
+            device = await self._authenticate_device(device_id, token, session_id=session_id)
         except (DeviceNotFoundError, PermissionError, ConsentError) as e:
             logger.warning(f"[v3 {device_id}] auth failed: {e}")
             try:
@@ -88,9 +91,23 @@ class V3SessionManager:
         # Use an explicit session_id query param when available so multiple clients
         # (e.g. browser + dashboard) can share the same voice session.
         voice_session_id = session_id or device_id
+        pairing = (
+            self.pairing_manager.get_by_session_id(voice_session_id)
+            if self.pairing_manager
+            else None
+        )
+
         if voice_session_id not in self.sessions:
-            character = device.get("character_id") or "default"
-            mode = device.get("mode_id") or "default"
+            character = (
+                (pairing.character if pairing else None)
+                or device.get("character_id")
+                or "default"
+            )
+            mode = (
+                (pairing.mode if pairing else None)
+                or device.get("mode_id")
+                or "default"
+            )
             session = VoiceSession(
                 session_id=voice_session_id,
                 providers=self.providers,
@@ -113,8 +130,8 @@ class V3SessionManager:
             except Exception as e:
                 logger.warning(f"[v3 {device_id}] send failed: {e}")
 
-        client_id = f"{device_id}-audio-{time.time():.0f}"
-        client = ClientHandle(device_id=client_id, device_type="audio", send=send_message)
+        client_id = f"{device_id}-{client_type}-{time.time():.0f}"
+        client = ClientHandle(device_id=client_id, device_type=client_type, send=send_message)
         session.add_client(client)
         self.device_index[device_id] = (voice_session_id, client_id)
 
@@ -247,7 +264,12 @@ class V3SessionManager:
 
     # ── Auth helpers ───────────────────────────────────────────────────────────
 
-    async def _authenticate_device(self, device_id: str, token: str) -> dict[str, Any]:
+    async def _authenticate_device(
+        self,
+        device_id: str,
+        token: str,
+        session_id: str | None = None,
+    ) -> dict[str, Any]:
         """Reuses existing Casa auth; falls through in local dev if Supabase is missing or fails.
 
         Mobile/web clients may authenticate with the shared MOBILE_API_KEY instead of a
@@ -261,7 +283,21 @@ class V3SessionManager:
                 "mode_id": "default",
                 "battery": None,
                 "is_active": True,
+                "mobile": True,
             }
+
+        if self.pairing_manager:
+            pairing = self.pairing_manager.get_by_token(token)
+            if pairing and pairing.session_id == session_id:
+                logger.info(f"[v3 {device_id}] pairing auth accepted session={session_id}")
+                return {
+                    "id": device_id,
+                    "character_id": pairing.character,
+                    "mode_id": pairing.mode,
+                    "battery": None,
+                    "is_active": True,
+                    "mobile": True,
+                }
 
         if self.settings.env == "development":
             try:
