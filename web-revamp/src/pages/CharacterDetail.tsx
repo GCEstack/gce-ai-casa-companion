@@ -1,5 +1,5 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import VideoBackground from '@/components/VideoBackground';
 import ParticleField from '@/components/ParticleField';
 import CenterStage from '@/sections/CenterStage';
@@ -69,11 +69,15 @@ function CharacterDetailContent({ character, activeMode, onModeChange }: Charact
   const { state, dispatch } = useApp();
   const isRelay = state.connectionMode === 'relay';
 
+  const relayDeviceId = useMemo(
+    () => `web-${character.slug}-${Math.random().toString(36).slice(2, 8)}`,
+    [character.slug]
+  );
   const localVoice = useVoiceChat(character.slug, activeMode);
   const relayVoice = useRelayVoiceChat({
     sessionId: relaySession?.sessionId || '',
     token: relaySession?.token || '',
-    deviceId: `web-${character.slug}-${Math.random().toString(36).slice(2, 8)}`,
+    deviceId: relayDeviceId,
     characterSlug: character.slug,
   });
 

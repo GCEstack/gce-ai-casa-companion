@@ -65,6 +65,7 @@ export function useRelayVoiceChat({ sessionId, token, deviceId, characterSlug }:
 
   const connect = useCallback(async () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    if (!sessionId || !token) return;
 
     const url =
       `${BACKEND_WS}/ws/voice/realtime/${encodeURIComponent(deviceId)}` +
