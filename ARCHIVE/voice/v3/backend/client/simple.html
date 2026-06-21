@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Casa Companion — Simple Voice</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 2rem auto; padding: 0 1rem; }
+    button { font-size: 1.2rem; padding: 1rem; width: 100%; margin: 0.5rem 0; border-radius: 12px; border: none; cursor: pointer; }
+    #recordBtn { background: #10b981; color: white; }
+    #recordBtn.recording { background: #ef4444; }
+    #interruptBtn { background: #f59e0b; color: white; }
+    #log { white-space: pre-wrap; background: #f3f4f6; padding: 1rem; border-radius: 8px; min-height: 120px; }
+    .status { margin: 0.5rem 0; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>🎙️ Casa Companion — Simple Voice</h1>
+  <p class="status">Status: <span id="status">idle</span></p>
+  <button id="recordBtn">Hold to talk</button>
+  <button id="interruptBtn">Interrupt</button>
+  <div id="log"></div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const serverHost = params.get("server") || location.host;
+    const character = params.get("character") || "corvo";
+    const sessionId = params.get("session_id") || "simple-" + Math.random().toString(36).slice(2, 8);
+    const baseUrl = `http://${serverHost}`;
+
+    const recordBtn = document.getElementById("recordBtn");
+    const interruptBtn = document.getElementById("interruptBtn");
+    const statusEl = document.getElementById("status");
+    const logEl = document.getElementById("log");
+
+    let mediaRecorder = null;
+    let chunks = [];
+    let audioCtx = null;
+
+    function log(msg) {
+      logEl.textContent += msg + "\n";
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function setStatus(s) {
+      statusEl.textContent = s;
+    }
+
+    async function ensureMic() {
+      if (!mediaRecorder) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size) chunks.push(e.data);
+        };
+      }
+    }
+
+    function playMp3(base64) {
+      const audio = new Audio("data:audio/mp3;base64," + base64);
+      audio.play();
+      return audio;
+    }
+
+    async function sendAudio(blob) {
+      setStatus("processing");
+      const form = new FormData();
+      form.append("file", blob, "voice.webm");
+
+      const url = `${baseUrl}/api/simple/voice?character=${encodeURIComponent(character)}&session_id=${encodeURIComponent(sessionId)}`;
+      log(`POST ${url}`);
+
+      const resp = await fetch(url, { method: "POST", body: form });
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = JSON.parse(line.slice(6));
+          log(JSON.stringify(data));
+          if (data.type === "stt") setStatus("heard: " + data.text);
+          if (data.type === "text") setStatus("reply: " + data.text);
+          if (data.type === "audio") playMp3(data.chunk);
+          if (data.type === "done" || data.type === "cancelled" || data.type === "error") {
+            setStatus(data.type === "done" ? "idle" : data.type);
+          }
+        }
+      }
+    }
+
+    recordBtn.addEventListener("mousedown", async () => {
+      await ensureMic();
+      chunks = [];
+      mediaRecorder.start();
+      recordBtn.classList.add("recording");
+      setStatus("listening...");
+    });
+
+    recordBtn.addEventListener("mouseup", async () => {
+      if (mediaRecorder.state === "inactive") return;
+      mediaRecorder.stop();
+      recordBtn.classList.remove("recording");
+      setStatus("thinking...");
+      await new Promise((r) => {
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(chunks, { type: "audio/webm" });
+          chunks = [];
+          await sendAudio(blob);
+          r();
+        };
+      });
+    });
+
+    // Touch support for mobile
+    recordBtn.addEventListener("touchstart", (e) => { e.preventDefault(); recordBtn.dispatchEvent(new Event("mousedown")); });
+    recordBtn.addEventListener("touchend", (e) => { e.preventDefault(); recordBtn.dispatchEvent(new Event("mouseup")); });
+
+    interruptBtn.addEventListener("click", async () => {
+      await fetch(`${baseUrl}/api/simple/interrupt?session_id=${encodeURIComponent(sessionId)}`, { method: "POST" });
+      log("interrupt sent");
+    });
+  </script>
+</body>
+</html>

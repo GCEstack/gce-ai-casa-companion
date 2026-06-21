@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CasaCompanion</string>
+    <string name="title_activity_main">CasaCompanion</string>
+    <string name="package_name">com.casacompanion.app</string>
+    <string name="custom_url_scheme">com.casacompanion.app</string>
+</resources>
