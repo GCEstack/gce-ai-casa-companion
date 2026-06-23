@@ -16,6 +16,7 @@ import asyncio
 import base64
 import logging
 import hashlib
+from pathlib import Path
 from typing import AsyncIterator, Optional, List, Dict, Any
 from dataclasses import dataclass
 
@@ -40,6 +41,30 @@ def _get_openrouter_provider_routing() -> Optional[Dict[str, Any]]:
     if sort in ("price", "throughput", "latency"):
         return {"sort": sort}
     return None
+
+
+def _load_character_prompts() -> Dict[str, str]:
+    """Load shared character prompts from packages/characters/characters.json.
+
+    Falls back to an empty dict if the file is missing so the backend can still
+    start when the shared package is not checked out.
+    """
+    candidate = Path(__file__).resolve().parents[4] / "packages" / "characters" / "characters.json"
+    if not candidate.exists():
+        logger.warning("Shared character prompts not found at %s", candidate)
+        return {}
+    try:
+        with candidate.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            return {k: str(v) for k, v in data.items() if isinstance(v, str)}
+        logger.warning("Shared character prompts has unexpected shape: %s", type(data))
+    except Exception as e:
+        logger.warning("Failed to load shared character prompts: %s", e)
+    return {}
+
+
+_CHARACTER_PROMPTS = _load_character_prompts()
 
 
 # ────────────────────────────────
@@ -243,6 +268,25 @@ class CharacterVoiceRouter:
 
     MAX_TAGGED_LENGTH = 500  # chars — beyond this, Gemini may read tags aloud
 
+    MODE_SLUG_MAP: Dict[str, str] = {
+        "story-time": "story",
+        "story": "story",
+        "calm-breathe": "calm",
+        "calm": "calm",
+        "stem-sparks": "play",
+        "play": "play",
+        "secret": "secret",
+        "introduction": "default",
+        "music-rhythm": "play",
+        "geography": "play",
+        "all-languages": "play",
+        "homework-helper": "play",
+        "coding": "play",
+        "milestones": "story",
+        "teaching-mode": "play",
+        "default": "default",
+    }
+
     def __init__(self, tts_model: str = DEFAULT_TTS):
         self.tts_model = tts_model
         if "gemini-3.1" not in tts_model:
@@ -252,7 +296,16 @@ class CharacterVoiceRouter:
             )
 
     def get_profile(self, character: str) -> VoiceProfile:
-        return self.PROFILES.get(character, self.PROFILES["default"])
+        if character in self.PROFILES:
+            return self.PROFILES[character]
+        if character in _CHARACTER_PROMPTS:
+            return VoiceProfile(
+                name=character,
+                prompt_prefix=_CHARACTER_PROMPTS[character],
+                tags={"story": "[excited]", "play": "[laughs]", "calm": "[sighs]", "secret": "[whispers]"},
+                default_tag="[excited]",
+            )
+        return self.PROFILES["default"]
 
     def get_voice(self, character: str, default_voice: str = "Kore") -> str:
         """Return the Gemini TTS voice for a character."""
@@ -261,7 +314,8 @@ class CharacterVoiceRouter:
     def apply_tags(self, text: str, character: str, mode: str = "default") -> str:
         """Wrap text with appropriate Gemini audio tags."""
         profile = self.get_profile(character)
-        tag = profile.tags.get(mode, profile.default_tag)
+        normalized_mode = self.MODE_SLUG_MAP.get(mode, mode)
+        tag = profile.tags.get(normalized_mode, profile.default_tag)
 
         # Chunk if too long
         if len(text) > self.MAX_TAGGED_LENGTH:

@@ -8,7 +8,7 @@ primary_region = "iad"
   ENV = "production"
   # Allowed CORS origins for the mobile PWA and landing sites.
   # Replace / extend with the actual Vercel deployment URLs from your dashboard.
-  CORS_ALLOWED_ORIGINS = "https://casa-companion.vercel.app,https://casa-web-mobile-liam.vercel.app,https://casa-web-mobile-peter.vercel.app,https://casa-web-mobile-jenny.vercel.app,https://casa-web-mobile-jimmy.vercel.app"
+  CORS_ALLOWED_ORIGINS = "https://casa-companion-app.fly.dev,https://casa-web-mobile-liam.fly.dev,https://casa-web-mobile-peter.fly.dev,https://casa-web-mobile-jenny.fly.dev,https://casa-web-mobile-jimmy.fly.dev"
   # Silero VAD enabled — uses ~180 MB RAM on first utterance (lazy load). 2 GB machine is sufficient.
   SILERO_VAD_DISABLED = "0"
   # Wake-word disabled: set PORCUPINE_ACCESS_KEY in Fly secrets to enable.

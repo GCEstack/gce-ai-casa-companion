@@ -83,3 +83,14 @@ def test_system_prompt_interests_appended():
     assert "love" in prompt
     assert "dinosaurs" in prompt
     assert "spiders" in prompt
+
+
+def test_shared_character_prompt_loaded():
+    router = CharacterVoiceRouter()
+    corvo = router.get_profile("corvo")
+    assert "Corvo" in corvo.prompt_prefix
+    assert "crow" in corvo.prompt_prefix.lower()
+
+    tartaruga = router.get_profile("tartaruga")
+    assert "Tartaruga" in tartaruga.prompt_prefix
+    assert "sea turtle" in tartaruga.prompt_prefix.lower()

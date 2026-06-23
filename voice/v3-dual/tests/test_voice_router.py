@@ -108,3 +108,8 @@ class TestCharacterVoiceRouter:
         text = "Hello there"
         tagged = router.apply_tags(text, "some_new_character", "play")
         assert tagged.startswith("[laughs] Hello there")
+
+    def test_mode_slug_normalization(self, router):
+        assert router.apply_tags("Hello!", "drago", "story-time").startswith("[excited]")
+        assert router.apply_tags("Breathe.", "drago", "calm-breathe").startswith("[sighs]")
+        assert router.apply_tags("Let's go!", "drago", "stem-sparks").startswith("[laughs]")
