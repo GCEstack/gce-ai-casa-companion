@@ -29,6 +29,9 @@ for candidate in _possible_env_files:
 import websockets
 
 URL = os.environ.get("VOICE_SERVER_URL", "ws://localhost:8080/ws/voice")
+if not URL.startswith(("ws://", "wss://")) or "your_value" in URL:
+    URL = "ws://localhost:8080/ws/voice"
+
 TOKEN = os.environ.get("VOICE_SERVER_API_KEY")
 SESSION_ID = "e2e-websocket-text"
 DEVICE_ID = "test-client"

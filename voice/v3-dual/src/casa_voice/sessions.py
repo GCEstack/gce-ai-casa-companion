@@ -1218,10 +1218,20 @@ class VoiceSession:
         return audio
 
     def _build_system_prompt(self) -> str:
-        parts = [
+        # Prefer the richer character profile from the voice router; fall back
+        # to a generic persona if the TTS provider doesn't expose one.
+        persona = (
             f"You are {self.character}. Friendly companion for kids. "
             "Respond briefly (1-2 sentences). Be warm and fun."
-        ]
+        )
+        if self.providers.tts and hasattr(self.providers.tts, "voice_router"):
+            try:
+                profile = self.providers.tts.voice_router.get_profile(self.character)
+                persona = f"{profile.prompt_prefix} Respond briefly (1-2 sentences). Be warm and fun."
+            except Exception:
+                pass
+
+        parts = [persona]
         if self._interests:
             summary_parts = []
             for category in ("love", "like", "enjoy", "favorite", "dislike"):

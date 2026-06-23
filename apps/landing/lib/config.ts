@@ -1,12 +1,12 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  CLOUDFLARE_API_TOKEN: z.string().min(1, "CLOUDFLARE_API_TOKEN is required"),
-  CLOUDFLARE_ACCOUNT_ID: z.string().min(1, "CLOUDFLARE_ACCOUNT_ID is required"),
+  CLOUDFLARE_API_TOKEN: z.string().optional(),
+  CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required for realtime voice"),
+  OPENAI_API_KEY: z.string().optional(),
   OPENAI_REALTIME_MODEL: z.string().default("gpt-realtime-2"),
   NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
 });
