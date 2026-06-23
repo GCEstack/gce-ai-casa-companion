@@ -36,6 +36,7 @@ def main():
         character text default 'default',
         mode text default 'default',
         conversation_history jsonb default '[]'::jsonb,
+        kid_profile jsonb default '{}'::jsonb,
         updated_at timestamptz default now()
     );
     """

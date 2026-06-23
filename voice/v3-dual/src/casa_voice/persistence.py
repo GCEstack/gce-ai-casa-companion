@@ -16,6 +16,8 @@ Expected table schema (create in Supabase SQL editor):
     );
 
     -- Optional: enable RLS if you add per-user sessions later.
+
+Run scripts/create_supabase_table.py (or the SQL it prints) to create the table.
 """
 
 import os

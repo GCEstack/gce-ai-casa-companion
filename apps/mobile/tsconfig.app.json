@@ -17,7 +17,8 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@casa/characters": ["../../packages/characters/src/index.ts"]
     }
   },
   "include": ["src"]

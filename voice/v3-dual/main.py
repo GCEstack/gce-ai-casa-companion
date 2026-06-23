@@ -30,7 +30,7 @@ from typing import Dict, Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request, HTTPException, Body, Depends
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 
 # Load environment variables from a .env file in the project root (or EC4 sibling) if present
@@ -104,6 +104,10 @@ async def lifespan(app: FastAPI):
             logger.info("[lifespan] Supabase session store enabled")
         except Exception as e:
             logger.error(f"[lifespan] Failed to initialize Supabase store: {e}")
+    if not os.environ.get("VOICE_SERVER_API_KEY"):
+        logger.warning(
+            "WARNING: VOICE_SERVER_API_KEY not set — WebSocket endpoint is unauthenticated"
+        )
     session_manager = SessionManager(providers, store=store)
     app.state.providers = providers
     app.state.session_manager = session_manager
@@ -148,6 +152,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch-all handler: log the full traceback and return a safe JSON error."""
+    error_id = secrets.token_urlsafe(8)
+    logger.exception(f"Unhandled error [{error_id}] on {request.method} {request.url.path}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error",
+            "error_id": error_id,
+        },
+    )
 
 
 class SessionManager:
@@ -415,7 +433,12 @@ async def _handle_voice_websocket(
     token: Optional[str],
 ):
     """Shared WebSocket handler for /ws/voice and /ws/voice/{device_id}."""
-    # Note: WebSocket voice endpoint is public; admin HTTP endpoints still require VOICE_SERVER_API_KEY.
+    expected_token = os.environ.get("VOICE_SERVER_API_KEY")
+    if expected_token and token != expected_token:
+        logger.warning(f"WebSocket connection rejected: invalid or missing token from {device_id}")
+        await websocket.close(code=4401, reason="Unauthorized")
+        return
+
     await websocket.accept()
 
     assigned_device_id = device_id or f"{device_type}-{secrets.token_hex(4)}"

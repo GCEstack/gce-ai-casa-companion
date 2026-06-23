@@ -1,6 +1,6 @@
 [project]
 name = "casa-voice"
-version = "2.1.0"
+version = "3.0.0"
 description = "Casa Companion Voice Agent V3 — Fast Groq/OpenAI Cloud Voice"
 requires-python = ">=3.10"
 dependencies = [
@@ -14,8 +14,6 @@ dependencies = [
     "supabase>=2.0",
     "qrcode[pil]>=7.0",
     "pvporcupine<2.0",
-    "openai>=1.30",
-    "azure-cognitiveservices-speech>=1.40",
 ]
 
 [project.optional-dependencies]

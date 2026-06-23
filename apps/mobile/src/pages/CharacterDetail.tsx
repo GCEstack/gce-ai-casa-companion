@@ -5,7 +5,7 @@ import CharacterShowcase from '@/components/CharacterShowcase';
 import ChatTranscript from '@/components/ChatTranscript';
 import InputBar from '@/components/InputBar';
 import { getCharacterBySlug } from '@/lib/characters';
-import { useVoiceChat } from '@/hooks/useVoiceChat';
+import { useV3VoiceChat } from '@/hooks/useV3VoiceChat';
 import { useAvailableCharacters } from '@/hooks/useAvailableCharacters';
 import { useFavorites, useAppSettings } from '@/lib/settings';
 
@@ -14,7 +14,7 @@ export default function CharacterDetail() {
   const navigate = useNavigate();
   const character = getCharacterBySlug(slug ?? '');
   const { settings } = useAppSettings();
-  const voice = useVoiceChat(character ?? null, { mode: settings.activeMode });
+  const voice = useV3VoiceChat(character ?? null, { mode: settings.activeMode });
   const [favorites, toggleFavorite] = useFavorites();
   const isFav = character ? favorites.includes(character.slug) : false;
   const { isEnabled } = useAvailableCharacters();

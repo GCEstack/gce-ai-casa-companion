@@ -12,6 +12,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@casa/characters": [
+        "../packages/characters/src/index.ts"
       ]
     },
     /* Bundler mode */

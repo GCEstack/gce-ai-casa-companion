@@ -1,0 +1,47 @@
+name: Backend Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'voice/v3-dual/**'
+      - '.github/workflows/backend-deploy.yml'
+
+jobs:
+  test-and-deploy:
+    name: Test and deploy casa-voice-agent
+    runs-on: ubuntu-latest
+    concurrency:
+      group: backend-deploy
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: voice/v3-dual/pyproject.toml
+
+      - name: Install backend dependencies
+        working-directory: voice/v3-dual
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Run unit tests
+        working-directory: voice/v3-dual
+        run: python -m pytest tests/test_commands.py tests/test_filler.py -v
+
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      # Requires FLY_API_TOKEN to be set in the repository secrets.
+      - name: Deploy to Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy ./voice/v3-dual --remote-only
