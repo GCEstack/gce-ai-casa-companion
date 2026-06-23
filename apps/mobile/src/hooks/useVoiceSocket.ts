@@ -176,6 +176,9 @@ export function useVoiceSocket(): VoiceSocketHook {
       nextPlayTimeRef.current = playContextRef.current.currentTime;
     }
     const ctx = playContextRef.current;
+    if (ctx.state === 'suspended') {
+      void ctx.resume();
+    }
     const actualRate = ctx.sampleRate;
 
     // Convert Int16 -> Float32
@@ -301,6 +304,7 @@ export function useVoiceSocket(): VoiceSocketHook {
     wsRef.current = ws;
 
     ws.onopen = () => {
+      console.log('[VoiceSocket] connected', url);
       reconnectCountRef.current = 0;
       setConnectionState('connected');
       pingIntervalRef.current = window.setInterval(() => {

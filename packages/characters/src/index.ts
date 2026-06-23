@@ -5,6 +5,8 @@
  * settings so they don't drift between `apps/mobile` and `web-revamp`.
  */
 
+export * from './characters';
+
 export interface CharacterFeature {
   name: string;
   description: string;
