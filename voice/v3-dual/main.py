@@ -62,6 +62,7 @@ from casa_voice.protocol import VoiceMessage, MessageType, CommandType
 from casa_voice.providers import VoiceProviders
 from casa_voice.sessions import VoiceSession, ClientHandle
 from casa_voice.persistence import SessionStore
+from casa_voice.pairing import PairingManager
 
 # Logging — one unified DEBUG stream; no duplicates, casa_voice always visible
 def _setup_logging():
@@ -114,8 +115,10 @@ async def lifespan(app: FastAPI):
             "WARNING: VOICE_SERVER_API_KEY not set — WebSocket endpoint is unauthenticated"
         )
     session_manager = SessionManager(providers, store=store)
+    pairing_manager = PairingManager()
     app.state.providers = providers
     app.state.session_manager = session_manager
+    app.state.pairing_manager = pairing_manager
     yield
     logger.info("[lifespan] Shutting down")
     for session in list(session_manager.sessions.values()):
@@ -183,18 +186,27 @@ class SessionManager:
         self.store = store
         self.sessions: Dict[str, VoiceSession] = {}
 
-    def _get_or_create(self, session_id: str) -> VoiceSession:
+    def _get_or_create(
+        self,
+        session_id: str,
+        character: str = "default",
+        mode: str = "default",
+    ) -> VoiceSession:
         if session_id not in self.sessions:
             session = VoiceSession(
                 session_id=session_id,
                 providers=self.providers,
-                character="default",
+                character=character,
+                mode=mode,
                 store=self.store,
             )
             self.sessions[session_id] = session
             # Start the pipeline once; clients join later
             asyncio.create_task(session.start())
-            logger.info(f"[SessionManager] Created session {session_id}")
+            logger.info(
+                f"[SessionManager] Created session {session_id} "
+                f"(character={character}, mode={mode})"
+            )
         return self.sessions[session_id]
 
     async def add_client(
@@ -203,8 +215,10 @@ class SessionManager:
         device_id: str,
         device_type: str,
         send: callable,
+        character: str = "default",
+        mode: str = "default",
     ) -> VoiceSession:
-        session = self._get_or_create(session_id)
+        session = self._get_or_create(session_id, character=character, mode=mode)
         client = ClientHandle(
             device_id=device_id,
             device_type=device_type,
@@ -292,6 +306,7 @@ async def health():
             "multi-client",
             "mode-a",
             "mode-b",
+            "phone-mic-pairing",
         ],
         "sessions": len(app.state.session_manager.sessions),
     }
@@ -329,6 +344,57 @@ async def kill_device(device_id: str, token: str = Depends(_require_admin_token)
                 del app.state.session_manager.sessions[sid]
             return {"status": "killed", "device_id": device_id}
     return {"status": "not_found", "device_id": device_id}
+
+
+# ── Phone-as-parent-mic pairing ───────────────────────────────────────────────
+
+class CreatePairingRequest(BaseModel):
+    character: Optional[str] = "default"
+    mode: Optional[str] = "default"
+
+    @field_validator("character", "mode")
+    @classmethod
+    def _validate_optional_id_fields(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        if len(value) > _MAX_ID_LEN:
+            raise ValueError(f"Field too long (max {_MAX_ID_LEN})")
+        if not _ID_PATTERN.match(value):
+            raise ValueError("Field contains invalid characters")
+        return value
+
+
+@app.post("/api/pairing")
+async def create_pairing(req: CreatePairingRequest):
+    """Create a short-lived pairing code for a parent phone microphone."""
+    pairing = await app.state.pairing_manager.create(
+        character=req.character or "default",
+        mode=req.mode or "default",
+    )
+    return {
+        "code": pairing.code,
+        "session_id": pairing.session_id,
+        "join_token": pairing.join_token,
+        "character": pairing.character,
+        "mode": pairing.mode,
+        "expires_at": pairing.expires_at.isoformat(),
+    }
+
+
+@app.get("/api/pairing/{code}")
+async def get_pairing(code: str):
+    """Look up pairing metadata by code."""
+    _sanitize_id(code, "code")
+    pairing = await app.state.pairing_manager.get(code)
+    if not pairing:
+        raise HTTPException(status_code=404, detail="Pairing not found")
+    return {
+        "code": pairing.code,
+        "session_id": pairing.session_id,
+        "character": pairing.character,
+        "mode": pairing.mode,
+        "expires_at": pairing.expires_at.isoformat(),
+    }
 
 
 # ── NFC / Physical Actions ────────────────────────────────────────────────────
@@ -485,6 +551,8 @@ async def _handle_voice_websocket(
     device_id: Optional[str],
     session_id: Optional[str],
     token: Optional[str],
+    character: str = "default",
+    mode: str = "default",
 ):
     """Shared WebSocket handler for /ws/voice and /ws/voice/{device_id}."""
     expected_token = os.environ.get("VOICE_SERVER_API_KEY")
@@ -528,6 +596,8 @@ async def _handle_voice_websocket(
         device_id=assigned_device_id,
         device_type=device_type,
         send=send_message,
+        character=character,
+        mode=mode,
     )
 
     # Throttle audio log per connection
@@ -633,6 +703,49 @@ async def voice_websocket_by_id(
     token: Optional[str] = Query(None),
 ):
     await _handle_voice_websocket(websocket, device_type, device_id, session_id, token)
+
+
+@app.websocket("/ws/voice/realtime/{device_id}")
+async def realtime_voice_websocket(
+    websocket: WebSocket,
+    device_id: str,
+    token: Optional[str] = Query(None),
+    session_id: Optional[str] = Query(None),
+    client_type: Optional[str] = Query(None),
+):
+    """Parent-phone microphone client joined via a pairing code.
+
+    The ``token`` query parameter must be the pairing's ``join_token``.
+    ``client_type`` is accepted for forward compatibility but treated as audio.
+    """
+    pairing = await app.state.pairing_manager.get_by_token(token) if token else None
+    if not pairing:
+        logger.warning(
+            f"Realtime WebSocket rejected: invalid or missing join token for {device_id}"
+        )
+        await websocket.close(code=4401, reason="Unauthorized")
+        return
+
+    if session_id and session_id != pairing.session_id:
+        logger.warning(
+            f"Realtime WebSocket rejected: session_id mismatch for {device_id}"
+        )
+        await websocket.close(code=4401, reason="Session mismatch")
+        return
+
+    # Reuse the shared handler. The admin-token check inside it is bypassed by
+    # passing the configured admin token (if any) since we already validated
+    # the pairing-specific join token above.
+    expected_admin_token = os.environ.get("VOICE_SERVER_API_KEY")
+    await _handle_voice_websocket(
+        websocket,
+        device_type="audio",
+        device_id=device_id,
+        session_id=pairing.session_id,
+        token=expected_admin_token if expected_admin_token else None,
+        character=pairing.character,
+        mode=pairing.mode,
+    )
 
 
 # ── Static files / root ───────────────────────────────────────────────────────
