@@ -25,7 +25,7 @@ export interface CharacterFeature {
   behavior: string;
 }
 
-import type { ModeConfig } from '@casa/characters';
+import type { ModeConfig } from '@/lib/casaCharacters';
 export type { ModeConfig };
 
 export type ConversationMode = 'turn-based' | 'free-flow';

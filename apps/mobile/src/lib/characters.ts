@@ -7,4 +7,4 @@ export {
   getCharacterSubtitle,
   getCharacterAccentHue,
   getCharacterBySlug,
-} from '@casa/characters';
+} from '@/lib/casaCharacters';

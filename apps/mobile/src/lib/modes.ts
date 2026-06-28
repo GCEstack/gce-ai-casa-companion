@@ -3,7 +3,7 @@ import {
   modeConfigs,
   getModeConfig,
   type ModeConfig,
-} from '@casa/characters';
+} from '@/lib/casaCharacters';
 import type { CharacterFeature } from '@/types';
 
 export const allModes: ModeConfig[] = modeConfigs;
