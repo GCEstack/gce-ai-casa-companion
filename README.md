@@ -99,14 +99,38 @@ Add new characters in one place; the aliases are configured in each app's `vite.
 
 ---
 
+## Canonical Production URLs
+
+| Service | URL |
+|---------|-----|
+| Voice backend | `https://casa-voice-agent.fly.dev` |
+| Voice WebSocket | `wss://casa-voice-agent.fly.dev/ws/voice` |
+| Mobile main | `https://casa-mobile-main.vercel.app` |
+| Mobile — Peter | `https://casa-mobile-peter.vercel.app` |
+| Mobile — Liam | `https://casa-mobile-liam.vercel.app` |
+| Mobile — Jimmy | `https://casa-mobile-jimmy.vercel.app` |
+| Mobile — Jenny | `https://casa-mobile-jenny.vercel.app` |
+
+The canonical GitHub remote is `https://github.com/GCEstack/gce-ai-casa-companion.git`.
+
+---
+
 ## Security
 
 - **Never commit `.env`, `.env.local`, `.env.*.backup`, or API keys.**
-- All `.env.example` files use `your_*_here` placeholders. Replace them locally.
+- All `.env.example` files use placeholders. Replace them locally.
 - Keep `node_modules/`, `.venv/`, `__pycache__/`, `.next/`, `.vercel/`, `dist/`, `build/`, and `tts_cache/` out of Git.
-- `voice/v3-dual/.env` is untracked and must stay untracked.
+- `voice/v3-dual/.env` and frontend `.env.local` / `.env.production` files are untracked and must stay untracked.
 - Set `VOICE_SERVER_API_KEY` in production to authenticate the WebSocket endpoint.
-- Rotate any keys that were previously exposed in old folders.
+- **Active leaked-key cleanup:** backup/archive env files were deleted. Rotate any keys that were previously exposed and recreate local `.env` files from `.env.example`.
+
+---
+
+## Vercel Hygiene
+
+- **Do NOT set `NODE_ENV=production` as a Vercel project env var.** It makes `npm install` skip `devDependencies` and breaks Next.js builds. `NODE_ENV` is set by the build command itself.
+- `apps/landing` should not have `VITE_*` env vars; those belong to `apps/mobile` and `web-revamp`.
+- `apps/landing` keeps build-time tooling in `devDependencies`; this is safe as long as `NODE_ENV=production` is not set as a project env var.
 
 ---
 
@@ -119,3 +143,5 @@ Add new characters in one place; the aliases are configured in each app's `vite.
 ## Consolidation Notes
 
 This repo was consolidated from multiple scattered Casa Companion folders. See `README.legacy.md` for the original detailed documentation and the `casa_companion_full_audit.md` report for the full audit and remediation checklist.
+
+For agent/development conventions, see `AGENTS.md`.
