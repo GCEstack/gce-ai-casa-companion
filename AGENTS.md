@@ -30,16 +30,10 @@ Legacy code lives in `ARCHIVE/` and should not be edited except to move things o
 
 ## Git Remotes
 
-- **Canonical upstream:** `https://github.com/GCEstack/gce-ai-casa-companion.git` (remote `gcestack`)
-- **Current pushable remote:** `https://github.com/simplebalance89-ai/casa-companion.git` (remote `origin`)
+- **Canonical upstream / push target:** `https://github.com/GCEstack/gce-ai-casa-companion.git` (remote `origin` and `gcestack`)
+- **Legacy mirror:** `https://github.com/simplebalance89-ai/casa-companion.git` (remote `simplebalance`)
 
-The `simplebalance89-ai` credentials currently do not have push access to `GCEstack/gce-ai-casa-companion`. Pushing to the canonical upstream requires rotating the leaked GitHub PAT (backlog task A1) and updating the remote URL (A2). Once the PAT is rotated, swap the remotes:
-
-```bash
-git remote set-url origin https://github.com/GCEstack/gce-ai-casa-companion.git
-```
-
-Until then, push to `origin` and keep `gcestack` as a reference to the canonical target.
+`origin` now pushes to the canonical `GCEstack/gce-ai-casa-companion` repo. The old `simplebalance89-ai` remote is kept as a read-only reference.
 
 ---
 
