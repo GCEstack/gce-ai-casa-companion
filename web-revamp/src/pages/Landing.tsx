@@ -24,7 +24,7 @@ export default function Landing() {
   const gridCharacters = pietro ? [pietro, ...others] : others;
 
   return (
-    <main className="relative min-h-[100dvh] pb-12" style={{ background: '#0a0a0f' }}>
+    <main className="relative min-h-[100dvh] pb-12">
       {/* Hero */}
       <section className="relative min-h-[50dvh] flex flex-col items-center justify-center overflow-hidden px-4 pt-10 pb-4">
         <VideoBackground blur={60} brightness={0.4} overlayOpacity={0.85} />

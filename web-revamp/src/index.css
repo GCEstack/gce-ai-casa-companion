@@ -212,6 +212,20 @@
     animation: wake-word-pulse 1.5s ease-in-out infinite;
   }
 
+  @keyframes float-slow {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(2%, 3%) scale(1.05); }
+    66% { transform: translate(-1%, 2%) scale(0.98); }
+  }
+
+  .animate-float-slow {
+    animation: float-slow 20s ease-in-out infinite;
+  }
+
+  .animate-float-slower {
+    animation: float-slow 28s ease-in-out infinite reverse;
+  }
+
   .barge-in-border {
     box-shadow: 0 0 0 2px rgba(249,115,22,0.8), 0 0 15px rgba(249,115,22,0.4);
   }
