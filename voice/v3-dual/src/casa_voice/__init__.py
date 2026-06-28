@@ -1,14 +1,14 @@
-"""Casa Voice V2 — Voice Agent Package
+"""Casa Voice V3-Dual — Voice Agent Package
 
 Modules:
-    protocol    — Message types, state machine, VoiceMessage
+    protocol    — Message types, VoiceState, CommandType, VoiceMessage
     commands    — Local keyword classifier
-    providers   — OpenRouter STT/TTS + Silero VAD + CharacterVoiceRouter
+    providers   — STT/TTS/LLM/VAD providers + CharacterVoiceRouter
     sessions    — Session manager with barge-in + wake phrases
 """
 
 from .protocol import (
-    MessageType, VoiceState, CommandType, VoiceMessage, StateMachine
+    MessageType, VoiceState, CommandType, VoiceMessage
 )
 from .commands import CommandClassifier, classifier
 from .providers import (
@@ -18,7 +18,7 @@ from .providers import (
 from .sessions import VoiceSession, AudioBuffer
 
 __all__ = [
-    "MessageType", "VoiceState", "CommandType", "VoiceMessage", "StateMachine",
+    "MessageType", "VoiceState", "CommandType", "VoiceMessage",
     "CommandClassifier", "classifier",
     "OpenRouterSTT", "OpenRouterTTS", "SileroVAD", "CharacterVoiceRouter",
     "VoiceProviders", "resample_pcm",

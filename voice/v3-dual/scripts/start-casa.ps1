@@ -7,8 +7,8 @@
 
 $ErrorActionPreference = "Stop"
 
-$projectRoot = "C:\Users\Dekan AI Brother\Projects\ACTIVE\apps-platforms\casa-companion\casa_voice_V3_dual"
-$port = 8081
+$projectRoot = "C:\Users\Dekan AI Brother\Projects\ACTIVE\apps-platforms\casa-companion\voice\v3-dual"
+$port = 8080
 
 Set-Location $projectRoot
 

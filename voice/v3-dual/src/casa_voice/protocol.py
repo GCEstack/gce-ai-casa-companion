@@ -1,4 +1,4 @@
-"""Casa Voice V2/V3 — Wake-Phrase + Dual-Mode Protocol
+"""Casa Voice V3-Dual — Wake-Phrase + Push-to-Talk Protocol
 
 Interaction Model: Wake-Phrase (always-listening audio devices)
 - IDLE: Audio device streams mic audio continuously.
@@ -8,6 +8,10 @@ Interaction Model: Wake-Phrase (always-listening audio devices)
 - Barge-in: INTERRUPT command (Space/avatar/button) stops playback.
 - RESET command clears conversation history and returns to IDLE.
 
+Push-to-Talk / ESP32:
+- START_LISTENING forces a wake-detected/listening turn from IDLE or INTERRUPTED.
+- STOP_LISTENING ends the turn manually and triggers processing.
+
 Device Modes:
 - Mode A (browser audio): browser sends/receives PCM and JSON.
 - Mode B (dashboard only): browser sends/receives JSON only; ESP32 handles PCM.
@@ -15,7 +19,7 @@ Device Modes:
 
 from enum import Enum
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 import json
 
 
@@ -32,7 +36,6 @@ class MessageType(Enum):
     PING = "ping"
     PONG = "pong"
     INTERRUPT_ACK = "interrupt_ack"
-    END_TURN_ACK = "end_turn_ack"
     DEVICE_CONNECTED = "device_connected"
     DEVICE_DISCONNECTED = "device_disconnected"
 
@@ -143,10 +146,6 @@ class VoiceMessage:
         return cls(type=MessageType.INTERRUPT_ACK)
 
     @classmethod
-    def end_turn_ack(cls) -> "VoiceMessage":
-        return cls(type=MessageType.END_TURN_ACK)
-
-    @classmethod
     def device_connected(cls, device_id: str, device_type: str) -> "VoiceMessage":
         return cls(
             type=MessageType.DEVICE_CONNECTED,
@@ -159,51 +158,3 @@ class VoiceMessage:
             type=MessageType.DEVICE_DISCONNECTED,
             payload={"device_id": device_id, "device_type": device_type},
         )
-
-
-class StateMachine:
-    """Wake-phrase state machine."""
-
-    def __init__(self):
-        self._state = VoiceState.IDLE
-        self._history: List[VoiceState] = []
-
-    @property
-    def state(self) -> VoiceState:
-        return self._state
-
-    def transition(self, new_state: VoiceState) -> bool:
-        valid = {
-            VoiceState.IDLE: [VoiceState.WAKE_DETECTED, VoiceState.LISTENING],
-            VoiceState.WAKE_DETECTED: [VoiceState.LISTENING],
-            VoiceState.LISTENING: [VoiceState.PROCESSING, VoiceState.INTERRUPTED],
-            VoiceState.PROCESSING: [VoiceState.SPEAKING, VoiceState.LISTENING, VoiceState.INTERRUPTED],
-            VoiceState.SPEAKING: [VoiceState.LISTENING, VoiceState.INTERRUPTED],
-            VoiceState.INTERRUPTED: [VoiceState.IDLE, VoiceState.LISTENING],
-        }
-        if new_state in valid.get(self._state, []):
-            self._history.append(self._state)
-            self._state = new_state
-            return True
-        return False
-
-    def interrupt(self) -> bool:
-        if self._state in (VoiceState.SPEAKING, VoiceState.PROCESSING, VoiceState.LISTENING):
-            self._history.append(self._state)
-            self._state = VoiceState.INTERRUPTED
-            return True
-        return False
-
-    def reset(self) -> bool:
-        self._history.append(self._state)
-        self._state = VoiceState.IDLE
-        return True
-
-    def can_listen(self) -> bool:
-        return self._state in (VoiceState.IDLE, VoiceState.LISTENING, VoiceState.INTERRUPTED)
-
-    def can_speak(self) -> bool:
-        return self._state == VoiceState.PROCESSING
-
-    def is_dormant(self) -> bool:
-        return self._state == VoiceState.IDLE

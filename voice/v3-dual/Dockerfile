@@ -13,9 +13,8 @@ COPY pyproject.toml .
 COPY src ./src
 RUN pip install --no-cache-dir .
 
-# Copy application entry point and package source.
+# Copy application entry point.
 COPY main.py .
-COPY src ./src
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app/src
