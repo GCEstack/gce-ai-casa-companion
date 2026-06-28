@@ -105,13 +105,13 @@ Add new characters in one place; the aliases are configured in each app's `vite.
 |---------|-----|
 | Voice backend | `https://casa-voice-agent.fly.dev` |
 | Voice WebSocket | `wss://casa-voice-agent.fly.dev/ws/voice` |
-| Mobile main | `https://casa-mobile-main.vercel.app` |
-| Mobile — Peter | `https://casa-mobile-peter.vercel.app` |
-| Mobile — Liam | `https://casa-mobile-liam.vercel.app` |
-| Mobile — Jimmy | `https://casa-mobile-jimmy.vercel.app` |
-| Mobile — Jenny | `https://casa-mobile-jenny.vercel.app` |
+| New design (web-revamp) | `https://casa-redesign-temp.vercel.app` |
+| Mobile — Liam | `https://casa-web-mobile-liam.fly.dev` |
+| Mobile — Peter | `https://casa-web-mobile-peter.fly.dev` |
+| Mobile — Jimmy | `https://casa-web-mobile-jimmy.fly.dev` |
+| Mobile — Jenny | `https://casa-web-mobile-jenny.fly.dev` |
 | Landing | `https://casa-landing.vercel.app` |
-| Web-revamp | `https://casa-companion-app.fly.dev` |
+| Legacy web-revamp | `https://casa-companion-app.fly.dev` |
 
 The canonical GitHub remote is `https://github.com/GCEstack/gce-ai-casa-companion.git`.
 

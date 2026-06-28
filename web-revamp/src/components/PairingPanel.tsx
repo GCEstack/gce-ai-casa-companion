@@ -3,7 +3,7 @@ import { QRCode } from 'react-qr-code';
 import { toast } from 'sonner';
 
 const BACKEND_HTTP = import.meta.env.VITE_BACKEND_HTTP_URL || 'https://casa-voice-agent.fly.dev';
-const PARENT_JOIN_URL = import.meta.env.VITE_PARENT_JOIN_URL || 'https://casa-mobile-main.vercel.app/pair';
+const PARENT_JOIN_URL = import.meta.env.VITE_PARENT_JOIN_URL || 'https://casa-web-mobile-liam.fly.dev/pair';
 
 interface Props {
   characterSlug: string;

@@ -20,13 +20,13 @@ Legacy code lives in `ARCHIVE/` and should not be edited except to move things o
 |---------|-----|
 | Voice backend | `https://casa-voice-agent.fly.dev` |
 | Voice WebSocket | `wss://casa-voice-agent.fly.dev/ws/voice` |
-| Mobile main | `https://casa-mobile-main.vercel.app` |
-| Mobile — Peter | `https://casa-mobile-peter.vercel.app` |
-| Mobile — Liam | `https://casa-mobile-liam.vercel.app` |
-| Mobile — Jimmy | `https://casa-mobile-jimmy.vercel.app` |
-| Mobile — Jenny | `https://casa-mobile-jenny.vercel.app` |
+| New design (web-revamp) | `https://casa-redesign-temp.vercel.app` |
+| Mobile — Liam | `https://casa-web-mobile-liam.fly.dev` |
+| Mobile — Peter | `https://casa-web-mobile-peter.fly.dev` |
+| Mobile — Jimmy | `https://casa-web-mobile-jimmy.fly.dev` |
+| Mobile — Jenny | `https://casa-web-mobile-jenny.fly.dev` |
 | Landing | `https://casa-landing.vercel.app` |
-| Web-revamp | `https://casa-companion-app.fly.dev` |
+| Legacy web-revamp | `https://casa-companion-app.fly.dev` |
 
 ## Git Remotes
 
@@ -42,7 +42,13 @@ Legacy code lives in `ARCHIVE/` and should not be edited except to move things o
 | Service | Provider | App / Project | URL |
 |---------|----------|---------------|-----|
 | Voice backend | Fly.io | `casa-voice-agent` | `https://casa-voice-agent.fly.dev` |
-| Web-revamp | Fly.io | `casa-companion-app` | `https://casa-companion-app.fly.dev` |
+| New design (web-revamp) | Vercel | `casa-redesign-temp` | `https://casa-redesign-temp.vercel.app` |
+| Legacy web-revamp | Fly.io | `casa-companion-app` | `https://casa-companion-app.fly.dev` |
+| Mobile PWA (Liam) | Fly.io | `casa-web-mobile-liam` | `https://casa-web-mobile-liam.fly.dev` |
+| Mobile PWA (Peter) | Fly.io | `casa-web-mobile-peter` | `https://casa-web-mobile-peter.fly.dev` |
+| Mobile PWA (Jimmy) | Fly.io | `casa-web-mobile-jimmy` | `https://casa-web-mobile-jimmy.fly.dev` |
+| Mobile PWA (Jenny) | Fly.io | `casa-web-mobile-jenny` | `https://casa-web-mobile-jenny.fly.dev` |
+| Landing | Vercel | `casa-landing` | `https://casa-landing.vercel.app` |
 | Supabase project | Supabase | `udbgzgntfiytnuajnbvy` | `https://udbgzgntfiytnuajnbvy.supabase.co` |
 
 ---
