@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { ChatMessage } from '@/hooks/useVoiceChat';
+import type { ChatMessage } from '@/hooks/useV3VoiceChat';
 import { userName } from '@/lib/personalization';
 
 interface ChatTranscriptProps {

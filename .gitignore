@@ -7,6 +7,10 @@
 .env.*.backup.*
 *.env.backup
 
+# Allow checked-in example env files (overrides any global .env.* rule)
+!.env.example
+!**/.env.example
+
 # Node / Next.js
 node_modules/
 .next/
