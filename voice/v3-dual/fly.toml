@@ -17,6 +17,8 @@ primary_region = "iad"
   WAKE_WORD_DISABLED = "1"
   # Native audio disabled: set to "1" and configure OPENROUTER_NATIVE_AUDIO_MODEL to enable quick-chat fast path.
   NATIVE_AUDIO_ENABLED = "0"
+  # TTS provider: "openai" (default, tts-1/nova) or "openrouter" (Gemini Flash with tags).
+  TTS_PROVIDER = "openai"
 
 [http_service]
   internal_port = 8080
