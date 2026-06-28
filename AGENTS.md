@@ -25,21 +25,31 @@ Legacy code lives in `ARCHIVE/` and should not be edited except to move things o
 | Mobile — Liam | `https://casa-mobile-liam.vercel.app` |
 | Mobile — Jimmy | `https://casa-mobile-jimmy.vercel.app` |
 | Mobile — Jenny | `https://casa-mobile-jenny.vercel.app` |
-| Landing | `https://<landing-project>.vercel.app` *(TODO: fill in)* |
-| Web-revamp | `https://<web-revamp-project>.vercel.app` *(TODO: fill in)* |
+| Landing | `https://casa-landing.vercel.app` |
+| Web-revamp | `https://casa-companion-app.fly.dev` |
 
 ## Git Remotes
 
 - **Canonical upstream:** `https://github.com/GCEstack/gce-ai-casa-companion.git` (remote `gcestack`)
 - **Current pushable remote:** `https://github.com/simplebalance89-ai/casa-companion.git` (remote `origin`)
 
-The `simplebalance89-ai` credentials currently do not have push access to `GCEstack/gce-ai-casa-companion`. Once the GitHub PAT is rotated, swap the remotes:
+The `simplebalance89-ai` credentials currently do not have push access to `GCEstack/gce-ai-casa-companion`. Pushing to the canonical upstream requires rotating the leaked GitHub PAT (backlog task A1) and updating the remote URL (A2). Once the PAT is rotated, swap the remotes:
 
 ```bash
 git remote set-url origin https://github.com/GCEstack/gce-ai-casa-companion.git
 ```
 
 Until then, push to `origin` and keep `gcestack` as a reference to the canonical target.
+
+---
+
+## Infrastructure References
+
+| Service | Provider | App / Project | URL |
+|---------|----------|---------------|-----|
+| Voice backend | Fly.io | `casa-voice-agent` | `https://casa-voice-agent.fly.dev` |
+| Web-revamp | Fly.io | `casa-companion-app` | `https://casa-companion-app.fly.dev` |
+| Supabase project | Supabase | `udbgzgntfiytnuajnbvy` | `https://udbgzgntfiytnuajnbvy.supabase.co` |
 
 ---
 

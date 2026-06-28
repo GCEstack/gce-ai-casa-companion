@@ -110,6 +110,8 @@ Add new characters in one place; the aliases are configured in each app's `vite.
 | Mobile — Liam | `https://casa-mobile-liam.vercel.app` |
 | Mobile — Jimmy | `https://casa-mobile-jimmy.vercel.app` |
 | Mobile — Jenny | `https://casa-mobile-jenny.vercel.app` |
+| Landing | `https://casa-landing.vercel.app` |
+| Web-revamp | `https://casa-companion-app.fly.dev` |
 
 The canonical GitHub remote is `https://github.com/GCEstack/gce-ai-casa-companion.git`.
 
