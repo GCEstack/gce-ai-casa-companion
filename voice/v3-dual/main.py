@@ -1,4 +1,4 @@
-"""Casa Voice V2/V3 — FastAPI Server (Dual-Mode)
+"""Casa Voice V3-Dual — FastAPI Server
 
 Supports:
 - Mode A (browser audio): client connects with ?device_type=audio
@@ -21,6 +21,7 @@ if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
 import os
+import re
 import asyncio
 import json
 import logging
@@ -31,16 +32,20 @@ from typing import Dict, Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request, HTTPException, Body, Depends
 from fastapi.responses import StreamingResponse, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
-# Load environment variables from a .env file in the project root (or EC4 sibling) if present
+# Load environment variables from an optional .env file.
+# CASA_ENV_FILE can point to a custom path; otherwise the project root .env is used.
 _project_root = Path(__file__).parent
+_env_file_override = os.environ.get("CASA_ENV_FILE")
 _possible_env_files = [
+    Path(_env_file_override) if _env_file_override else None,
     _project_root / ".env",
-    Path("C:/Users/Dekan AI Brother/Projects/ACTIVE/apps-platforms/EC4") / ".env",
 ]
 _env_file = None
 for candidate in _possible_env_files:
+    if not candidate:
+        continue
     if candidate.exists():
         _env_file = candidate
         # Do not override env vars already set in the process (e.g. CI/test overrides)
@@ -48,7 +53,7 @@ for candidate in _possible_env_files:
         logging.info(f"Loaded environment from {_env_file}")
         break
 if not _env_file:
-    logging.warning("No .env file found in project root or EC4 folder")
+    logging.warning("No .env file found. Set CASA_ENV_FILE or create a project root .env")
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -115,8 +120,10 @@ async def lifespan(app: FastAPI):
     logger.info("[lifespan] Shutting down")
     for session in list(session_manager.sessions.values()):
         await session.stop()
-    await providers.stt.client.aclose()
-    await providers.tts.client.aclose()
+    if providers.stt is not None:
+        await providers.stt.client.aclose()
+    if providers.tts is not None:
+        await providers.tts.client.aclose()
     if providers.native_audio is not None:
         await providers.native_audio.close()
 
@@ -225,6 +232,35 @@ class SessionManager:
         return None, None
 
 
+# ── Input validation helpers ──────────────────────────────────────────────────
+
+_MAX_ID_LEN = 64
+_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
+_MAX_AUDIO_CHUNK_BYTES = 256 * 1024  # 256 KiB per WebSocket binary frame
+
+
+def _sanitize_id(value: Optional[str], name: str = "id") -> str:
+    """Return a validated id, or raise HTTPException 400 if invalid."""
+    if not value:
+        raise HTTPException(status_code=400, detail=f"Missing {name}")
+    if len(value) > _MAX_ID_LEN:
+        raise HTTPException(status_code=400, detail=f"{name} too long (max {_MAX_ID_LEN})")
+    if not _ID_PATTERN.match(value):
+        raise HTTPException(status_code=400, detail=f"{name} contains invalid characters")
+    return value
+
+
+def _sanitize_ws_id(value: Optional[str], name: str = "id") -> str:
+    """Return a validated id for WebSocket contexts (raises ValueError)."""
+    if not value:
+        raise ValueError(f"Missing {name}")
+    if len(value) > _MAX_ID_LEN:
+        raise ValueError(f"{name} too long (max {_MAX_ID_LEN})")
+    if not _ID_PATTERN.match(value):
+        raise ValueError(f"{name} contains invalid characters")
+    return value
+
+
 # ── Admin auth helper ─────────────────────────────────────────────────────────
 
 def _require_admin_token(token: Optional[str] = Query(None)):
@@ -283,6 +319,7 @@ async def list_sessions(token: str = Depends(_require_admin_token)):
 @app.get("/api/kill/{device_id}")
 async def kill_device(device_id: str, token: str = Depends(_require_admin_token)):
     """Admin endpoint: kick a device from its session. Requires VOICE_SERVER_API_KEY."""
+    _sanitize_id(device_id, "device_id")
     for sid, session in list(app.state.session_manager.sessions.items()):
         if device_id in session.clients:
             await session.handle_command(CommandType.RESET)
@@ -302,6 +339,17 @@ class TapRequest(BaseModel):
     character: Optional[str] = None
     mode: Optional[str] = None
     scene: Optional[str] = None
+
+    @field_validator("session_id", "character", "mode", "scene")
+    @classmethod
+    def _validate_optional_id_fields(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        if len(value) > _MAX_ID_LEN:
+            raise ValueError(f"Field too long (max {_MAX_ID_LEN})")
+        if not _ID_PATTERN.match(value):
+            raise ValueError("Field contains invalid characters")
+        return value
 
 
 ALLOWED_TAP_ACTIONS = {
@@ -368,12 +416,17 @@ async def tap_get(
     scene: Optional[str] = Query(None),
 ):
     """NFC-friendly GET endpoint for the same actions."""
+    _sanitize_id(session_id, "session_id")
     if action not in ALLOWED_TAP_ACTIONS:
         raise HTTPException(status_code=400, detail=f"Unknown action: {action}")
 
     session = app.state.session_manager.sessions.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    for value, name in ((character, "character"), (mode, "mode"), (scene, "scene")):
+        if value is not None:
+            _sanitize_id(value, name)
 
     payload = {"character": character, "mode": mode, "scene": scene}
     await _execute_tap(session, action, payload)
@@ -393,6 +446,7 @@ async def events(
     Mirrors the WebSocket text messages (state changes, transcripts,
     config changes, device presence) for external monitoring/dashboards.
     """
+    _sanitize_id(device_id, "device_id")
     expected_token = os.environ.get("VOICE_SERVER_API_KEY")
     if expected_token and token != expected_token:
         raise HTTPException(status_code=403, detail="Invalid token")
@@ -439,10 +493,15 @@ async def _handle_voice_websocket(
         await websocket.close(code=4401, reason="Unauthorized")
         return
 
-    await websocket.accept()
+    try:
+        assigned_device_id = _sanitize_ws_id(device_id, "device_id") if device_id else f"{device_type}-{secrets.token_hex(4)}"
+        assigned_session_id = _sanitize_ws_id(session_id, "session_id") if session_id else f"session-{secrets.token_hex(4)}"
+    except ValueError as e:
+        logger.warning(f"WebSocket connection rejected: {e}")
+        await websocket.close(code=4400, reason=f"Invalid id: {e}")
+        return
 
-    assigned_device_id = device_id or f"{device_type}-{secrets.token_hex(4)}"
-    assigned_session_id = session_id or f"session-{secrets.token_hex(4)}"
+    await websocket.accept()
 
     logger.info(
         f"=== WebSocket connected: device={assigned_device_id} "
@@ -493,6 +552,11 @@ async def _handle_voice_websocket(
                     )
                     continue
                 pcm = message["bytes"]
+                if len(pcm) > _MAX_AUDIO_CHUNK_BYTES:
+                    logger.warning(
+                        f"[{assigned_device_id}] Audio chunk too large: {len(pcm)} bytes; ignoring"
+                    )
+                    continue
                 # Throttle log to avoid flooding: log first chunk and every ~2 seconds thereafter
                 now = asyncio.get_event_loop().time()
                 if now - _last_audio_log >= 2.0:
