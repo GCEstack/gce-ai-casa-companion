@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { COPYRIGHT_GUARD } from "@casa/characters";
 import { getCharacter } from "@/lib/characters";
 import { getMode } from "@/lib/modes";
-import { COPYRIGHT_GUARD } from "@/lib/guard";
 import { chat } from "@/services/ai/chat";
 
 const messageSchema = z.object({

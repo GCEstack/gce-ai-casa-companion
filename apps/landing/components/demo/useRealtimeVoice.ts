@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { COPYRIGHT_GUARD } from "@casa/characters";
 import { getCharacter } from "@/lib/characters";
 import { getMode } from "@/lib/modes";
-import { COPYRIGHT_GUARD } from "@/lib/guard";
 
 export type VoiceStatus = "idle" | "connecting" | "connected" | "error";
 

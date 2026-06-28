@@ -3,11 +3,19 @@ import characterPrompts from '../characters.json';
 /**
  * Shared character definitions used by Casa Companion apps.
  *
- * This package centralises prompt configs and browser speech-synthesis voice
- * settings so they don't drift between `apps/mobile` and `web-revamp`.
+ * This package centralises prompt configs, voice assignments, mode metadata,
+ * and safety guard text so they don't drift between apps.
  */
 
 export * from './characters';
+export type { ModeConfig } from './modes';
+export {
+  allModes,
+  modeMap,
+  getModeBySlug,
+  getMode,
+} from './modes';
+export { COPYRIGHT_GUARD } from './guard';
 
 export interface CharacterFeature {
   name: string;
@@ -22,6 +30,7 @@ export interface CharacterConfig {
   slug: string;
   meaning: string;
   voice: 'alloy' | 'ash' | 'coral' | 'echo' | 'fable' | 'nova' | 'onyx' | 'sage' | 'shimmer';
+  realtimeVoice?: string;
   prompt: string;
   features: CharacterFeature[];
 }
@@ -32,6 +41,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "corvo",
     meaning: "Corvo means Crow in Italian",
     voice: "onyx",
+    realtimeVoice: "ash",
     prompt: characterPrompts.corvo,
     features: [],
   },
@@ -40,6 +50,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "gufo",
     meaning: "Gufo means Owl in Italian",
     voice: "echo",
+    realtimeVoice: "sage",
     prompt: characterPrompts.gufo,
     features: [],
   },
@@ -48,6 +59,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "orsetto",
     meaning: "Orsetto means Little Bear in Italian",
     voice: "coral",
+    realtimeVoice: "coral",
     prompt: characterPrompts.orsetto,
     features: [],
   },
@@ -56,6 +68,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "coniglio",
     meaning: "Coniglio means Bunny in Italian",
     voice: "sage",
+    realtimeVoice: "shimmer",
     prompt: characterPrompts.coniglio,
     features: [],
   },
@@ -64,6 +77,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "tartaruga",
     meaning: "Tartaruga means Sea Turtle in Italian",
     voice: "alloy",
+    realtimeVoice: "alloy",
     prompt: characterPrompts.tartaruga,
     features: [],
   },
@@ -72,6 +86,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "elefante",
     meaning: "Elefante means Elephant in Italian",
     voice: "nova",
+    realtimeVoice: "echo",
     prompt: characterPrompts.elefante,
     features: [],
   },
@@ -80,6 +95,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "leone",
     meaning: "Leone means Lion in Italian",
     voice: "shimmer",
+    realtimeVoice: "echo",
     prompt: characterPrompts.leone,
     features: [],
   },
@@ -88,6 +104,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "delfino",
     meaning: "Delfino means Dolphin in Italian",
     voice: "coral",
+    realtimeVoice: "ballad",
     prompt: characterPrompts.delfino,
     features: [],
   },
@@ -96,6 +113,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "volpe",
     meaning: "Volpe means Fox in Italian",
     voice: "coral",
+    realtimeVoice: "coral",
     prompt: characterPrompts.volpe,
     features: [],
   },
@@ -104,6 +122,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "drago",
     meaning: "Drago means Dragon in Italian",
     voice: "fable",
+    realtimeVoice: "ballad",
     prompt: characterPrompts.drago,
     features: [],
   },
@@ -112,6 +131,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "xolo",
     meaning: "Xolo is a Xoloitzcuintli, the ancient Aztec dog",
     voice: "alloy",
+    realtimeVoice: "verse",
     prompt: characterPrompts.xolo,
     features: [],
   },
@@ -120,6 +140,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "scheletro",
     meaning: "Scheletro means Skeleton in Italian — The Funny Bones",
     voice: "fable",
+    realtimeVoice: "ash",
     prompt: characterPrompts.scheletro,
     features: [
       {
@@ -136,6 +157,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "ragno",
     meaning: "Ragno means Spider in Italian — The Web Artist",
     voice: "echo",
+    realtimeVoice: "coral",
     prompt: characterPrompts.ragno,
     features: [
       {
@@ -152,6 +174,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "veloce",
     meaning: "Veloce means Fast in Italian — The Speedy Rabbit",
     voice: "shimmer",
+    realtimeVoice: "echo",
     prompt: characterPrompts.veloce,
     features: [
       {
@@ -168,6 +191,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "stellino",
     meaning: "Stellino means Little Star in Italian — The Dreamer",
     voice: "ash",
+    realtimeVoice: "shimmer",
     prompt: characterPrompts.stellino,
     features: [
       {
@@ -184,6 +208,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "sacco",
     meaning: "Sacco means Sack in Italian — The DJ Sack",
     voice: "nova",
+    realtimeVoice: "ballad",
     prompt: characterPrompts.sacco,
     features: [
       {
@@ -200,6 +225,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "spugna",
     meaning: "Spugna means Sponge in Italian",
     voice: "sage",
+    realtimeVoice: "sage",
     prompt: characterPrompts.spugna,
     features: [
       {
@@ -216,6 +242,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "rocco",
     meaning: "Rocco is a Cockroach — Rock Frontman",
     voice: "onyx",
+    realtimeVoice: "verse",
     prompt: characterPrompts.rocco,
     features: [
       {
@@ -232,6 +259,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "vinile",
     meaning: "Vinile means Vinyl in Italian — The Record Collector",
     voice: "fable",
+    realtimeVoice: "echo",
     prompt: characterPrompts.vinile,
     features: [
       {
@@ -248,6 +276,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "battito",
     meaning: "Battito means Heartbeat in Italian",
     voice: "shimmer",
+    realtimeVoice: "ash",
     prompt: characterPrompts.battito,
     features: [
       {
@@ -264,6 +293,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "onda",
     meaning: "Onda means Wave in Italian — The Surf Punk",
     voice: "coral",
+    realtimeVoice: "shimmer",
     prompt: characterPrompts.onda,
     features: [
       {
@@ -280,6 +310,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "maestra",
     meaning: "Maestra means Teacher in Italian",
     voice: "echo",
+    realtimeVoice: "coral",
     prompt: characterPrompts.maestra,
     features: [
       {
@@ -296,6 +327,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "costruttore",
     meaning: "Costruttore means Builder in Italian",
     voice: "alloy",
+    realtimeVoice: "echo",
     prompt: characterPrompts.costruttore,
     features: [
       {
@@ -312,6 +344,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "dottore",
     meaning: "Dottore means Doctor in Italian",
     voice: "ash",
+    realtimeVoice: "sage",
     prompt: characterPrompts.dottore,
     features: [
       {
@@ -328,6 +361,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "pietro",
     meaning: "Pietro is the Founder of Casa Companion — The Leader",
     voice: "alloy",
+    realtimeVoice: "verse",
     prompt: characterPrompts.pietro,
     features: [
       {
@@ -344,6 +378,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "borsa",
     meaning: "Borsa means Purse/Bag in Italian — The Fashionista",
     voice: "nova",
+    realtimeVoice: "ash",
     prompt: characterPrompts.borsa,
     features: [
       {
@@ -360,6 +395,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "mamma",
     meaning: "Mamma means Mom in Italian — The Nurturer",
     voice: "sage",
+    realtimeVoice: "shimmer",
     prompt: characterPrompts.mamma,
     features: [
       {
@@ -376,6 +412,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "verita",
     meaning: "Verita is an Eagle — Truth Eagle",
     voice: "onyx",
+    realtimeVoice: "verse",
     prompt: characterPrompts.verita,
     features: [
       {
@@ -392,6 +429,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "forza",
     meaning: "Forza means Strength in Italian",
     voice: "coral",
+    realtimeVoice: "coral",
     prompt: characterPrompts.forza,
     features: [],
   },
@@ -400,6 +438,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "bella",
     meaning: "Bella means Beautiful in Italian",
     voice: "shimmer",
+    realtimeVoice: "shimmer",
     prompt: characterPrompts.bella,
     features: [],
   },
@@ -408,6 +447,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "cuoco",
     meaning: "Cuoco is a Rooster — Chef Rooster",
     voice: "coral",
+    realtimeVoice: "ballad",
     prompt: characterPrompts.cuoco,
     features: [
       {
@@ -424,6 +464,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "nonna",
     meaning: "Nonna means Grandmother in Italian",
     voice: "sage",
+    realtimeVoice: "sage",
     prompt: characterPrompts.nonna,
     features: [],
   },
@@ -432,6 +473,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "cucita",
     meaning: "Cucita means Sewn/Stitched in Italian",
     voice: "coral",
+    realtimeVoice: "coral",
     prompt: characterPrompts.cucita,
     features: [],
   },
@@ -440,6 +482,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "polpo",
     meaning: "Polpo means Octopus in Italian",
     voice: "coral",
+    realtimeVoice: "coral",
     prompt: characterPrompts.polpo,
     features: [],
   },
@@ -448,6 +491,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "jack",
     meaning: "A playful friend",
     voice: "fable",
+    realtimeVoice: "fable",
     prompt: characterPrompts.jack,
     features: [],
   },
@@ -456,6 +500,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "agenda",
     meaning: "The cheerful planner",
     voice: "sage",
+    realtimeVoice: "sage",
     prompt: characterPrompts.agenda,
     features: [],
   },
@@ -464,6 +509,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "alien",
     meaning: "The friendly alien explorer",
     voice: "nova",
+    realtimeVoice: "nova",
     prompt: characterPrompts.alien,
     features: [],
   },
@@ -472,6 +518,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "dragon",
     meaning: "The kind-hearted dragon",
     voice: "shimmer",
+    realtimeVoice: "shimmer",
     prompt: characterPrompts.dragon,
     features: [],
   },
@@ -480,6 +527,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "fraggl",
     meaning: "The playful creature",
     voice: "echo",
+    realtimeVoice: "echo",
     prompt: characterPrompts.fraggl,
     features: [],
   },
@@ -488,6 +536,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "grouch",
     meaning: "The lovable grump",
     voice: "onyx",
+    realtimeVoice: "onyx",
     prompt: characterPrompts.grouch,
     features: [],
   },
@@ -496,6 +545,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "lucha_bee",
     meaning: "The wrestling bee champion",
     voice: "fable",
+    realtimeVoice: "fable",
     prompt: characterPrompts.lucha_bee,
     features: [],
   },
@@ -504,6 +554,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "ninja_cat",
     meaning: "The agile protector",
     voice: "ash",
+    realtimeVoice: "ash",
     prompt: characterPrompts.ninja_cat,
     features: [],
   },
@@ -512,6 +563,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "papa",
     meaning: "The wise companion",
     voice: "coral",
+    realtimeVoice: "coral",
     prompt: characterPrompts.papa,
     features: [],
   },
@@ -520,6 +572,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "pirate_parrot",
     meaning: "The adventurous parrot",
     voice: "echo",
+    realtimeVoice: "echo",
     prompt: characterPrompts.pirate_parrot,
     features: [],
   },
@@ -528,6 +581,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "transformer_bot",
     meaning: "The creative robot",
     voice: "alloy",
+    realtimeVoice: "alloy",
     prompt: characterPrompts.transformer_bot,
     features: [],
   },
@@ -536,6 +590,7 @@ export const characterConfigs: Record<string, CharacterConfig> = {
     slug: "trex",
     meaning: "The gentle giant",
     voice: "shimmer",
+    realtimeVoice: "shimmer",
     prompt: characterPrompts.trex,
     features: [],
   },
