@@ -13,7 +13,7 @@ export default function Favorites() {
   const favoriteCharacters = availableCharacters.filter((c) => favorites.includes(c.slug));
 
   return (
-    <div className="min-h-full flex flex-col px-4 pt-4 pb-24">
+    <div className="min-h-full flex flex-col px-4 pt-4 pb-28">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate('/')} className="p-2 -ml-2 text-gray-300">
@@ -30,7 +30,7 @@ export default function Favorites() {
             <p className="text-gray-500 text-xs">Tap the heart on a character to add them here.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {favoriteCharacters.map((character) => (
               <CharacterCard key={character.slug} character={character} role={getCharacterRole(character)} />
             ))}

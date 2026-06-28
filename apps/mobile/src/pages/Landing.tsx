@@ -2,8 +2,10 @@ import { Mic, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CharacterCard from '@/components/CharacterCard';
 import BottomNav from '@/components/BottomNav';
+import ConnectionDot from '@/components/ConnectionDot';
 import { useAvailableCharacters } from '@/hooks/useAvailableCharacters';
-import { getCharacterRole } from '@/lib/characters';
+import { useVoiceConnectionStatus } from '@/hooks/useVoiceConnectionStatus';
+import { getCharacterDescription, getCharacterRole } from '@/lib/characters';
 import type { Character } from '@/types';
 
 function FeaturedCard({ character }: { character: Character }) {
@@ -11,6 +13,7 @@ function FeaturedCard({ character }: { character: Character }) {
   return (
     <button
       onClick={() => navigate(`/character/${character.slug}`)}
+      aria-label={`Select ${getCharacterDescription(character)}`}
       className="relative w-full p-5 rounded-3xl bg-surface active:scale-95 transition-transform text-left overflow-hidden"
       style={{ border: `1px solid ${character.accentColor}30` }}
     >
@@ -47,12 +50,17 @@ function FeaturedCard({ character }: { character: Character }) {
 export default function Landing() {
   const { characters: availableCharacters, featured, userName, isPersonalized } = useAvailableCharacters();
   const others = availableCharacters.filter((c) => c.slug !== featured?.slug);
+  const connection = useVoiceConnectionStatus();
 
   return (
     <div className="min-h-full flex flex-col">
       {/* Hero */}
       <section className="relative px-6 pt-10 pb-6 text-center">
         <div className="flex items-center justify-center gap-2 mb-3">
+          <ConnectionDot
+            isConnected={connection.isConnected}
+            isConnecting={connection.isConnecting}
+          />
           <Mic className="w-6 h-6 text-accent" />
           <h1 className="text-2xl font-bold text-white">
             {isPersonalized ? `${userName}'s Companions` : 'Casa Companion'}
@@ -66,7 +74,7 @@ export default function Landing() {
       </section>
 
       {/* Character grid */}
-      <section className="flex-1 px-4 pb-24 space-y-5">
+      <section className="flex-1 px-4 pb-28 space-y-5">
         {featured && <FeaturedCard character={featured} />}
 
         {others.length > 0 && (
@@ -74,7 +82,7 @@ export default function Landing() {
             <h2 className="text-sm font-semibold text-gray-300 px-1">
               {featured ? 'More friends' : 'Pick Your Companion'}
             </h2>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {others.map((character) => (
                 <CharacterCard key={character.slug} character={character} role={getCharacterRole(character)} />
               ))}

@@ -19,6 +19,8 @@ export default function BottomNav() {
           <button
             key={item.path}
             onClick={() => navigate(item.path)}
+            aria-label={item.label}
+            aria-current={item.active ? 'page' : undefined}
             className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
               item.active
                 ? 'bg-accent text-black'
