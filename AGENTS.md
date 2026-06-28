@@ -28,19 +28,18 @@ Legacy code lives in `ARCHIVE/` and should not be edited except to move things o
 | Landing | `https://<landing-project>.vercel.app` *(TODO: fill in)* |
 | Web-revamp | `https://<web-revamp-project>.vercel.app` *(TODO: fill in)* |
 
-## Git Remote
+## Git Remotes
 
-The canonical upstream is:
+- **Canonical upstream:** `https://github.com/GCEstack/gce-ai-casa-companion.git` (remote `gcestack`)
+- **Current pushable remote:** `https://github.com/simplebalance89-ai/casa-companion.git` (remote `origin`)
 
-```text
-https://github.com/GCEstack/gce-ai-casa-companion.git
-```
-
-`origin` should point there. If it still points to `simplebalance89-ai/casa-companion`, run:
+The `simplebalance89-ai` credentials currently do not have push access to `GCEstack/gce-ai-casa-companion`. Once the GitHub PAT is rotated, swap the remotes:
 
 ```bash
 git remote set-url origin https://github.com/GCEstack/gce-ai-casa-companion.git
 ```
+
+Until then, push to `origin` and keep `gcestack` as a reference to the canonical target.
 
 ---
 
