@@ -4,7 +4,7 @@ Modules:
     protocol    — Message types, VoiceState, CommandType, VoiceMessage
     commands    — Local keyword classifier
     providers   — STT/TTS/LLM/VAD providers + CharacterVoiceRouter
-    sessions    — Session manager with barge-in + wake phrases
+    session     — Session manager with barge-in + wake phrases
 """
 
 from .protocol import (
