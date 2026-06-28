@@ -1,0 +1,32 @@
+name: Vercel NODE_ENV Guard
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scan for NODE_ENV=production
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          vercel_hits=$(find . -name 'vercel.json' -not -path '*/node_modules/*' -exec grep -Hn '"NODE_ENV"[[:space:]]*:[[:space:]]*"production"' {} + || true)
+          env_hits=$(find . -name '.env*' -not -path '*/node_modules/*' -not -name '.env.example' -exec grep -Hn '^NODE_ENV=production' {} + || true)
+
+          if [ -n "$vercel_hits" ] || [ -n "$env_hits" ]; then
+            echo "::error::NODE_ENV=production is not allowed in Vercel configs or committed .env files"
+            echo "vercel.json hits:"
+            echo "$vercel_hits"
+            echo ".env* hits:"
+            echo "$env_hits"
+            exit 1
+          fi
+
+          echo "No NODE_ENV=production found."
