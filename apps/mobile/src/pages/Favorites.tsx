@@ -13,7 +13,7 @@ export default function Favorites() {
   const favoriteCharacters = availableCharacters.filter((c) => favorites.includes(c.slug));
 
   return (
-    <div className="min-h-full flex flex-col px-4 pt-4 pb-24">
+    <div className="min-h-full flex flex-col px-4 pt-4 pb-32">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate('/')} className="p-2 -ml-2 text-gray-300">

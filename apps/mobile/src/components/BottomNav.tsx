@@ -19,13 +19,15 @@ export default function BottomNav() {
           <button
             key={item.path}
             onClick={() => navigate(item.path)}
+            aria-label={item.label}
+            aria-current={item.active ? 'page' : undefined}
             className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
               item.active
                 ? 'bg-accent text-black'
                 : 'text-gray-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            <item.icon className="w-5 h-5" />
+            <item.icon className="w-5 h-5" aria-hidden="true" />
             {item.active && <span>{item.label}</span>}
           </button>
         ))}

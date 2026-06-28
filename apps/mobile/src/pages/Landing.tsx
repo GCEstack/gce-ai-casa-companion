@@ -66,7 +66,7 @@ export default function Landing() {
       </section>
 
       {/* Character grid */}
-      <section className="flex-1 px-4 pb-24 space-y-5">
+      <section className="flex-1 px-4 pb-32 space-y-5">
         {featured && <FeaturedCard character={featured} />}
 
         {others.length > 0 && (
