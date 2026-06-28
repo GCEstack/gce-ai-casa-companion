@@ -25,17 +25,8 @@ export interface CharacterFeature {
   behavior: string;
 }
 
-export interface ModeConfig {
-  slug: string;
-  label: string;
-  icon: string;
-  category: 'introduction' | 'play' | 'learn' | 'support' | 'feature';
-  accentColor: string;
-  accentMuted: string;
-  dotColor: string;
-  description: string;
-  instruction?: string;
-}
+import type { ModeConfig } from '@casa/characters';
+export type { ModeConfig };
 
 export type ConversationMode = 'turn-based' | 'free-flow';
 

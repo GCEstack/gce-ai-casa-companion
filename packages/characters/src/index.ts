@@ -14,6 +14,9 @@ export {
   modeMap,
   getModeBySlug,
   getMode,
+  modeConfigs,
+  modeConfigMap,
+  getModeConfig,
 } from './modes';
 export { COPYRIGHT_GUARD } from './guard';
 
