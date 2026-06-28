@@ -1,17 +1,60 @@
 import { Mic, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import CharacterCard from '@/components/CharacterCard';
 import BottomNav from '@/components/BottomNav';
 import { useAvailableCharacters } from '@/hooks/useAvailableCharacters';
 import { getCharacterRole } from '@/lib/characters';
 import type { Character } from '@/types';
 
+function ConnectionDot() {
+  const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+
+  useEffect(() => {
+    const checkOnline = () => setStatus(navigator.onLine ? 'connected' : 'disconnected');
+    checkOnline();
+    window.addEventListener('online', checkOnline);
+    window.addEventListener('offline', checkOnline);
+    const timer = setTimeout(() => checkOnline(), 2000);
+    return () => {
+      window.removeEventListener('online', checkOnline);
+      window.removeEventListener('offline', checkOnline);
+      clearTimeout(timer);
+    };
+  }, []);
+
+  const colorClass =
+    status === 'connected'
+      ? 'bg-green-500'
+      : status === 'connecting'
+        ? 'bg-amber-400 animate-pulse'
+        : 'bg-red-500';
+
+  const label =
+    status === 'connected'
+      ? 'Connected'
+      : status === 'connecting'
+        ? 'Connecting...'
+        : 'Disconnected';
+
+  return (
+    <span
+      className={`inline-block w-2 h-2 rounded-full ${colorClass}`}
+      aria-label={label}
+      role="status"
+      title={label}
+    />
+  );
+}
+
 function FeaturedCard({ character }: { character: Character }) {
   const navigate = useNavigate();
+  const role = getCharacterRole(character);
   return (
     <button
       onClick={() => navigate(`/character/${character.slug}`)}
-      className="relative w-full p-5 rounded-3xl bg-surface active:scale-95 transition-transform text-left overflow-hidden"
+      aria-label={`Select ${character.name}${role ? `, ${role}` : ''}`}
+      className="relative w-full p-5 rounded-3xl bg-surface active:scale-95 transition-transform text-left overflow-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       style={{ border: `1px solid ${character.accentColor}30` }}
     >
       <div
@@ -57,6 +100,7 @@ export default function Landing() {
           <h1 className="text-2xl font-bold text-white">
             {isPersonalized ? `${userName}'s Companions` : 'Casa Companion'}
           </h1>
+          <ConnectionDot />
         </div>
         <p className="text-sm text-gray-400">
           {isPersonalized
@@ -74,7 +118,7 @@ export default function Landing() {
             <h2 className="text-sm font-semibold text-gray-300 px-1">
               {featured ? 'More friends' : 'Pick Your Companion'}
             </h2>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-3">
               {others.map((character) => (
                 <CharacterCard key={character.slug} character={character} role={getCharacterRole(character)} />
               ))}

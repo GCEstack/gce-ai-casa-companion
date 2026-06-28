@@ -12,12 +12,11 @@ export default function CharacterCard({ character, role }: CharacterCardProps) {
   return (
     <button
       onClick={() => navigate(`/character/${character.slug}`)}
-      aria-label={`Select ${character.name}${role ? `, ${role}` : ''}`}
       className="flex flex-col items-center p-3 rounded-2xl bg-surface active:scale-95 transition-transform"
     >
       <img
         src={character.portrait}
-        alt=""
+        alt={character.name}
         className="w-20 h-20 rounded-full object-cover mb-2"
         loading="lazy"
       />
