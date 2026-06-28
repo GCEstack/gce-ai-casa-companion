@@ -34,11 +34,18 @@ def _load_character_prompts() -> Dict[str, str]:
     Falls back to an empty dict if the file is missing so the backend can still
     start when the shared package is not checked out.
     """
-    candidate = Path(__file__).resolve().parents[5] / "packages" / "characters" / "characters.json"
-    if not candidate.exists():
-        logger.warning("Shared character prompts not found at %s", candidate)
-        return {}
     try:
+        parents = Path(__file__).resolve().parents
+        if len(parents) <= 5:
+            logger.warning(
+                "Shared character prompts not available: source tree is too shallow (%d parents)",
+                len(parents),
+            )
+            return {}
+        candidate = parents[5] / "packages" / "characters" / "characters.json"
+        if not candidate.exists():
+            logger.warning("Shared character prompts not found at %s", candidate)
+            return {}
         with candidate.open("r", encoding="utf-8") as f:
             data = json.load(f)
         if isinstance(data, dict):
