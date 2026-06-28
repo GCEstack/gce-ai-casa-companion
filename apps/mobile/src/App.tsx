@@ -3,6 +3,7 @@ import Landing from './pages/Landing';
 import CharacterDetail from './pages/CharacterDetail';
 import Favorites from './pages/Favorites';
 import Settings from './pages/Settings';
+import Pair from './pages/Pair';
 import ParentalLock from './components/ParentalLock';
 
 export default function App() {
@@ -14,6 +15,7 @@ export default function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/favorites" element={<Favorites />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/pair" element={<Pair />} />
             <Route path="/character/:slug" element={<CharacterDetail />} />
             <Route path="/character/:slug/:mode" element={<CharacterDetail />} />
           </Routes>
