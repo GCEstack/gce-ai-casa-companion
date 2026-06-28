@@ -58,10 +58,13 @@ class VoiceSession:
         self._vad_task: Optional[asyncio.Task] = None
 
         self._speaking = asyncio.Event()
+        self._speaking_done = asyncio.Event()
+        self._speaking_done.set()  # Initially not speaking.
         self._interrupted = asyncio.Event()
         self._lock = asyncio.Lock()
         self._wake_event = asyncio.Event()
         self._manual_stop = False
+        self._background_tasks: set[asyncio.Task] = set()
 
         self._conversation_history: list = []
         self._interests: Dict[str, List[str]] = {}
@@ -106,6 +109,13 @@ class VoiceSession:
     def _clear_request_id(self):
         self._current_request_id = None
 
+    def _spawn(self, coro) -> asyncio.Task:
+        """Start a background task and track it for clean shutdown."""
+        task = asyncio.create_task(coro)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
+
     @property
     def _ctx(self) -> str:
         """Log prefix including session and current request ID."""
@@ -137,7 +147,7 @@ class VoiceSession:
             except Exception as e:
                 logger.error(f"[{self.session_id}] Error notifying new client {client.device_id}: {e}")
 
-        asyncio.create_task(_notify_new_client())
+        self._spawn(_notify_new_client())
 
     def remove_client(self, device_id: str):
         client = self.clients.get(device_id)
@@ -153,7 +163,7 @@ class VoiceSession:
                 except Exception as e:
                     logger.error(f"[{self.session_id}] Error broadcasting disconnect: {e}")
 
-            asyncio.create_task(_notify_disconnect())
+            self._spawn(_notify_disconnect())
 
     @property
     def has_audio_client(self) -> bool:
@@ -201,10 +211,7 @@ class VoiceSession:
 
         # Also enqueue non-binary messages for SSE listeners
         if not msg.binary:
-            try:
-                client.events.put_nowait(msg.to_json())
-            except asyncio.QueueFull:
-                logger.warning(f"[{self.session_id}] SSE event queue full for {client.device_id}")
+            client.put_event(msg.to_json())
 
     async def start(self):
         self.state = VoiceState.IDLE
@@ -225,21 +232,32 @@ class VoiceSession:
         logger.info(f"Session {self.session_id} started (IDLE)")
 
     async def stop(self):
+        self._manual_stop = True
+        # Cancel core pipeline tasks.
         if self._input_task:
             self._input_task.cancel()
         if self._vad_task:
             self._vad_task.cancel()
-        try:
-            await asyncio.gather(self._input_task, self._vad_task, return_exceptions=True)
-        except Exception:
-            pass
+        # Cancel any background notification/prefill tasks.
+        for task in list(self._background_tasks):
+            task.cancel()
+        tasks = [self._input_task, self._vad_task] + list(self._background_tasks)
+        tasks = [t for t in tasks if t is not None]
+        if tasks:
+            try:
+                await asyncio.gather(*tasks, return_exceptions=True)
+            except Exception:
+                pass
+        self._background_tasks.clear()
         logger.info(f"Session {self.session_id} stopped")
 
     # ── Message handlers ────────────────────────────────────────────────────────
 
     async def handle_audio(self, pcm: bytes):
-        self.input_buffer.append(pcm)
-        self.vad_buffer.append(pcm)
+        async with self.input_buffer.lock:
+            self.input_buffer.append(pcm)
+        async with self.vad_buffer.lock:
+            self.vad_buffer.append(pcm)
         self._wake_event.set()
 
     async def handle_text_input(self, text: str):
@@ -256,6 +274,11 @@ class VoiceSession:
             await self._broadcast(VoiceMessage.state_change(VoiceState.LISTENING))
         elif self.state == VoiceState.SPEAKING:
             await self._trigger_interrupt()
+            # Discard any mic audio that arrived while TTS was playing.
+            async with self.input_buffer.lock:
+                self.input_buffer.get_and_clear()
+            async with self.vad_buffer.lock:
+                self.vad_buffer.get_and_clear()
 
         await self._broadcast(VoiceMessage.transcript(text))
         await self._process_text_turn(text)
@@ -289,7 +312,7 @@ class VoiceSession:
                         kid_profile={"interests": self._interests},
                     )
                 if self.providers.llm:
-                    asyncio.create_task(self._story_queue.prefill(self._interests))
+                    self._spawn(self._story_queue.prefill(self._interests))
                 await self._speak(segment)
                 return
 
@@ -380,6 +403,12 @@ class VoiceSession:
                             await self._process_native_audio(audio)
                             continue
 
+                        if self.providers.stt is None:
+                            logger.error(f"{self._ctx} LISTENING: no STT provider configured")
+                            await self._broadcast(VoiceMessage.error("config", "No speech recognition available"))
+                            await self._return_to_idle()
+                            continue
+
                         logger.info(f"{self._ctx} LISTENING: sending {len(audio)} bytes to STT")
                         t0 = time.perf_counter()
                         transcript = await self.providers.stt.transcribe(audio)
@@ -429,7 +458,7 @@ class VoiceSession:
                                 )
                             # Top up the queue in the background while speaking.
                             if self.providers.llm:
-                                asyncio.create_task(self._story_queue.prefill(self._interests))
+                                self._spawn(self._story_queue.prefill(self._interests))
                             await self._speak(segment)
                             continue
                         logger.info(f"{self._ctx} Story continuation requested but queue empty")
@@ -445,11 +474,9 @@ class VoiceSession:
                     continue
 
                 if self.state == VoiceState.SPEAKING:
-                    # _speaking is set while audio is playing. asyncio.Event.wait()
-                    # returns immediately when already set, so we must yield manually
-                    # to avoid starving the event loop (and TTS network I/O).
+                    # Wait efficiently until TTS finishes instead of busy-polling.
                     if self._speaking.is_set():
-                        await asyncio.sleep(0.05)
+                        await self._speaking_done.wait()
                     continue
 
                 if self.state == VoiceState.INTERRUPTED:
@@ -457,9 +484,11 @@ class VoiceSession:
                     continue
 
                 if self.state == VoiceState.PROCESSING:
+                    # Processing happens in this task; we only land here briefly.
                     await asyncio.sleep(0.05)
                     continue
 
+                # Unknown/future state: yield briefly.
                 await asyncio.sleep(0.05)
 
             except asyncio.CancelledError:
@@ -471,18 +500,22 @@ class VoiceSession:
     async def _vad_loop(self):
         while True:
             try:
-                await asyncio.sleep(0.05)
-
                 if self.state != VoiceState.SPEAKING:
+                    # Block until audio/state change instead of polling.
+                    self._wake_event.clear()
+                    await self._wake_event.wait()
                     continue
 
                 # Don't discard audio until we have enough for VAD.
-                if len(self.vad_buffer) < 3200:
-                    continue
-
-                audio = self.vad_buffer.get_and_clear()
+                async with self.vad_buffer.lock:
+                    if len(self.vad_buffer) < 3200:
+                        continue
+                    audio = self.vad_buffer.get_and_clear()
                 logger.debug(f"[{self.session_id}] VAD loop checking {len(audio)} bytes")
                 if await self.providers.vad.detect_speech(audio):
+                    if self.providers.stt is None:
+                        logger.warning(f"[{self.session_id}] Barge-in detected but no STT provider")
+                        continue
                     logger.info(f"[{self.session_id}] Barge-in speech detected, transcribing...")
                     transcript = await self.providers.stt.transcribe(audio)
                     logger.info(f"[{self.session_id}] Barge-in transcript: '{transcript}'")
@@ -505,6 +538,8 @@ class VoiceSession:
     # ── Helpers ─────────────────────────────────────────────────────────────────
 
     async def _trigger_interrupt(self):
+        if self.state != VoiceState.SPEAKING:
+            return
         self._interrupted.set()
         await self._broadcast(VoiceMessage.interrupt_ack())
         async with self._lock:
@@ -517,8 +552,10 @@ class VoiceSession:
         self._interests.clear()
         self._story_queue.clear()
         self._current_utterance = ""
-        self.input_buffer.get_and_clear()
-        self.vad_buffer.get_and_clear()
+        async with self.input_buffer.lock:
+            self.input_buffer.get_and_clear()
+        async with self.vad_buffer.lock:
+            self.vad_buffer.get_and_clear()
         if self.store:
             await self.store.save(
                 self.session_id,
@@ -535,12 +572,20 @@ class VoiceSession:
             self._interrupted.clear()
             self._manual_stop = False
             self._current_utterance = ""
+            self._pending_utterance = ""
+            self._pending_audio = b""
             self._clear_request_id()
-            await self._broadcast(VoiceMessage.state_change(VoiceState.IDLE))
-            logger.info(f"[{self.session_id}] → IDLE")
+        # Clear audio buffers outside the state lock to avoid holding it during I/O.
+        async with self.input_buffer.lock:
+            self.input_buffer.get_and_clear()
+        async with self.vad_buffer.lock:
+            self.vad_buffer.get_and_clear()
+        await self._broadcast(VoiceMessage.state_change(VoiceState.IDLE))
+        logger.info(f"[{self.session_id}] → IDLE")
 
     async def _collect_utterance(self) -> bytes:
-        audio = self.input_buffer.get_and_clear()
+        async with self.input_buffer.lock:
+            audio = self.input_buffer.get_and_clear()
         silence_frames = 0
         max_frames = int(self.command_max_seconds * 1000 / 50)
         silence_limit = max(1, self.command_silence_ms // 50)
@@ -557,7 +602,8 @@ class VoiceSession:
                 logger.info(f"[{self.session_id}] LISTENING: manual stop, collected {len(audio)} bytes")
                 break
 
-            chunk = self.input_buffer.get_and_clear()
+            async with self.input_buffer.lock:
+                chunk = self.input_buffer.get_and_clear()
             if not chunk:
                 silence_frames += 1
             else:

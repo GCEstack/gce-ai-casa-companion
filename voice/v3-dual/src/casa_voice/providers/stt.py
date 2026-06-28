@@ -7,7 +7,7 @@ from typing import Optional
 
 import httpx
 
-from .common import DEFAULT_STT, OPENROUTER_BASE, _get_openrouter_provider_routing, logger
+from .common import DEFAULT_STT, OPENROUTER_BASE, _get_openrouter_provider_routing, logger, with_retries
 
 
 class OpenRouterSTT:
@@ -21,6 +21,14 @@ class OpenRouterSTT:
 
         Uses OpenAI-compatible multipart/form-data upload, which OpenRouter proxies.
         """
+        try:
+            return await self._transcribe_with_retry(pcm_bytes, sample_rate)
+        except Exception as e:
+            logger.error(f"STT failed: {e}", exc_info=True)
+            return ""
+
+    @with_retries(max_attempts=3, backoff_seconds=(0.5, 1.0, 2.0))
+    async def _transcribe_with_retry(self, pcm_bytes: bytes, sample_rate: int = 16000) -> str:
         if not pcm_bytes:
             return ""
         logger.info(f"STT: transcribing {len(pcm_bytes)} bytes")
@@ -38,21 +46,17 @@ class OpenRouterSTT:
             "HTTP-Referer": "https://casa-companion.io",
             "X-Title": "Casa Companion Voice",
         }
-        try:
-            resp = await self.client.post(
-                f"{OPENROUTER_BASE}/audio/transcriptions",
-                headers=headers,
-                data=data,
-                files={"file": ("audio.wav", io.BytesIO(wav_bytes), "audio/wav")},
-            )
-            resp.raise_for_status()
-            result = resp.json()
-            text = result.get("text", "").strip()
-            logger.info(f"STT: result = '{text}'")
-            return text
-        except Exception as e:
-            logger.error(f"STT failed: {e}", exc_info=True)
-            return ""
+        resp = await self.client.post(
+            f"{OPENROUTER_BASE}/audio/transcriptions",
+            headers=headers,
+            data=data,
+            files={"file": ("audio.wav", io.BytesIO(wav_bytes), "audio/wav")},
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        text = result.get("text", "").strip()
+        logger.info(f"STT: result = '{text}'")
+        return text
 
     @staticmethod
     def _pcm_to_wav(pcm: bytes, rate: int, channels: int = 1, bits: int = 16) -> bytes:
@@ -93,30 +97,34 @@ class GroqSTT:
         self.response_format = os.environ.get("GROQ_STT_RESPONSE_FORMAT", "verbose_json")
 
     async def transcribe(self, pcm_bytes: bytes, sample_rate: int = 16000) -> str:
+        try:
+            return await self._transcribe_with_retry(pcm_bytes, sample_rate)
+        except Exception as e:
+            logger.error(f"Groq STT failed: {e}", exc_info=True)
+            return ""
+
+    @with_retries(max_attempts=3, backoff_seconds=(0.5, 1.0, 2.0))
+    async def _transcribe_with_retry(self, pcm_bytes: bytes, sample_rate: int = 16000) -> str:
         if not pcm_bytes:
             return ""
         logger.info(f"Groq STT: transcribing {len(pcm_bytes)} bytes")
         wav_bytes = OpenRouterSTT._pcm_to_wav(pcm_bytes, sample_rate)
 
-        try:
-            resp = await self.client.post(
-                f"{self.base_url}/audio/transcriptions",
-                headers={"Authorization": f"Bearer {self.api_key}"},
-                files={
-                    "file": ("audio.wav", io.BytesIO(wav_bytes), "audio/wav"),
-                },
-                data={
-                    "model": self.model,
-                    "language": "en",
-                    "temperature": self.temperature,
-                    "response_format": self.response_format,
-                },
-            )
-            resp.raise_for_status()
-            result = resp.json()
-            text = result.get("text", "").strip()
-            logger.info(f"Groq STT: result = '{text}'")
-            return text
-        except Exception as e:
-            logger.error(f"Groq STT failed: {e}", exc_info=True)
-            return ""
+        resp = await self.client.post(
+            f"{self.base_url}/audio/transcriptions",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            files={
+                "file": ("audio.wav", io.BytesIO(wav_bytes), "audio/wav"),
+            },
+            data={
+                "model": self.model,
+                "language": "en",
+                "temperature": self.temperature,
+                "response_format": self.response_format,
+            },
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        text = result.get("text", "").strip()
+        logger.info(f"Groq STT: result = '{text}'")
+        return text

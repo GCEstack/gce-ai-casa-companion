@@ -200,6 +200,8 @@ class TTSCache:
     """
 
     CHUNK_SIZE = 4096
+    MAX_FILES = 5000
+    MAX_BYTES = 1024 * 1024 * 1024  # 1 GB
 
     def __init__(self, cache_dir: str):
         self.cache_dir = cache_dir
@@ -214,6 +216,28 @@ class TTSCache:
 
     def exists(self, text: str, model: str, voice: str) -> bool:
         return os.path.exists(self._path(self._key(text, model, voice)))
+
+    def _evict_if_needed(self):
+        """Remove oldest cache entries if over file or byte limits."""
+        entries = [
+            (os.path.getmtime(os.path.join(self.cache_dir, f)), f)
+            for f in os.listdir(self.cache_dir)
+            if f.endswith(".pcm")
+        ]
+        entries.sort()
+        total_bytes = sum(
+            os.path.getsize(os.path.join(self.cache_dir, f)) for _, f in entries
+        )
+        while entries and (
+            len(entries) > self.MAX_FILES or total_bytes > self.MAX_BYTES
+        ):
+            _, oldest = entries.pop(0)
+            oldest_path = os.path.join(self.cache_dir, oldest)
+            try:
+                total_bytes -= os.path.getsize(oldest_path)
+                os.remove(oldest_path)
+            except OSError:
+                pass
 
     async def read_stream(
         self, text: str, model: str, voice: str
@@ -237,5 +261,6 @@ class TTSCache:
             with open(tmp_path, "wb") as f:
                 f.write(data)
             os.replace(tmp_path, path)
+            self._evict_if_needed()
 
         await asyncio.to_thread(_write)

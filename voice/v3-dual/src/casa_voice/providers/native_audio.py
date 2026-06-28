@@ -3,13 +3,32 @@
 import base64
 import io
 import json
-import logging
 import wave
 from typing import Any, AsyncIterator, Dict, List, Optional
 
 import httpx
+from pydantic import BaseModel, Field
 
 from .common import _get_openrouter_provider_routing, logger
+
+
+class AudioDelta(BaseModel):
+    id: Optional[str] = None
+    transcript: Optional[str] = None
+    data: Optional[str] = None
+
+
+class Delta(BaseModel):
+    content: Optional[str] = None
+    audio: Optional[AudioDelta] = None
+
+
+class Choice(BaseModel):
+    delta: Delta = Field(default_factory=Delta)
+
+
+class StreamChunk(BaseModel):
+    choices: List[Choice] = Field(default_factory=list)
 
 
 class NativeAudioProvider:
@@ -127,40 +146,40 @@ class NativeAudioProvider:
                     except json.JSONDecodeError:
                         continue
 
-                    if not chunk.get("choices"):
+                    try:
+                        parsed = StreamChunk.model_validate(chunk)
+                    except Exception as parse_err:
+                        logger.warning(f"Native audio: failed to parse chunk: {parse_err}; chunk={chunk}")
                         continue
 
-                    delta = chunk["choices"][0].get("delta", {})
+                    if not parsed.choices:
+                        continue
+
+                    delta = parsed.choices[0].delta
 
                     # Native audio models put assistant text inside audio.transcript,
                     # and the user's transcript in the first audio delta that has an id.
-                    audio_delta = delta.get("audio")
-                    if audio_delta:
-                        if isinstance(audio_delta, dict):
-                            audio_id = audio_delta.get("id")
-                            transcript = audio_delta.get("transcript")
-                            data = audio_delta.get("data")
+                    if delta.audio:
+                        audio_id = delta.audio.id
+                        transcript = delta.audio.transcript
+                        data = delta.audio.data
 
-                            # First audio chunk with an id + transcript is the model's
-                            # transcription of the user's audio.
-                            if audio_id and transcript and user_transcript is None:
-                                user_transcript = transcript
-                                yield {"type": "user_transcript", "content": user_transcript}
-                            elif transcript:
-                                full_text += transcript
-                                yield {"type": "text", "content": transcript}
+                        # First audio chunk with an id + transcript is the model's
+                        # transcription of the user's audio.
+                        if audio_id and transcript and user_transcript is None:
+                            user_transcript = transcript
+                            yield {"type": "user_transcript", "content": user_transcript}
+                        elif transcript:
+                            full_text += transcript
+                            yield {"type": "text", "content": transcript}
 
-                            if data:
-                                pcm_chunk = base64.b64decode(data)
-                                yield {"type": "audio", "data": pcm_chunk}
-                        elif isinstance(audio_delta, str):
-                            pcm_chunk = base64.b64decode(audio_delta)
+                        if data:
+                            pcm_chunk = base64.b64decode(data)
                             yield {"type": "audio", "data": pcm_chunk}
 
-                    if delta.get("content"):
-                        text_chunk = delta["content"]
-                        full_text += text_chunk
-                        yield {"type": "text", "content": text_chunk}
+                    if delta.content:
+                        full_text += delta.content
+                        yield {"type": "text", "content": delta.content}
 
         except httpx.HTTPStatusError as e:
             logger.error(f"Native audio HTTP error: {e.response.status_code} -- {e.response.text[:500]}")

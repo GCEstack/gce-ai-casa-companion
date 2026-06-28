@@ -61,8 +61,33 @@ from fastapi.middleware.cors import CORSMiddleware
 from casa_voice.protocol import VoiceMessage, MessageType, CommandType
 from casa_voice.providers import VoiceProviders
 from casa_voice.sessions import VoiceSession, ClientHandle
-from casa_voice.persistence import SessionStore
-from casa_voice.pairing import PairingManager
+from casa_voice.persistence import SessionStore, RedisSessionStore
+from casa_voice.pairing import PairingManager, RedisPairingManager
+
+# Simple in-memory metrics exposed on /metrics.
+class Metrics:
+    def __init__(self):
+        self.sessions_created = 0
+        self.messages_received = 0
+        self.errors = 0
+        self.provider_failures = {"stt": 0, "llm": 0, "tts": 0}
+
+    def inc_sessions(self):
+        self.sessions_created += 1
+
+    def inc_messages(self):
+        self.messages_received += 1
+
+    def inc_error(self):
+        self.errors += 1
+
+    def inc_provider_failure(self, provider: str):
+        if provider in self.provider_failures:
+            self.provider_failures[provider] += 1
+
+
+metrics = Metrics()
+
 
 # Logging — one unified DEBUG stream; no duplicates, casa_voice always visible
 def _setup_logging():
@@ -104,7 +129,13 @@ async def lifespan(app: FastAPI):
     logger.info("[lifespan] Starting Casa Voice V3 Dual")
     providers = VoiceProviders()
     store = None
-    if os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_SERVICE_KEY"):
+    if os.environ.get("REDIS_URL"):
+        try:
+            store = RedisSessionStore()
+            logger.info("[lifespan] Redis session store enabled")
+        except Exception as e:
+            logger.error(f"[lifespan] Failed to initialize Redis store: {e}")
+    elif os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_SERVICE_KEY"):
         try:
             store = SessionStore()
             logger.info("[lifespan] Supabase session store enabled")
@@ -115,7 +146,15 @@ async def lifespan(app: FastAPI):
             "WARNING: VOICE_SERVER_API_KEY not set — WebSocket endpoint is unauthenticated"
         )
     session_manager = SessionManager(providers, store=store)
-    pairing_manager = PairingManager()
+    if os.environ.get("REDIS_URL"):
+        try:
+            pairing_manager = RedisPairingManager()
+            logger.info("[lifespan] Redis pairing manager enabled")
+        except Exception as e:
+            logger.error(f"[lifespan] Failed to initialize Redis pairing manager: {e}")
+            pairing_manager = PairingManager()
+    else:
+        pairing_manager = PairingManager()
     app.state.providers = providers
     app.state.session_manager = session_manager
     app.state.pairing_manager = pairing_manager
@@ -127,8 +166,14 @@ async def lifespan(app: FastAPI):
         await providers.stt.client.aclose()
     if providers.tts is not None:
         await providers.tts.client.aclose()
+    if providers.llm is not None and hasattr(providers.llm, "client"):
+        await providers.llm.client.aclose()
     if providers.native_audio is not None:
         await providers.native_audio.close()
+    if store is not None:
+        await store.close()
+    if hasattr(pairing_manager, "close"):
+        await pairing_manager.close()
 
 
 app = FastAPI(
@@ -164,6 +209,21 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(WebSocketDisconnect)
+async def websocket_disconnect_handler(request: Request, exc: WebSocketDisconnect):
+    """Let WebSocket disconnects propagate cleanly; do not return an HTTP response."""
+    raise exc
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Preserve FastAPI HTTP exception semantics with the same safe JSON shape."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Catch-all handler: log the full traceback and return a safe JSON error."""
@@ -185,13 +245,15 @@ class SessionManager:
         self.providers = providers
         self.store = store
         self.sessions: Dict[str, VoiceSession] = {}
+        self._lock = asyncio.Lock()
 
-    def _get_or_create(
+    def _get_or_create_locked(
         self,
         session_id: str,
         character: str = "default",
         mode: str = "default",
     ) -> VoiceSession:
+        """Create or return a session. Caller must hold self._lock."""
         if session_id not in self.sessions:
             session = VoiceSession(
                 session_id=session_id,
@@ -203,6 +265,7 @@ class SessionManager:
             self.sessions[session_id] = session
             # Start the pipeline once; clients join later
             asyncio.create_task(session.start())
+            metrics.inc_sessions()
             logger.info(
                 f"[SessionManager] Created session {session_id} "
                 f"(character={character}, mode={mode})"
@@ -218,24 +281,26 @@ class SessionManager:
         character: str = "default",
         mode: str = "default",
     ) -> VoiceSession:
-        session = self._get_or_create(session_id, character=character, mode=mode)
-        client = ClientHandle(
-            device_id=device_id,
-            device_type=device_type,
-            send=send,
-        )
-        session.add_client(client)
-        return session
+        async with self._lock:
+            session = self._get_or_create_locked(session_id, character=character, mode=mode)
+            client = ClientHandle(
+                device_id=device_id,
+                device_type=device_type,
+                send=send,
+            )
+            session.add_client(client)
+            return session
 
     async def remove_client(self, session_id: str, device_id: str):
-        session = self.sessions.get(session_id)
-        if not session:
-            return
-        session.remove_client(device_id)
-        if session.is_empty:
-            await session.stop()
-            del self.sessions[session_id]
-            logger.info(f"[SessionManager] Removed empty session {session_id}")
+        async with self._lock:
+            session = self.sessions.get(session_id)
+            if not session:
+                return
+            session.remove_client(device_id)
+            if session.is_empty:
+                await session.stop()
+                del self.sessions[session_id]
+                logger.info(f"[SessionManager] Removed empty session {session_id}")
 
     def find_client(self, device_id: str):
         """Return (session, client) for a given device_id, or (None, None)."""
@@ -287,28 +352,41 @@ def _require_admin_token(token: Optional[str] = Query(None)):
 
 # ── API Routes ────────────────────────────────────────────────────────────────
 
+@app.get("/metrics")
+async def get_metrics():
+    """Basic operational metrics (JSON)."""
+    return {
+        "sessions_created": metrics.sessions_created,
+        "messages_received": metrics.messages_received,
+        "errors": metrics.errors,
+        "provider_failures": metrics.provider_failures,
+        "active_sessions": len(app.state.session_manager.sessions),
+    }
+
+
 @app.get("/health")
 async def health():
+    """Lightweight health check for load balancers and Azure container probes."""
+    providers = app.state.providers
+    provider_status = {
+        "stt": providers.stt is not None and not getattr(providers.stt, "client", None).is_closed
+        if providers.stt and hasattr(providers.stt, "client")
+        else providers.stt is not None,
+        "llm": providers.llm is not None,
+        "tts": providers.tts is not None and not getattr(providers.tts, "client", None).is_closed
+        if providers.tts and hasattr(providers.tts, "client")
+        else providers.tts is not None,
+        "vad": providers.vad is not None,
+        "native_audio": providers.native_audio is not None,
+    }
+    store = app.state.session_manager.store
     return {
         "status": "ok",
-        "solution": "A-wake-phrases-dual-mode",
-        "features": [
-            "barge-in",
-            "voice-commands",
-            "wake-phrases",
-            "interrupt-phrases",
-            "end-turn",
-            "reset",
-            "pwa",
-            "esp32",
-            "pcm-streaming",
-            "silero-vad-lazy",
-            "multi-client",
-            "mode-a",
-            "mode-b",
-            "phone-mic-pairing",
-        ],
+        "version": "3.0.0-dual",
         "sessions": len(app.state.session_manager.sessions),
+        "providers": provider_status,
+        "persistence": store is not None,
+        "websocket_auth": bool(os.environ.get("VOICE_SERVER_API_KEY")),
     }
 
 
@@ -606,6 +684,7 @@ async def _handle_voice_websocket(
     try:
         while True:
             message = await websocket.receive()
+            metrics.inc_messages()
             logger.debug(
                 f"[{assigned_session_id}/{assigned_device_id}] Raw message keys: {list(message.keys())}"
             )
@@ -677,6 +756,7 @@ async def _handle_voice_websocket(
     except WebSocketDisconnect:
         logger.info(f"[{assigned_device_id}] Client disconnected")
     except Exception as e:
+        metrics.inc_error()
         logger.error(f"[{assigned_device_id}] WebSocket error: {e}", exc_info=True)
     finally:
         logger.info(f"[{assigned_device_id}] Cleaning up")

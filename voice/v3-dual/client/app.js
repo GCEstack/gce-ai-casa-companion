@@ -20,7 +20,7 @@
  */
 
 const CONFIG = {
-    SERVER_URL: "ws://" + location.host,
+    SERVER_URL: (location.protocol === "https:" ? "wss://" : "ws://") + location.host,
     SAMPLE_RATE: 16000,
     CHUNK_SIZE: 512,
 };
@@ -31,6 +31,9 @@ let clientMode = "browser"; // "browser" | "dashboard"
 let sessionId = null;
 let deviceId = null;
 let pingInterval = null;
+let reconnectTimeout = null;
+let reconnectDelayMs = 2000;
+const RECONNECT_DELAY_MAX_MS = 30000;
 
 // Browser-mode audio state
 let audioContext = null;
@@ -190,6 +193,12 @@ function connect() {
     ws.onopen = () => {
         log("WebSocket connected");
         updateConnectionStatus(true);
+        // Reset reconnect backoff on successful connection.
+        reconnectDelayMs = 2000;
+        if (reconnectTimeout) {
+            clearTimeout(reconnectTimeout);
+            reconnectTimeout = null;
+        }
         if (clientMode === "browser" && autoListenEnabled) {
             startRecording();
         }
@@ -222,7 +231,12 @@ function connect() {
         if (clientMode === "browser") {
             stopRecording();
         }
-        setTimeout(connect, 2000);
+        // Exponential backoff reconnect: 2s, 4s, 8s ... capped at 30s.
+        if (reconnectTimeout) clearTimeout(reconnectTimeout);
+        reconnectTimeout = setTimeout(() => {
+            reconnectDelayMs = Math.min(reconnectDelayMs * 2, RECONNECT_DELAY_MAX_MS);
+            connect();
+        }, reconnectDelayMs);
     };
 
     ws.onerror = (err) => {

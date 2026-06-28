@@ -38,8 +38,14 @@ class VoiceProviders:
                 model=os.environ.get("GROQ_LLM_MODEL", "llama-3.3-70b-versatile"),
             )
         elif gemini_key:
-            logger.info("Using Groq STT + Gemini LLM")
-            self.stt = GroqSTT(api_key=groq_key) if groq_key else None
+            logger.info("Using Gemini LLM")
+            # Prefer Groq STT when available; otherwise fall back to OpenRouter STT.
+            if groq_key:
+                self.stt = GroqSTT(api_key=groq_key)
+            elif openrouter_key:
+                self.stt = OpenRouterSTT(api_key=openrouter_key)
+            else:
+                self.stt = None
             self.llm = GeminiLLM(
                 api_key=gemini_key,
                 model=os.environ.get("GEMINI_MODEL", "gemini-2.5-flash-preview-05-20"),
