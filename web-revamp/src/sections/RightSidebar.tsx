@@ -79,7 +79,7 @@ export default function RightSidebar({ character, compact }: RightSidebarProps) 
   return (
     <aside
       ref={containerRef}
-      className="right-sidebar hidden lg:flex flex-col w-[280px] h-full py-6 px-3 gap-3 overflow-y-auto"
+      className="right-sidebar hidden lg:flex flex-col w-[300px] h-full py-6 px-4 gap-4 overflow-y-auto"
     >
       {/* Connect button — always at the top */}
       <div className="sidebar-connect">{connectButton}</div>

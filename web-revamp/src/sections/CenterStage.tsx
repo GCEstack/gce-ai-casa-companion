@@ -1,30 +1,15 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
-import {
-  Hand,
-  Waves,
-  BookOpen,
-  Music,
-  Globe,
-  FlaskConical,
-  Languages,
-  Pencil,
-  Code,
-  Wind,
-  Trophy,
-  GraduationCap,
-  Sparkles,
-} from 'lucide-react';
+import { Hand, Waves } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Character, ModeConfig } from '@/types';
 import type { UseVoiceChatReturn } from '@/hooks/useVoiceChat';
 import VoiceWaveform from '@/components/VoiceWaveform';
 import MicButton from '@/components/MicButton';
+import ModeDropdown from '@/components/ModeDropdown';
 import { useApp } from '@/context/AppContext';
 import { useCharacterVoice } from '@/hooks/useCharacterVoice';
-import { allModes, modeFromFeature } from '@/lib/modes';
-import { characterConfigs } from '@/lib/characterConfig';
 import { getCharacterVideos } from '@/lib/characterVideos';
 
 interface CenterStageProps {
@@ -34,49 +19,30 @@ interface CenterStageProps {
   voice: UseVoiceChatReturn;
 }
 
-const iconMap: Record<string, React.ReactNode> = {
-  Hand: <Hand className="w-4 h-4" />,
-  BookOpen: <BookOpen className="w-4 h-4" />,
-  Music: <Music className="w-4 h-4" />,
-  Globe: <Globe className="w-4 h-4" />,
-  FlaskConical: <FlaskConical className="w-4 h-4" />,
-  Languages: <Languages className="w-4 h-4" />,
-  Pencil: <Pencil className="w-4 h-4" />,
-  Code: <Code className="w-4 h-4" />,
-  Wind: <Wind className="w-4 h-4" />,
-  Trophy: <Trophy className="w-4 h-4" />,
-  GraduationCap: <GraduationCap className="w-4 h-4" />,
-  Sparkles: <Sparkles className="w-4 h-4" />,
-};
-
-const categoryLabel: Record<string, string> = {
-  introduction: 'Intro',
-  play: 'Play',
-  learn: 'Learn',
-  support: 'Support',
-};
-
-const categoryColor: Record<string, string> = {
-  introduction: '#d4a843',
-  play: '#f97316',
-  learn: '#eab308',
-  support: '#ec4899',
-};
-
 export default function CenterStage({ character, activeMode, onModeChange, voice }: CenterStageProps) {
   const { state, dispatch } = useApp();
   const portraitRef = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLHeadingElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
+  const [isReacting, setIsReacting] = useState(false);
 
   const { playVoice } = useCharacterVoice(character);
+
+  const handleModeChange = useCallback(
+    (mode: ModeConfig) => {
+      if (mode.category !== 'introduction' && !state.isSpeaking) {
+        setIsReacting(true);
+      }
+      onModeChange(mode);
+    },
+    [onModeChange, state.isSpeaking]
+  );
 
   // Entrance animation
   useGSAP(() => {
     const tl = gsap.timeline();
 
-    // Portrait scale-in
     if (portraitRef.current) {
       tl.fromTo(
         portraitRef.current,
@@ -86,7 +52,6 @@ export default function CenterStage({ character, activeMode, onModeChange, voice
       );
     }
 
-    // Name fade-up
     if (nameRef.current) {
       tl.fromTo(
         nameRef.current,
@@ -96,7 +61,6 @@ export default function CenterStage({ character, activeMode, onModeChange, voice
       );
     }
 
-    // Subtitle fade-up
     if (subtitleRef.current) {
       tl.fromTo(
         subtitleRef.current,
@@ -106,7 +70,6 @@ export default function CenterStage({ character, activeMode, onModeChange, voice
       );
     }
 
-    // Action buttons
     if (actionsRef.current) {
       const buttons = actionsRef.current.querySelectorAll('button');
       tl.fromTo(
@@ -118,12 +81,11 @@ export default function CenterStage({ character, activeMode, onModeChange, voice
     }
   }, { dependencies: [character.slug] });
 
-  const subtitleText = `${character.description} \u00b7 ${activeMode.label}`;
+  const subtitleText = `${character.description} · ${activeMode.label}`;
 
-  const { idle: idleVideo, speaking: rawSpeakingVideo } = getCharacterVideos(character.slug);
-  const hasIdleVideo = !!idleVideo;
-  const speakingVideo = rawSpeakingVideo || idleVideo;
-  const glowFallback = state.isSpeaking && (!rawSpeakingVideo || !hasIdleVideo);
+  const staticImage = character.showcase || character.portrait || `/characters/${character.slug}.png`;
+  const { speaking: speakingVideo } = getCharacterVideos(character.slug);
+  const hasSpeakingVideo = !!speakingVideo;
 
   const toggleConversationMode = useCallback(() => {
     const next = voice.conversationMode === 'turn-based' ? 'free-flow' : 'turn-based';
@@ -149,63 +111,55 @@ export default function CenterStage({ character, activeMode, onModeChange, voice
 
   const isFreeFlow = voice.conversationMode === 'free-flow';
 
-  // Group modes by category preserving order
-  const grouped = allModes.reduce<Record<string, ModeConfig[]>>((acc, mode) => {
-    if (!acc[mode.category]) acc[mode.category] = [];
-    acc[mode.category].push(mode);
-    return acc;
-  }, {});
-  const categoryOrder = ['introduction', 'play', 'learn', 'support'];
+  const isListening = turnState === 'listening';
+  const isThinking = turnState === 'processing';
+  const isSpeaking = state.isSpeaking;
+  const shouldCssSpeak = isSpeaking && !hasSpeakingVideo;
 
-  // Character-specific AI features from characterConfig.ts
-  const config = characterConfigs[character.slug.toLowerCase()];
-  const featureModes = config?.features.map((feature) => modeFromFeature(feature, character.accentColor)) ?? [];
+  const avatarWrapperClass = [
+    'relative rounded-2xl overflow-hidden cursor-pointer',
+    isListening ? 'avatar-listening' : '',
+    isThinking ? 'avatar-thinking' : '',
+    shouldCssSpeak ? 'avatar-speaking' : '',
+    isReacting ? 'avatar-reaction' : '',
+  ].join(' ');
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center py-8 px-4">
       {/* Character Portrait */}
       <div
         ref={portraitRef}
-        className={`relative w-[340px] h-[460px] md:w-[420px] md:h-[540px] rounded-2xl overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-[1.02] ${
-          state.isRecording ? 'recording-ring' : ''
-        }`}
+        className={avatarWrapperClass}
         style={{
+          width: 'min(420px, 75vw)',
+          height: 'min(540px, 95vw)',
+          maxWidth: 420,
+          maxHeight: 540,
           background: '#000000',
-          boxShadow: state.isRecording
-            ? `0 0 0 4px rgba(239,68,68,0.6), 0 0 30px rgba(239,68,68,0.4), 0 8px 32px rgba(0,0,0,0.3), 0 0 60px ${character.accentColor}20${glowFallback ? `, 0 0 40px ${character.accentColor}80` : ''}`
-            : `0 8px 32px rgba(0,0,0,0.3), 0 0 60px ${character.accentColor}20${glowFallback ? `, 0 0 40px ${character.accentColor}80` : ''}`,
+          boxShadow: isThinking
+            ? 'none'
+            : `0 8px 32px rgba(0,0,0,0.3), 0 0 60px ${character.accentColor}20${isSpeaking ? `, 0 0 40px ${character.accentColor}80` : ''}`,
         }}
         onClick={playVoice}
+        onAnimationEnd={() => setIsReacting(false)}
       >
-        {hasIdleVideo ? (
-          <>
-            <video
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-                state.isSpeaking ? 'opacity-0' : 'opacity-100'
-              }`}
-              src={idleVideo!}
-              autoPlay
-              loop
-              muted
-              playsInline
-              webkit-playsinline="true"
-            />
-            <video
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-                state.isSpeaking ? 'opacity-100' : 'opacity-0'
-              }`}
-              src={speakingVideo!}
-              autoPlay
-              muted
-              playsInline
-              webkit-playsinline="true"
-            />
-          </>
-        ) : (
-          <img
-            src={`/characters/${character.slug}.png`}
-            alt={character.name}
-            className="w-full h-full object-cover"
+        {/* Static base image — completely still when idle */}
+        <img
+          src={staticImage}
+          alt={character.name}
+          className="absolute inset-0 w-full h-full object-cover"
+          draggable={false}
+        />
+
+        {/* Speaking video overlay — only plays while talking */}
+        {isSpeaking && hasSpeakingVideo && (
+          <video
+            className="absolute inset-0 w-full h-full object-cover"
+            src={speakingVideo!}
+            autoPlay
+            muted
+            playsInline
+            webkit-playsinline="true"
           />
         )}
 
@@ -238,7 +192,7 @@ export default function CenterStage({ character, activeMode, onModeChange, voice
 
       {/* Transcript / Response */}
       {(voice.lastTranscript || voice.lastResponse) && (
-        <div className="mt-4 max-w-md px-4 text-center space-y-2">
+        <div className="mt-4 max-w-2xl px-4 text-center space-y-2">
           {voice.lastTranscript && (
             <p className="text-sm text-gray-400">
               <span className="font-medium text-gray-300">You:</span> {voice.lastTranscript}
@@ -256,9 +210,9 @@ export default function CenterStage({ character, activeMode, onModeChange, voice
       <div ref={actionsRef} className="flex flex-col items-center gap-3 mt-5">
         <div className="flex items-center gap-3">
           <MicButton
-            isListening={voice.turnState === 'listening'}
-            isProcessing={voice.turnState === 'processing'}
-            isSpeaking={voice.turnState === 'speaking'}
+            isListening={isListening}
+            isProcessing={isThinking}
+            isSpeaking={isSpeaking}
             accentColor={character.accentColor}
             onPress={() => {
               console.log('[MicButton] pressed, turnState:', voice.turnState);
@@ -280,6 +234,11 @@ export default function CenterStage({ character, activeMode, onModeChange, voice
           >
             {turnIndicator.label}
           </span>
+        </div>
+
+        {/* Mode selector */}
+        <div className="mt-2">
+          <ModeDropdown activeMode={activeMode} onModeChange={handleModeChange} />
         </div>
 
         {/* Conversation mode toggle */}
@@ -322,111 +281,6 @@ export default function CenterStage({ character, activeMode, onModeChange, voice
         >
           {state.connectionMode === 'relay' ? 'Use this device' : 'Use phone mic'}
         </button>
-
-        {/* Mode icon row */}
-        <div className="mt-4 w-full max-w-md">
-          {categoryOrder.map((category) => (
-            <div key={category} className="mb-4">
-              <div className="flex items-center gap-2 px-2 mb-2">
-                <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: categoryColor[category] }}
-                />
-                <span
-                  className="text-[10px] uppercase tracking-widest font-semibold"
-                  style={{ color: categoryColor[category] }}
-                >
-                  {categoryLabel[category]}
-                </span>
-              </div>
-              <div className="flex flex-wrap justify-center gap-2">
-                {grouped[category]?.map((mode) => {
-                  const isActive = activeMode.slug === mode.slug;
-                  const color = categoryColor[mode.category];
-                  return (
-                    <button
-                      key={mode.slug}
-                      onClick={() => onModeChange(mode)}
-                      className="flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-colors min-w-[64px]"
-                      style={{
-                        background: isActive ? `${color}20` : 'transparent',
-                        border: `1px solid ${isActive ? `${color}50` : 'rgba(255,255,255,0.06)'}`,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActive) e.currentTarget.style.background = 'transparent';
-                      }}
-                    >
-                      <span style={{ color: isActive ? color : '#9ca3af' }}>
-                        {iconMap[mode.icon] || <Hand className="w-4 h-4" />}
-                      </span>
-                      <span
-                        className="text-[9px] text-center leading-tight max-w-[60px]"
-                        style={{ color: isActive ? color : '#9ca3af' }}
-                      >
-                        {mode.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-
-          {/* Character-specific AI Features */}
-          {featureModes.length > 0 && (
-            <div className="mb-4">
-              <div className="flex items-center gap-2 px-2 mb-2">
-                <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: character.accentColor }}
-                />
-                <span
-                  className="text-[10px] uppercase tracking-widest font-semibold"
-                  style={{ color: character.accentColor }}
-                >
-                  Features
-                </span>
-              </div>
-              <div className="flex flex-wrap justify-center gap-2">
-                {featureModes.map((mode) => {
-                  const isActive = activeMode.slug === mode.slug;
-                  const color = character.accentColor;
-                  return (
-                    <button
-                      key={mode.slug}
-                      onClick={() => onModeChange(mode)}
-                      title={mode.description}
-                      className="flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-colors min-w-[64px]"
-                      style={{
-                        background: isActive ? `${color}20` : 'transparent',
-                        border: `1px solid ${isActive ? `${color}50` : 'rgba(255,255,255,0.06)'}`,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActive) e.currentTarget.style.background = 'transparent';
-                      }}
-                    >
-                      <span style={{ color: isActive ? color : '#9ca3af' }}>
-                        {iconMap[mode.icon] || <Sparkles className="w-4 h-4" />}
-                      </span>
-                      <span
-                        className="text-[9px] text-center leading-tight max-w-[60px]"
-                        style={{ color: isActive ? color : '#9ca3af' }}
-                      >
-                        {mode.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

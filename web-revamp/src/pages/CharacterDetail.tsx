@@ -13,30 +13,10 @@ import { useVoiceChat } from '@/hooks/useVoiceChat';
 import { useRelayVoiceChat } from '@/hooks/useRelayVoiceChat';
 import PairingPanel from '@/components/PairingPanel';
 import { hasOnboarded, markOnboarded } from '@/hooks/useOnboarding';
+import { fetchBackendTTS } from '@/lib/tts';
 
 const WELCOME_SCRIPT =
   "Hey there! I'm Pietro — the founder of Casa Companion. Welcome! Here's the deal: you've got a whole crew of AI companions here, each with their own personality and skills. Want help with homework? Hit up Maestra or Spugna. Need to write a song? Rocco's your guy. Want to chill? Battito's got you. Just pick a companion from the row up top, or stay here and talk to me. I'm your startup advisor, idea bouncer, and all-around hype man. You can say things like 'story mode', 'math mode', or 'calm mode' to switch up how we talk. And hey — you can interrupt me anytime. Just start talking. So... what's on your mind?";
-
-async function fetchTTSBlob(text: string, voice: string): Promise<Blob> {
-  const key = import.meta.env.VITE_OPENAI_API_KEY;
-  const res = await fetch('https://api.openai.com/v1/audio/speech', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'tts-1',
-      voice,
-      input: text,
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text().catch(() => '');
-    throw new Error(`TTS error ${res.status}: ${err}`);
-  }
-  return await res.blob();
-}
 
 interface CharacterDetailContentProps {
   character: Character;
@@ -104,8 +84,7 @@ function CharacterDetailContent({ character, activeMode, onModeChange }: Charact
       await new Promise((r) => setTimeout(r, 500));
       if (cancelled) return;
 
-      const config = characterConfigs.pietro;
-      const blob = await fetchTTSBlob(WELCOME_SCRIPT, config.voice);
+      const blob = await fetchBackendTTS(WELCOME_SCRIPT, character.slug, activeMode.slug);
       const url = URL.createObjectURL(blob);
       audio = new Audio(url);
 
@@ -164,6 +143,9 @@ function CharacterDetailContent({ character, activeMode, onModeChange }: Charact
       {/* Video Background */}
       <VideoBackground blur={40} brightness={0.35} overlayOpacity={0.7} accentColor={character.accentColor} videoSrc={character.videoSrc} />
 
+      {/* Subtle texture + gradient overlay */}
+      <div className="bg-texture" />
+
       {/* Character-themed particles */}
       <ParticleField
         count={50}
@@ -177,6 +159,7 @@ function CharacterDetailContent({ character, activeMode, onModeChange }: Charact
             characterSlug={character.slug}
             modeSlug={activeMode.slug}
             onSessionReady={setRelaySession}
+            onCancel={() => dispatch({ type: 'SET_CONNECTION_MODE', payload: 'local' })}
           />
         </div>
       )}

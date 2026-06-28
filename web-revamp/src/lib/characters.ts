@@ -214,7 +214,7 @@ export const characters: Character[] = [
     portrait: '/characters/xolo.png',
     showcase: '/characters/xolo.png',
     voiceIntro: '/audio/xolo-intro.mp3',
-    videoSrc: undefined,
+    videoSrc: '/videos/ambient-bokeh.mp4',
     modes: {
       play: ['Story Time', 'Music & Rhythm', 'Geography', 'STEM Sparks'],
       learn: ['All Languages', 'Homework Helper', 'Coding'],
@@ -294,7 +294,7 @@ export const characters: Character[] = [
     portrait: '/characters/stellino.png',
     showcase: '/characters/stellino.png',
     voiceIntro: '/audio/stellino-intro.mp3',
-    videoSrc: undefined,
+    videoSrc: '/videos/ambient-bokeh.mp4',
     modes: {
       play: ['Story Time', 'Music & Rhythm', 'Geography', 'STEM Sparks'],
       learn: ['All Languages', 'Homework Helper', 'Coding'],
@@ -374,7 +374,7 @@ export const characters: Character[] = [
     portrait: '/characters/vinile.png',
     showcase: '/characters/vinile.png',
     voiceIntro: '/audio/vinile-intro.mp3',
-    videoSrc: undefined,
+    videoSrc: '/videos/ambient-bokeh.mp4',
     modes: {
       play: ['Story Time', 'Music & Rhythm', 'Geography', 'STEM Sparks'],
       learn: ['All Languages', 'Homework Helper', 'Coding'],
