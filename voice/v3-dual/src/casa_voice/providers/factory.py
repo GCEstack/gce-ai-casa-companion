@@ -53,7 +53,12 @@ class VoiceProviders:
             self.stt = None
             self.llm = None
 
-        if openai_key:
+        tts_provider = os.environ.get("TTS_PROVIDER", "openai").strip().lower()
+
+        if tts_provider == "openrouter" and openrouter_key:
+            logger.info("Using OpenRouter TTS (Gemini Flash) as configured by TTS_PROVIDER")
+            self.tts = OpenRouterTTS(api_key=openrouter_key)
+        elif openai_key:
             logger.info("Using OpenAI direct TTS")
             self.tts = OpenAIDirectTTS(
                 api_key=openai_key,
