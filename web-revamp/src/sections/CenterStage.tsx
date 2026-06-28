@@ -15,6 +15,8 @@ import {
   Trophy,
   GraduationCap,
   Sparkles,
+  Smartphone,
+  Mic,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Character, ModeConfig } from '@/types';
@@ -26,12 +28,14 @@ import { useCharacterVoice } from '@/hooks/useCharacterVoice';
 import { allModes, modeFromFeature } from '@/lib/modes';
 import { characterConfigs } from '@/lib/characterConfig';
 import { getCharacterVideos } from '@/lib/characterVideos';
+import PairingPanel from '@/components/PairingPanel';
 
 interface CenterStageProps {
   character: Character;
   activeMode: ModeConfig;
   onModeChange: (mode: ModeConfig) => void;
   voice: UseVoiceChatReturn;
+  onRelaySessionReady?: (info: { sessionId: string; token: string }) => void;
 }
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -63,8 +67,8 @@ const categoryColor: Record<string, string> = {
   support: '#ec4899',
 };
 
-export default function CenterStage({ character, activeMode, onModeChange, voice }: CenterStageProps) {
-  const { state } = useApp();
+export default function CenterStage({ character, activeMode, onModeChange, voice, onRelaySessionReady }: CenterStageProps) {
+  const { state, dispatch } = useApp();
   const portraitRef = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLHeadingElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
@@ -281,6 +285,44 @@ export default function CenterStage({ character, activeMode, onModeChange, voice
             {turnIndicator.label}
           </span>
         </div>
+
+        {/* Connection mode toggle */}
+        <button
+          onClick={() => {
+            const next = state.connectionMode === 'local' ? 'relay' : 'local';
+            dispatch({ type: 'SET_CONNECTION_MODE', payload: next });
+            toast.info(next === 'relay' ? 'Phone mic mode' : 'This device mic mode');
+          }}
+          className="flex items-center gap-2 mt-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+          style={{
+            background: state.connectionMode === 'relay' ? `${character.accentColor}20` : 'rgba(255,255,255,0.06)',
+            color: state.connectionMode === 'relay' ? character.accentColor : 'rgba(255,255,255,0.6)',
+            border: `1px solid ${state.connectionMode === 'relay' ? `${character.accentColor}40` : 'rgba(255,255,255,0.08)'}`,
+          }}
+        >
+          {state.connectionMode === 'relay' ? (
+            <>
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Phone mic</span>
+            </>
+          ) : (
+            <>
+              <Mic className="w-3.5 h-3.5" />
+              <span>This device</span>
+            </>
+          )}
+        </button>
+
+        {/* Relay pairing panel */}
+        {state.connectionMode === 'relay' && !voice.isConnected && onRelaySessionReady && (
+          <div className="mt-4">
+            <PairingPanel
+              characterSlug={character.slug}
+              modeSlug={activeMode.slug}
+              onSessionReady={onRelaySessionReady}
+            />
+          </div>
+        )}
 
         {/* Conversation mode toggle */}
         <button

@@ -55,6 +55,7 @@ export interface AppState {
   isSpeaking: boolean;
   micPermission: boolean;
   conversationMode: ConversationMode;
+  connectionMode: 'local' | 'relay';
   wakeWordEnabled: boolean;
   bargeInEnabled: boolean;
   isWakeWordListening: boolean;
@@ -72,6 +73,7 @@ export type AppAction =
   | { type: 'SET_SPEAKING'; payload: boolean }
   | { type: 'SET_MIC_PERMISSION'; payload: boolean }
   | { type: 'SET_CONVERSATION_MODE'; payload: ConversationMode }
+  | { type: 'SET_CONNECTION_MODE'; payload: 'local' | 'relay' }
   | { type: 'TOGGLE_WAKE_WORD' }
   | { type: 'TOGGLE_BARGE_IN' }
   | { type: 'SET_WAKE_WORD_LISTENING'; payload: boolean }

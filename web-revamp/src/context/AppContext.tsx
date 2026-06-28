@@ -14,6 +14,7 @@ const initialState: AppState = {
   isSpeaking: false,
   micPermission: false,
   conversationMode: 'turn-based',
+  connectionMode: 'local',
   wakeWordEnabled: false,
   bargeInEnabled: false,
   isWakeWordListening: false,
@@ -42,6 +43,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, micPermission: action.payload };
     case 'SET_CONVERSATION_MODE':
       return { ...state, conversationMode: action.payload };
+    case 'SET_CONNECTION_MODE':
+      return { ...state, connectionMode: action.payload };
     case 'TOGGLE_WAKE_WORD':
       return { ...state, wakeWordEnabled: !state.wakeWordEnabled };
     case 'TOGGLE_BARGE_IN':
