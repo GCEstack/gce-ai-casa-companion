@@ -80,6 +80,7 @@ class CharacterVoiceRouter:
         "leone": "Alnilam",
         "delfino": "Sadachbia",
         "drago": "Fenrir",
+        "volpe": "Aoede",
         # Musicians
         "rocco": "Zubenelgenubi",
         "vinile": "Achird",
@@ -92,6 +93,7 @@ class CharacterVoiceRouter:
         # Family
         "mamma": "Sulafat",
         "nonna": "Gacrux",
+        "papa": "Enceladus",
         # Creatures
         "cucita": "Despina",
         "polpo": "Iapetus",
@@ -108,6 +110,18 @@ class CharacterVoiceRouter:
         "veloce": "Laomedeia",
         "stellino": "Zephyr",
         "verita": "Kore",
+        # Phase 3 / English-named fantasy characters
+        "jack": "Puck",
+        "agenda": "Callirrhoe",
+        "alien": "Zephyr",
+        "dragon": "Fenrir",
+        "fraggl": "Laomedeia",
+        "grouch": "Algenib",
+        "lucha_bee": "Pulcherrima",
+        "ninja_cat": "Erinome",
+        "pirate_parrot": "Sadachbia",
+        "transformer_bot": "Iapetus",
+        "trex": "Alnilam",
     }
 
     MAX_TAGGED_LENGTH = 500  # chars -- beyond this, Gemini may read tags aloud

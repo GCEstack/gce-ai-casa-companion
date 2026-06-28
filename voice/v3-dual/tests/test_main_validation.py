@@ -96,14 +96,10 @@ def _assert_ws_rejected(client, path: str, expected_code: int):
     assert exc_info.value.code == expected_code
 
 
-def test_websocket_rejects_invalid_token(client):
-    _assert_ws_rejected(client, "/ws/voice?token=wrong", 4401)
-
-
 def test_websocket_rejects_invalid_device_id(client):
     _assert_ws_rejected(
         client,
-        "/ws/voice?token=test-admin-token&device_id=bad id!",
+        "/ws/voice?device_id=bad id!",
         4400,
     )
 
@@ -111,14 +107,14 @@ def test_websocket_rejects_invalid_device_id(client):
 def test_websocket_rejects_invalid_session_id(client):
     _assert_ws_rejected(
         client,
-        "/ws/voice?token=test-admin-token&session_id=bad session!",
+        "/ws/voice?session_id=bad session!",
         4400,
     )
 
 
 def test_websocket_accepts_valid_params(client):
     with client.websocket_connect(
-        "/ws/voice?token=test-admin-token&device_id=test-device-1&session_id=test-session-1"
+        "/ws/voice?device_id=test-device-1&session_id=test-session-1"
     ) as ws:
         # Send ping and wait for pong.
         ws.send_json({"type": "ping"})

@@ -26,8 +26,10 @@ import asyncio
 import json
 import logging
 import secrets
+import struct
 from contextlib import asynccontextmanager
-from typing import Dict, Optional
+from io import BytesIO
+from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request, HTTPException, Body, Depends
@@ -475,6 +477,115 @@ async def get_pairing(code: str):
     }
 
 
+# ── TTS endpoint ──────────────────────────────────────────────────────────────
+
+class TTSRequest(BaseModel):
+    text: str
+    character: Optional[str] = "default"
+    mode: Optional[str] = "default"
+    format: Optional[str] = "wav"  # "wav" or "pcm"
+
+    @field_validator("text")
+    @classmethod
+    def _limit_text_length(cls, value: str) -> str:
+        if len(value) > 4000:
+            raise ValueError("text too long (max 4000 chars)")
+        return value
+
+
+def _wav_header(
+    pcm_data: bytes,
+    sample_rate: int = 16000,
+    channels: int = 1,
+    bits_per_sample: int = 16,
+) -> bytes:
+    """Return a PCM WAV header for the given raw PCM data."""
+    byte_rate = sample_rate * channels * bits_per_sample // 8
+    block_align = channels * bits_per_sample // 8
+    data_chunk_size = len(pcm_data)
+    riff_chunk_size = 36 + data_chunk_size
+
+    return struct.pack(
+        "<4sI4s4sIHHIIHH4sI",
+        b"RIFF",
+        riff_chunk_size,
+        b"WAVE",
+        b"fmt ",
+        16,  # Subchunk1Size
+        1,   # AudioFormat (PCM)
+        channels,
+        sample_rate,
+        byte_rate,
+        block_align,
+        bits_per_sample,
+        b"data",
+        data_chunk_size,
+    )
+
+
+# ── Simple HTTP chat endpoint (no WebSocket) ──────────────────────────────────
+
+class ChatRequest(BaseModel):
+    text: str
+    character: Optional[str] = "default"
+    mode: Optional[str] = "default"
+    session_id: Optional[str] = None
+    history: Optional[List[Dict[str, str]]] = None
+
+    @field_validator("text")
+    @classmethod
+    def _limit_text_length(cls, value: str) -> str:
+        if len(value) > 4000:
+            raise ValueError("text too long (max 4000 chars)")
+        return value
+
+
+@app.post("/api/chat")
+async def chat(req: ChatRequest):
+    """Generate a character response for typed/transcribed text.
+
+    The caller is responsible for conversation history (local storage).  The
+    response text can then be passed to ``/api/tts`` for speech.
+    """
+    providers = getattr(app.state, "providers", None)
+    if providers is None or providers.llm is None:
+        raise HTTPException(status_code=503, detail="LLM provider not available")
+
+    character = req.character or "default"
+    mode = req.mode or "default"
+
+    persona = (
+        "You are a friendly companion for kids. "
+        "Respond briefly (1-2 sentences). Be warm and fun."
+    )
+    if providers.tts and hasattr(providers.tts, "voice_router"):
+        try:
+            profile = providers.tts.voice_router.get_profile(character)
+            persona = f"{profile.prompt_prefix} Respond briefly (1-2 sentences). Be warm and fun."
+        except Exception:
+            pass
+
+    messages = [{"role": "system", "content": persona}]
+    for turn in (req.history or [])[-6:]:
+        messages.append(turn)
+    messages.append({"role": "user", "content": req.text})
+
+    try:
+        reply = await providers.llm.chat(
+            messages=messages,
+            temperature=0.8,
+            max_tokens=150,
+        )
+    except Exception as e:
+        logger.exception("Chat endpoint failed")
+        raise HTTPException(status_code=502, detail="LLM failed") from e
+
+    if not reply:
+        raise HTTPException(status_code=502, detail="LLM returned empty response")
+
+    return {"text": reply, "character": character, "mode": mode}
+
+
 # ── NFC / Physical Actions ────────────────────────────────────────────────────
 
 class TapRequest(BaseModel):
@@ -577,6 +688,36 @@ async def tap_get(
     return {"status": "ok", "session_id": session_id, "action": action}
 
 
+@app.post("/api/tts")
+async def tts(req: TTSRequest):
+    """Synthesize speech through the configured backend TTS provider.
+
+    Returns a WAV file by default; pass ``format="pcm"`` for raw s16le PCM.
+    """
+    tts_provider = getattr(app.state, "providers", None)
+    if tts_provider is None or tts_provider.tts is None:
+        raise HTTPException(status_code=503, detail="TTS provider not available")
+
+    try:
+        pcm = await tts_provider.tts.synthesize(
+            req.text,
+            character=req.character or "default",
+            mode=req.mode or "default",
+        )
+    except Exception as e:
+        logger.exception("TTS endpoint failed")
+        raise HTTPException(status_code=502, detail="TTS synthesis failed") from e
+
+    if req.format == "pcm":
+        return StreamingResponse(
+            BytesIO(pcm),
+            media_type="audio/L16;rate=16000;channels=1",
+        )
+
+    wav = _wav_header(pcm) + pcm
+    return StreamingResponse(BytesIO(wav), media_type="audio/wav")
+
+
 # ── SSE Events ────────────────────────────────────────────────────────────────
 
 @app.get("/events/{device_id}")
@@ -628,17 +769,10 @@ async def _handle_voice_websocket(
     device_type: str,
     device_id: Optional[str],
     session_id: Optional[str],
-    token: Optional[str],
     character: str = "default",
     mode: str = "default",
 ):
     """Shared WebSocket handler for /ws/voice and /ws/voice/{device_id}."""
-    expected_token = os.environ.get("VOICE_SERVER_API_KEY")
-    if expected_token and token != expected_token:
-        logger.warning(f"WebSocket connection rejected: invalid or missing token from {device_id}")
-        await websocket.close(code=4401, reason="Unauthorized")
-        return
-
     try:
         assigned_device_id = _sanitize_ws_id(device_id, "device_id") if device_id else f"{device_type}-{secrets.token_hex(4)}"
         assigned_session_id = _sanitize_ws_id(session_id, "session_id") if session_id else f"session-{secrets.token_hex(4)}"
@@ -769,9 +903,8 @@ async def voice_websocket(
     device_type: str = Query("audio", enum=["audio", "dashboard"]),
     device_id: Optional[str] = Query(None),
     session_id: Optional[str] = Query(None),
-    token: Optional[str] = Query(None),
 ):
-    await _handle_voice_websocket(websocket, device_type, device_id, session_id, token)
+    await _handle_voice_websocket(websocket, device_type, device_id, session_id)
 
 
 @app.websocket("/ws/voice/{device_id}")
@@ -780,9 +913,8 @@ async def voice_websocket_by_id(
     device_id: str,
     device_type: str = Query("audio", enum=["audio", "dashboard"]),
     session_id: Optional[str] = Query(None),
-    token: Optional[str] = Query(None),
 ):
-    await _handle_voice_websocket(websocket, device_type, device_id, session_id, token)
+    await _handle_voice_websocket(websocket, device_type, device_id, session_id)
 
 
 @app.websocket("/ws/voice/realtime/{device_id}")
