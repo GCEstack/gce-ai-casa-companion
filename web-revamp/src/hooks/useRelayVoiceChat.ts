@@ -30,6 +30,9 @@ export function useRelayVoiceChat({
   const [sampleRate, setSampleRate] = useState(16000);
   const { playChunk, stop: stopPlayback } = usePCMPlayback(sampleRate);
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectCountRef = useRef(0);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const intentionalDisconnectRef = useRef(false);
 
   const handleMessage = useCallback(
     (msg: Record<string, unknown>) => {
@@ -83,9 +86,19 @@ export function useRelayVoiceChat({
     [dispatch, sampleRate]
   );
 
+  const clearReconnectTimer = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+  }, []);
+
   const connect = useCallback(async () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
     if (!sessionId || !token) return;
+
+    intentionalDisconnectRef.current = false;
+    clearReconnectTimer();
 
     const url =
       `${BACKEND_WS.replace(/\/$/, '')}/ws/voice/realtime/${encodeURIComponent(deviceId)}` +
@@ -100,6 +113,7 @@ export function useRelayVoiceChat({
     wsRef.current = ws;
 
     ws.onopen = () => {
+      reconnectCountRef.current = 0;
       setIsConnected(true);
       dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'online' });
       dispatch({ type: 'SET_MIC_PERMISSION', payload: true });
@@ -110,6 +124,17 @@ export function useRelayVoiceChat({
       dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'offline' });
       dispatch({ type: 'SET_RECORDING', payload: false });
       dispatch({ type: 'SET_SPEAKING', payload: false });
+
+      if (
+        !intentionalDisconnectRef.current &&
+        reconnectCountRef.current < 5 &&
+        sessionId &&
+        token
+      ) {
+        const delay = Math.min(1000 * 2 ** reconnectCountRef.current, 30000);
+        reconnectCountRef.current += 1;
+        reconnectTimerRef.current = window.setTimeout(connect, delay);
+      }
     };
 
     ws.onerror = (e) => {
@@ -129,13 +154,16 @@ export function useRelayVoiceChat({
         // ignore non-JSON text
       }
     };
-  }, [sessionId, token, deviceId, characterSlug, modeSlug, dispatch, playChunk, handleMessage]);
+  }, [sessionId, token, deviceId, characterSlug, modeSlug, dispatch, playChunk, handleMessage, clearReconnectTimer]);
 
   const disconnect = useCallback(() => {
+    intentionalDisconnectRef.current = true;
+    clearReconnectTimer();
+    reconnectCountRef.current = 0;
     wsRef.current?.close();
     wsRef.current = null;
     stopPlayback();
-  }, [stopPlayback]);
+  }, [stopPlayback, clearReconnectTimer]);
 
   const sendText = useCallback(
     async (text: string) => {

@@ -471,6 +471,7 @@ async def get_pairing(code: str):
     return {
         "code": pairing.code,
         "session_id": pairing.session_id,
+        "join_token": pairing.join_token,
         "character": pairing.character,
         "mode": pairing.mode,
         "expires_at": pairing.expires_at.isoformat(),
@@ -945,16 +946,13 @@ async def realtime_voice_websocket(
         await websocket.close(code=4401, reason="Session mismatch")
         return
 
-    # Reuse the shared handler. The admin-token check inside it is bypassed by
-    # passing the configured admin token (if any) since we already validated
-    # the pairing-specific join token above.
-    expected_admin_token = os.environ.get("VOICE_SERVER_API_KEY")
+    # Reuse the shared handler. The pairing-specific join token was already
+    # validated above, so no additional admin-token check is needed here.
     await _handle_voice_websocket(
         websocket,
         device_type="audio",
         device_id=device_id,
         session_id=pairing.session_id,
-        token=expected_admin_token if expected_admin_token else None,
         character=pairing.character,
         mode=pairing.mode,
     )
