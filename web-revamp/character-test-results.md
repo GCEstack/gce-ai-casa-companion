@@ -1,6 +1,6 @@
 # Character Sync Test Results — web-revamp
 
-Generated: 2026-06-30T05:19:28.945Z
+Generated: 2026-06-30T08:17:50.000Z
 Total characters: 46
 Errors: 0
 Video fallbacks (portrait-only): 3

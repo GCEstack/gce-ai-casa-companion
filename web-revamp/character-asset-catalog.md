@@ -1,6 +1,6 @@
 # Character Asset Catalog — web-revamp
 
-Generated: 2026-06-30T05:23:16.628Z
+Generated: 2026-06-30T08:20:13.742Z
 - Total characters: 46
 - With idle + speaking videos: 43
 - Portrait/video fallback only: 3
