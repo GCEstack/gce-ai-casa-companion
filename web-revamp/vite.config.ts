@@ -12,7 +12,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@casa/characters": path.resolve(__dirname, "./src/lib/@casa/characters/index.ts"),
+      "@casa/characters": path.resolve(__dirname, "./src/lib/@casa/characters/src/index.ts"),
     },
   },
 });
