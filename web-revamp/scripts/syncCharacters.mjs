@@ -48,8 +48,8 @@ function copyDir(src, dest) {
 }
 
 if (!statSync(sourceDir, { throwIfNoEntry: false })?.isDirectory()) {
-  console.error(`Source character package not found: ${sourceDir}`);
-  process.exit(1);
+  console.log(`Source character package not found (${sourceDir}); using committed mirror.`);
+  process.exit(0);
 }
 
 ensureDir(destDir);
