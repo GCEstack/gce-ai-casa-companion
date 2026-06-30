@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import './PietroHost.css';
 import { useVoiceChat } from '@/hooks/useVoiceChat';
+import { fetchBackendTTS } from '@/lib/tts';
 
 const PIETRO_WELCOME = `Hey there! Welcome to Casa Companion. I'm Pietro — the founder. You got a whole crew of AI companions here. Each one's got their own personality and skills. Want help with homework? Hit up Maestra. Need to write a song? Rocco's your guy. Want to chill? Battito's got you. Just pick a companion from below, or stick with me. So... what's on your mind?`;
 
@@ -55,21 +56,8 @@ export default function PietroHost() {
     setState('speaking');
 
     try {
-      // STEP 3: Fetch TTS audio
-      const res = await fetch('https://api.openai.com/v1/audio/speech', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'tts-1',
-          voice: 'alloy',
-          input: PIETRO_WELCOME,
-        }),
-      });
-
-      const blob = await res.blob();
+      // STEP 3: Fetch TTS audio from the Casa backend (never OpenAI directly)
+      const blob = await fetchBackendTTS(PIETRO_WELCOME, 'pietro', 'default');
       const url = URL.createObjectURL(blob);
 
       // STEP 4: Create and play audio

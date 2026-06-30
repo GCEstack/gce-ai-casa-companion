@@ -64,11 +64,12 @@ function getOrCreateSessionId(): string {
   }
 }
 
+const DEFAULT_VOICE_WS_URL = 'wss://casa-voice-agent.fly.dev';
+
 function inferWsUrl(): string {
   const configured = import.meta.env.VITE_VOICE_SERVER_URL;
   if (configured) return configured;
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.host}`;
+  return DEFAULT_VOICE_WS_URL;
 }
 
 export function useVoiceSocket(): VoiceSocketHook {
