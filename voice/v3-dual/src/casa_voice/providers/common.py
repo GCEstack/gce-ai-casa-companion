@@ -1,19 +1,60 @@
 """Shared constants and helpers for Casa Voice providers."""
 
+import asyncio
+import functools
 import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional, TypeVar
 
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
+T = TypeVar("T")
+
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 DEFAULT_LLM = "openai/gpt-4o-mini"
 DEFAULT_STT = "openai/whisper-1"
 DEFAULT_TTS = "google/gemini-3.1-flash-tts-preview"  # ONLY model that supports tags
+
+
+def with_retries(
+    max_attempts: int = 3,
+    backoff_seconds: tuple[float, ...] = (0.5, 1.0, 2.0),
+    exceptions: tuple[type[Exception], ...] = (Exception,),
+):
+    """Decorator for async functions that retries on transient failures.
+
+    Args:
+        max_attempts: Maximum number of attempts (including the first).
+        backoff_seconds: Sleep durations between attempts.
+        exceptions: Exception types that trigger a retry.
+    """
+
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs) -> T:
+            last_exc: Optional[Exception] = None
+            for attempt in range(max_attempts):
+                try:
+                    return await func(*args, **kwargs)
+                except exceptions as e:
+                    last_exc = e
+                    if attempt < max_attempts - 1:
+                        delay = backoff_seconds[min(attempt, len(backoff_seconds) - 1)]
+                        logger.warning(
+                            f"{func.__name__} failed (attempt {attempt + 1}/{max_attempts}): {e}; "
+                            f"retrying in {delay}s"
+                        )
+                        await asyncio.sleep(delay)
+            logger.error(f"{func.__name__} failed after {max_attempts} attempts: {last_exc}")
+            raise last_exc  # type: ignore[misc]
+
+        return wrapper
+
+    return decorator
 
 
 def _get_openrouter_provider_routing() -> Optional[Dict[str, Any]]:

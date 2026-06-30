@@ -14,11 +14,13 @@
         "./src/*"
       ],
       "@casa/characters": [
-        "../packages/characters/src/index.ts"
+        "./src/lib/@casa/characters/src/index.ts"
       ]
     },
     /* Bundler mode */
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",

@@ -1,5 +1,6 @@
 """Text-to-speech providers."""
 
+import asyncio
 import logging
 import os
 from typing import AsyncIterator, List, Optional
@@ -8,6 +9,10 @@ import httpx
 
 from .character_router import CharacterVoiceRouter, TTSCache
 from .common import DEFAULT_TTS, OPENROUTER_BASE, _get_openrouter_provider_routing, logger
+
+# Retry/backoff configuration for TTS HTTP streams.
+_TTS_MAX_ATTEMPTS = 3
+_TTS_BACKOFF_SECONDS = (0.5, 1.0, 2.0)
 
 
 class OpenRouterTTS:
@@ -74,35 +79,46 @@ class OpenRouterTTS:
             "X-Title": "Casa Companion Voice",
         }
 
-        try:
-            collected: List[bytes] = []
-            async with self.client.stream(
-                "POST",
-                f"{OPENROUTER_BASE}/audio/speech",
-                headers=headers,
-                json=payload,
-            ) as resp:
-                resp.raise_for_status()
-                total = 0
-                async for chunk in resp.aiter_bytes(chunk_size=4096):
-                    if chunk:
-                        total += len(chunk)
-                        collected.append(chunk)
-                        yield chunk
-                logger.info(f"TTS: streamed {total} bytes")
+        last_exc: Optional[Exception] = None
+        collected: List[bytes] = []
+        for attempt in range(_TTS_MAX_ATTEMPTS):
+            collected.clear()
+            try:
+                async with self.client.stream(
+                    "POST",
+                    f"{OPENROUTER_BASE}/audio/speech",
+                    headers=headers,
+                    json=payload,
+                ) as resp:
+                    resp.raise_for_status()
+                    total = 0
+                    async for chunk in resp.aiter_bytes(chunk_size=4096):
+                        if chunk:
+                            total += len(chunk)
+                            collected.append(chunk)
+                            yield chunk
+                    logger.info(f"TTS: streamed {total} bytes")
+                break  # Success; exit retry loop.
+            except Exception as e:
+                last_exc = e
+                logger.warning(
+                    f"TTS failed (attempt {attempt + 1}/{_TTS_MAX_ATTEMPTS}): {e}"
+                )
+                if attempt < _TTS_MAX_ATTEMPTS - 1:
+                    await asyncio.sleep(_TTS_BACKOFF_SECONDS[attempt])
+                else:
+                    logger.error(f"TTS failed after {_TTS_MAX_ATTEMPTS} attempts: {last_exc}", exc_info=True)
+                    raise last_exc
 
-            # Cache the full response for instant replay next time.
-            # Cache write failures must not crash the active turn.
-            if self.cache is not None and collected:
-                try:
-                    await self.cache.write(tagged_text, self.model, voice, b"".join(collected))
-                except Exception as cache_err:
-                    logger.warning(
-                        f"TTS cache write failed (turn continuing): {cache_err}", exc_info=True
-                    )
-        except Exception as e:
-            logger.error(f"TTS failed: {e}", exc_info=True)
-            raise
+        # Cache the full response for instant replay next time.
+        # Cache write failures must not crash the active turn.
+        if self.cache is not None and collected:
+            try:
+                await self.cache.write(tagged_text, self.model, voice, b"".join(collected))
+            except Exception as cache_err:
+                logger.warning(
+                    f"TTS cache write failed (turn continuing): {cache_err}", exc_info=True
+                )
 
     async def synthesize(self, text: str, character: str = "default", mode: str = "default") -> bytes:
         """Full synthesis (buffered). Use synthesize_stream for real-time."""
@@ -129,6 +145,11 @@ class OpenAIDirectTTS:
         self.response_format = response_format
         self.sample_rate = sample_rate
         self.client = httpx.AsyncClient(timeout=60.0)
+        self.voice_router = CharacterVoiceRouter(model)
+
+        cache_enabled = os.environ.get("TTS_CACHE_ENABLED", "1").strip().lower() in ("1", "true", "yes")
+        cache_dir = os.environ.get("TTS_CACHE_DIR", "tts_cache")
+        self.cache = TTSCache(cache_dir) if cache_enabled else None
 
     async def synthesize_stream(
         self,
@@ -136,33 +157,64 @@ class OpenAIDirectTTS:
         character: str = "default",
         mode: str = "default",
     ) -> AsyncIterator[bytes]:
-        logger.info(f"OpenAI TTS: synthesizing {len(text)} chars")
-        try:
-            async with self.client.stream(
-                "POST",
-                "https://api.openai.com/v1/audio/speech",
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": self.model,
-                    "input": text,
-                    "voice": self.voice,
-                    "response_format": self.response_format,
-                    "sample_rate": self.sample_rate,
-                },
-            ) as resp:
-                resp.raise_for_status()
-                total = 0
-                async for chunk in resp.aiter_bytes(chunk_size=4096):
-                    if chunk:
-                        total += len(chunk)
-                        yield chunk
-                logger.info(f"OpenAI TTS: streamed {total} bytes")
-        except Exception as e:
-            logger.error(f"OpenAI TTS failed: {e}", exc_info=True)
-            raise
+        tagged_text = self.voice_router.apply_tags(text, character, mode)
+        voice = self.voice_router.get_voice(character, self.voice)
+        logger.info(f"OpenAI TTS: synthesizing {len(tagged_text)} chars for character={character}, voice={voice}")
+
+        # Cache hit: serve the pre-generated PCM instantly.
+        if self.cache is not None and self.cache.exists(tagged_text, self.model, voice):
+            logger.info("OpenAI TTS: cache hit")
+            async for chunk in self.cache.read_stream(tagged_text, self.model, voice):
+                yield chunk
+            return
+
+        last_exc: Optional[Exception] = None
+        collected: List[bytes] = []
+        for attempt in range(_TTS_MAX_ATTEMPTS):
+            collected.clear()
+            try:
+                async with self.client.stream(
+                    "POST",
+                    "https://api.openai.com/v1/audio/speech",
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": self.model,
+                        "input": tagged_text,
+                        "voice": voice,
+                        "response_format": self.response_format,
+                        "sample_rate": self.sample_rate,
+                    },
+                ) as resp:
+                    resp.raise_for_status()
+                    total = 0
+                    async for chunk in resp.aiter_bytes(chunk_size=4096):
+                        if chunk:
+                            total += len(chunk)
+                            collected.append(chunk)
+                            yield chunk
+                    logger.info(f"OpenAI TTS: streamed {total} bytes")
+                break  # Success; exit retry loop.
+            except Exception as e:
+                last_exc = e
+                logger.warning(
+                    f"OpenAI TTS failed (attempt {attempt + 1}/{_TTS_MAX_ATTEMPTS}): {e}"
+                )
+                if attempt < _TTS_MAX_ATTEMPTS - 1:
+                    await asyncio.sleep(_TTS_BACKOFF_SECONDS[attempt])
+                else:
+                    logger.error(f"OpenAI TTS failed after {_TTS_MAX_ATTEMPTS} attempts: {last_exc}", exc_info=True)
+                    raise last_exc
+
+        if self.cache is not None and collected:
+            try:
+                await self.cache.write(tagged_text, self.model, voice, b"".join(collected))
+            except Exception as cache_err:
+                logger.warning(
+                    f"OpenAI TTS cache write failed (turn continuing): {cache_err}", exc_info=True
+                )
 
     async def synthesize(self, text: str, character: str = "default", mode: str = "default") -> bytes:
         """Full synthesis (buffered). Use synthesize_stream for real-time."""

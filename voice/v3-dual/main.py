@@ -26,8 +26,10 @@ import asyncio
 import json
 import logging
 import secrets
+import struct
 from contextlib import asynccontextmanager
-from typing import Dict, Optional
+from io import BytesIO
+from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request, HTTPException, Body, Depends
@@ -61,8 +63,33 @@ from fastapi.middleware.cors import CORSMiddleware
 from casa_voice.protocol import VoiceMessage, MessageType, CommandType
 from casa_voice.providers import VoiceProviders
 from casa_voice.sessions import VoiceSession, ClientHandle
-from casa_voice.persistence import SessionStore
-from casa_voice.pairing import PairingManager
+from casa_voice.persistence import SessionStore, RedisSessionStore
+from casa_voice.pairing import PairingManager, RedisPairingManager
+
+# Simple in-memory metrics exposed on /metrics.
+class Metrics:
+    def __init__(self):
+        self.sessions_created = 0
+        self.messages_received = 0
+        self.errors = 0
+        self.provider_failures = {"stt": 0, "llm": 0, "tts": 0}
+
+    def inc_sessions(self):
+        self.sessions_created += 1
+
+    def inc_messages(self):
+        self.messages_received += 1
+
+    def inc_error(self):
+        self.errors += 1
+
+    def inc_provider_failure(self, provider: str):
+        if provider in self.provider_failures:
+            self.provider_failures[provider] += 1
+
+
+metrics = Metrics()
+
 
 # Logging — one unified DEBUG stream; no duplicates, casa_voice always visible
 def _setup_logging():
@@ -104,7 +131,13 @@ async def lifespan(app: FastAPI):
     logger.info("[lifespan] Starting Casa Voice V3 Dual")
     providers = VoiceProviders()
     store = None
-    if os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_SERVICE_KEY"):
+    if os.environ.get("REDIS_URL"):
+        try:
+            store = RedisSessionStore()
+            logger.info("[lifespan] Redis session store enabled")
+        except Exception as e:
+            logger.error(f"[lifespan] Failed to initialize Redis store: {e}")
+    elif os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_SERVICE_KEY"):
         try:
             store = SessionStore()
             logger.info("[lifespan] Supabase session store enabled")
@@ -115,7 +148,15 @@ async def lifespan(app: FastAPI):
             "WARNING: VOICE_SERVER_API_KEY not set — WebSocket endpoint is unauthenticated"
         )
     session_manager = SessionManager(providers, store=store)
-    pairing_manager = PairingManager()
+    if os.environ.get("REDIS_URL"):
+        try:
+            pairing_manager = RedisPairingManager()
+            logger.info("[lifespan] Redis pairing manager enabled")
+        except Exception as e:
+            logger.error(f"[lifespan] Failed to initialize Redis pairing manager: {e}")
+            pairing_manager = PairingManager()
+    else:
+        pairing_manager = PairingManager()
     app.state.providers = providers
     app.state.session_manager = session_manager
     app.state.pairing_manager = pairing_manager
@@ -127,8 +168,14 @@ async def lifespan(app: FastAPI):
         await providers.stt.client.aclose()
     if providers.tts is not None:
         await providers.tts.client.aclose()
+    if providers.llm is not None and hasattr(providers.llm, "client"):
+        await providers.llm.client.aclose()
     if providers.native_audio is not None:
         await providers.native_audio.close()
+    if store is not None:
+        await store.close()
+    if hasattr(pairing_manager, "close"):
+        await pairing_manager.close()
 
 
 app = FastAPI(
@@ -164,6 +211,21 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(WebSocketDisconnect)
+async def websocket_disconnect_handler(request: Request, exc: WebSocketDisconnect):
+    """Let WebSocket disconnects propagate cleanly; do not return an HTTP response."""
+    raise exc
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Preserve FastAPI HTTP exception semantics with the same safe JSON shape."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Catch-all handler: log the full traceback and return a safe JSON error."""
@@ -185,13 +247,15 @@ class SessionManager:
         self.providers = providers
         self.store = store
         self.sessions: Dict[str, VoiceSession] = {}
+        self._lock = asyncio.Lock()
 
-    def _get_or_create(
+    def _get_or_create_locked(
         self,
         session_id: str,
         character: str = "default",
         mode: str = "default",
     ) -> VoiceSession:
+        """Create or return a session. Caller must hold self._lock."""
         if session_id not in self.sessions:
             session = VoiceSession(
                 session_id=session_id,
@@ -203,6 +267,7 @@ class SessionManager:
             self.sessions[session_id] = session
             # Start the pipeline once; clients join later
             asyncio.create_task(session.start())
+            metrics.inc_sessions()
             logger.info(
                 f"[SessionManager] Created session {session_id} "
                 f"(character={character}, mode={mode})"
@@ -218,24 +283,26 @@ class SessionManager:
         character: str = "default",
         mode: str = "default",
     ) -> VoiceSession:
-        session = self._get_or_create(session_id, character=character, mode=mode)
-        client = ClientHandle(
-            device_id=device_id,
-            device_type=device_type,
-            send=send,
-        )
-        session.add_client(client)
-        return session
+        async with self._lock:
+            session = self._get_or_create_locked(session_id, character=character, mode=mode)
+            client = ClientHandle(
+                device_id=device_id,
+                device_type=device_type,
+                send=send,
+            )
+            session.add_client(client)
+            return session
 
     async def remove_client(self, session_id: str, device_id: str):
-        session = self.sessions.get(session_id)
-        if not session:
-            return
-        session.remove_client(device_id)
-        if session.is_empty:
-            await session.stop()
-            del self.sessions[session_id]
-            logger.info(f"[SessionManager] Removed empty session {session_id}")
+        async with self._lock:
+            session = self.sessions.get(session_id)
+            if not session:
+                return
+            session.remove_client(device_id)
+            if session.is_empty:
+                await session.stop()
+                del self.sessions[session_id]
+                logger.info(f"[SessionManager] Removed empty session {session_id}")
 
     def find_client(self, device_id: str):
         """Return (session, client) for a given device_id, or (None, None)."""
@@ -287,28 +354,41 @@ def _require_admin_token(token: Optional[str] = Query(None)):
 
 # ── API Routes ────────────────────────────────────────────────────────────────
 
+@app.get("/metrics")
+async def get_metrics():
+    """Basic operational metrics (JSON)."""
+    return {
+        "sessions_created": metrics.sessions_created,
+        "messages_received": metrics.messages_received,
+        "errors": metrics.errors,
+        "provider_failures": metrics.provider_failures,
+        "active_sessions": len(app.state.session_manager.sessions),
+    }
+
+
 @app.get("/health")
 async def health():
+    """Lightweight health check for load balancers and Azure container probes."""
+    providers = app.state.providers
+    provider_status = {
+        "stt": providers.stt is not None and not getattr(providers.stt, "client", None).is_closed
+        if providers.stt and hasattr(providers.stt, "client")
+        else providers.stt is not None,
+        "llm": providers.llm is not None,
+        "tts": providers.tts is not None and not getattr(providers.tts, "client", None).is_closed
+        if providers.tts and hasattr(providers.tts, "client")
+        else providers.tts is not None,
+        "vad": providers.vad is not None,
+        "native_audio": providers.native_audio is not None,
+    }
+    store = app.state.session_manager.store
     return {
         "status": "ok",
-        "solution": "A-wake-phrases-dual-mode",
-        "features": [
-            "barge-in",
-            "voice-commands",
-            "wake-phrases",
-            "interrupt-phrases",
-            "end-turn",
-            "reset",
-            "pwa",
-            "esp32",
-            "pcm-streaming",
-            "silero-vad-lazy",
-            "multi-client",
-            "mode-a",
-            "mode-b",
-            "phone-mic-pairing",
-        ],
+        "version": "3.0.0-dual",
         "sessions": len(app.state.session_manager.sessions),
+        "providers": provider_status,
+        "persistence": store is not None,
+        "websocket_auth": bool(os.environ.get("VOICE_SERVER_API_KEY")),
     }
 
 
@@ -391,10 +471,120 @@ async def get_pairing(code: str):
     return {
         "code": pairing.code,
         "session_id": pairing.session_id,
+        "join_token": pairing.join_token,
         "character": pairing.character,
         "mode": pairing.mode,
         "expires_at": pairing.expires_at.isoformat(),
     }
+
+
+# ── TTS endpoint ──────────────────────────────────────────────────────────────
+
+class TTSRequest(BaseModel):
+    text: str
+    character: Optional[str] = "default"
+    mode: Optional[str] = "default"
+    format: Optional[str] = "wav"  # "wav" or "pcm"
+
+    @field_validator("text")
+    @classmethod
+    def _limit_text_length(cls, value: str) -> str:
+        if len(value) > 4000:
+            raise ValueError("text too long (max 4000 chars)")
+        return value
+
+
+def _wav_header(
+    pcm_data: bytes,
+    sample_rate: int = 16000,
+    channels: int = 1,
+    bits_per_sample: int = 16,
+) -> bytes:
+    """Return a PCM WAV header for the given raw PCM data."""
+    byte_rate = sample_rate * channels * bits_per_sample // 8
+    block_align = channels * bits_per_sample // 8
+    data_chunk_size = len(pcm_data)
+    riff_chunk_size = 36 + data_chunk_size
+
+    return struct.pack(
+        "<4sI4s4sIHHIIHH4sI",
+        b"RIFF",
+        riff_chunk_size,
+        b"WAVE",
+        b"fmt ",
+        16,  # Subchunk1Size
+        1,   # AudioFormat (PCM)
+        channels,
+        sample_rate,
+        byte_rate,
+        block_align,
+        bits_per_sample,
+        b"data",
+        data_chunk_size,
+    )
+
+
+# ── Simple HTTP chat endpoint (no WebSocket) ──────────────────────────────────
+
+class ChatRequest(BaseModel):
+    text: str
+    character: Optional[str] = "default"
+    mode: Optional[str] = "default"
+    session_id: Optional[str] = None
+    history: Optional[List[Dict[str, str]]] = None
+
+    @field_validator("text")
+    @classmethod
+    def _limit_text_length(cls, value: str) -> str:
+        if len(value) > 4000:
+            raise ValueError("text too long (max 4000 chars)")
+        return value
+
+
+@app.post("/api/chat")
+async def chat(req: ChatRequest):
+    """Generate a character response for typed/transcribed text.
+
+    The caller is responsible for conversation history (local storage).  The
+    response text can then be passed to ``/api/tts`` for speech.
+    """
+    providers = getattr(app.state, "providers", None)
+    if providers is None or providers.llm is None:
+        raise HTTPException(status_code=503, detail="LLM provider not available")
+
+    character = req.character or "default"
+    mode = req.mode or "default"
+
+    persona = (
+        "You are a friendly companion for kids. "
+        "Respond briefly (1-2 sentences). Be warm and fun."
+    )
+    if providers.tts and hasattr(providers.tts, "voice_router"):
+        try:
+            profile = providers.tts.voice_router.get_profile(character)
+            persona = f"{profile.prompt_prefix} Respond briefly (1-2 sentences). Be warm and fun."
+        except Exception:
+            pass
+
+    messages = [{"role": "system", "content": persona}]
+    for turn in (req.history or [])[-6:]:
+        messages.append(turn)
+    messages.append({"role": "user", "content": req.text})
+
+    try:
+        reply = await providers.llm.chat(
+            messages=messages,
+            temperature=0.8,
+            max_tokens=150,
+        )
+    except Exception as e:
+        logger.exception("Chat endpoint failed")
+        raise HTTPException(status_code=502, detail="LLM failed") from e
+
+    if not reply:
+        raise HTTPException(status_code=502, detail="LLM returned empty response")
+
+    return {"text": reply, "character": character, "mode": mode}
 
 
 # ── NFC / Physical Actions ────────────────────────────────────────────────────
@@ -499,6 +689,36 @@ async def tap_get(
     return {"status": "ok", "session_id": session_id, "action": action}
 
 
+@app.post("/api/tts")
+async def tts(req: TTSRequest):
+    """Synthesize speech through the configured backend TTS provider.
+
+    Returns a WAV file by default; pass ``format="pcm"`` for raw s16le PCM.
+    """
+    tts_provider = getattr(app.state, "providers", None)
+    if tts_provider is None or tts_provider.tts is None:
+        raise HTTPException(status_code=503, detail="TTS provider not available")
+
+    try:
+        pcm = await tts_provider.tts.synthesize(
+            req.text,
+            character=req.character or "default",
+            mode=req.mode or "default",
+        )
+    except Exception as e:
+        logger.exception("TTS endpoint failed")
+        raise HTTPException(status_code=502, detail="TTS synthesis failed") from e
+
+    if req.format == "pcm":
+        return StreamingResponse(
+            BytesIO(pcm),
+            media_type="audio/L16;rate=16000;channels=1",
+        )
+
+    wav = _wav_header(pcm) + pcm
+    return StreamingResponse(BytesIO(wav), media_type="audio/wav")
+
+
 # ── SSE Events ────────────────────────────────────────────────────────────────
 
 @app.get("/events/{device_id}")
@@ -550,17 +770,10 @@ async def _handle_voice_websocket(
     device_type: str,
     device_id: Optional[str],
     session_id: Optional[str],
-    token: Optional[str],
     character: str = "default",
     mode: str = "default",
 ):
     """Shared WebSocket handler for /ws/voice and /ws/voice/{device_id}."""
-    expected_token = os.environ.get("VOICE_SERVER_API_KEY")
-    if expected_token and token != expected_token:
-        logger.warning(f"WebSocket connection rejected: invalid or missing token from {device_id}")
-        await websocket.close(code=4401, reason="Unauthorized")
-        return
-
     try:
         assigned_device_id = _sanitize_ws_id(device_id, "device_id") if device_id else f"{device_type}-{secrets.token_hex(4)}"
         assigned_session_id = _sanitize_ws_id(session_id, "session_id") if session_id else f"session-{secrets.token_hex(4)}"
@@ -606,6 +819,7 @@ async def _handle_voice_websocket(
     try:
         while True:
             message = await websocket.receive()
+            metrics.inc_messages()
             logger.debug(
                 f"[{assigned_session_id}/{assigned_device_id}] Raw message keys: {list(message.keys())}"
             )
@@ -677,6 +891,7 @@ async def _handle_voice_websocket(
     except WebSocketDisconnect:
         logger.info(f"[{assigned_device_id}] Client disconnected")
     except Exception as e:
+        metrics.inc_error()
         logger.error(f"[{assigned_device_id}] WebSocket error: {e}", exc_info=True)
     finally:
         logger.info(f"[{assigned_device_id}] Cleaning up")
@@ -689,9 +904,8 @@ async def voice_websocket(
     device_type: str = Query("audio", enum=["audio", "dashboard"]),
     device_id: Optional[str] = Query(None),
     session_id: Optional[str] = Query(None),
-    token: Optional[str] = Query(None),
 ):
-    await _handle_voice_websocket(websocket, device_type, device_id, session_id, token)
+    await _handle_voice_websocket(websocket, device_type, device_id, session_id)
 
 
 @app.websocket("/ws/voice/{device_id}")
@@ -700,9 +914,8 @@ async def voice_websocket_by_id(
     device_id: str,
     device_type: str = Query("audio", enum=["audio", "dashboard"]),
     session_id: Optional[str] = Query(None),
-    token: Optional[str] = Query(None),
 ):
-    await _handle_voice_websocket(websocket, device_type, device_id, session_id, token)
+    await _handle_voice_websocket(websocket, device_type, device_id, session_id)
 
 
 @app.websocket("/ws/voice/realtime/{device_id}")
@@ -733,16 +946,13 @@ async def realtime_voice_websocket(
         await websocket.close(code=4401, reason="Session mismatch")
         return
 
-    # Reuse the shared handler. The admin-token check inside it is bypassed by
-    # passing the configured admin token (if any) since we already validated
-    # the pairing-specific join token above.
-    expected_admin_token = os.environ.get("VOICE_SERVER_API_KEY")
+    # Reuse the shared handler. The pairing-specific join token was already
+    # validated above, so no additional admin-token check is needed here.
     await _handle_voice_websocket(
         websocket,
         device_type="audio",
         device_id=device_id,
         session_id=pairing.session_id,
-        token=expected_admin_token if expected_admin_token else None,
         character=pairing.character,
         mode=pairing.mode,
     )

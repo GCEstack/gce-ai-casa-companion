@@ -80,6 +80,7 @@ class CharacterVoiceRouter:
         "leone": "Alnilam",
         "delfino": "Sadachbia",
         "drago": "Fenrir",
+        "volpe": "Aoede",
         # Musicians
         "rocco": "Zubenelgenubi",
         "vinile": "Achird",
@@ -92,6 +93,7 @@ class CharacterVoiceRouter:
         # Family
         "mamma": "Sulafat",
         "nonna": "Gacrux",
+        "papa": "Enceladus",
         # Creatures
         "cucita": "Despina",
         "polpo": "Iapetus",
@@ -108,6 +110,18 @@ class CharacterVoiceRouter:
         "veloce": "Laomedeia",
         "stellino": "Zephyr",
         "verita": "Kore",
+        # Phase 3 / English-named fantasy characters
+        "jack": "Puck",
+        "agenda": "Callirrhoe",
+        "alien": "Zephyr",
+        "dragon": "Fenrir",
+        "fraggl": "Laomedeia",
+        "grouch": "Algenib",
+        "lucha_bee": "Pulcherrima",
+        "ninja_cat": "Erinome",
+        "pirate_parrot": "Sadachbia",
+        "transformer_bot": "Iapetus",
+        "trex": "Alnilam",
     }
 
     MAX_TAGGED_LENGTH = 500  # chars -- beyond this, Gemini may read tags aloud
@@ -200,6 +214,8 @@ class TTSCache:
     """
 
     CHUNK_SIZE = 4096
+    MAX_FILES = 5000
+    MAX_BYTES = 1024 * 1024 * 1024  # 1 GB
 
     def __init__(self, cache_dir: str):
         self.cache_dir = cache_dir
@@ -214,6 +230,28 @@ class TTSCache:
 
     def exists(self, text: str, model: str, voice: str) -> bool:
         return os.path.exists(self._path(self._key(text, model, voice)))
+
+    def _evict_if_needed(self):
+        """Remove oldest cache entries if over file or byte limits."""
+        entries = [
+            (os.path.getmtime(os.path.join(self.cache_dir, f)), f)
+            for f in os.listdir(self.cache_dir)
+            if f.endswith(".pcm")
+        ]
+        entries.sort()
+        total_bytes = sum(
+            os.path.getsize(os.path.join(self.cache_dir, f)) for _, f in entries
+        )
+        while entries and (
+            len(entries) > self.MAX_FILES or total_bytes > self.MAX_BYTES
+        ):
+            _, oldest = entries.pop(0)
+            oldest_path = os.path.join(self.cache_dir, oldest)
+            try:
+                total_bytes -= os.path.getsize(oldest_path)
+                os.remove(oldest_path)
+            except OSError:
+                pass
 
     async def read_stream(
         self, text: str, model: str, voice: str
@@ -237,5 +275,6 @@ class TTSCache:
             with open(tmp_path, "wb") as f:
                 f.write(data)
             os.replace(tmp_path, path)
+            self._evict_if_needed()
 
         await asyncio.to_thread(_write)

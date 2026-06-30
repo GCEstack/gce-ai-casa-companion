@@ -126,16 +126,20 @@ async def _speak(self, text: str):
         await self._broadcast(VoiceMessage.state_change(VoiceState.SPEAKING))
         await self._broadcast(VoiceMessage.assistant_text(text))
         self._speaking.set()
+        self._speaking_done.clear()
         self._interrupted.clear()
         # Drop any leftover input audio so the VAD loop doesn't false-trigger
         # barge-in from audio that arrived before we started speaking.
-        self.input_buffer.get_and_clear()
-        self.vad_buffer.get_and_clear()
+        async with self.input_buffer.lock:
+            self.input_buffer.get_and_clear()
+        async with self.vad_buffer.lock:
+            self.vad_buffer.get_and_clear()
 
     if self.providers.tts is None:
         logger.error(f"{self._ctx} SPEAKING: no TTS provider configured")
         await self._broadcast(VoiceMessage.error("tts", "No TTS provider configured"))
         self._speaking.clear()
+        self._speaking_done.set()
         await self._return_to_idle()
         return
 
@@ -163,6 +167,7 @@ async def _speak(self, text: str):
         logger.error(f"{self._ctx} TTS error: {e}", exc_info=True)
     finally:
         self._speaking.clear()
+        self._speaking_done.set()
         if not self._interrupted.is_set():
             await self._return_to_idle()
 

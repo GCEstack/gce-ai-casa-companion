@@ -7,7 +7,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional
 
 import httpx
 
-from .common import logger
+from .common import logger, with_retries
 
 
 class GroqLLM:
@@ -29,25 +29,34 @@ class GroqLLM:
         max_tokens: int = 512,
     ) -> str:
         try:
-            resp = await self.client.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": self.model,
-                    "messages": messages,
-                    "temperature": temperature,
-                    "max_tokens": max_tokens,
-                },
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"].strip()
+            return await self._chat_with_retry(messages, temperature, max_tokens)
         except Exception as e:
             logger.error(f"Groq LLM failed: {e}", exc_info=True)
             return ""
+
+    @with_retries(max_attempts=3, backoff_seconds=(0.5, 1.0, 2.0))
+    async def _chat_with_retry(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.7,
+        max_tokens: int = 512,
+    ) -> str:
+        resp = await self.client.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"].strip()
 
     async def chat_stream(
         self,
@@ -102,7 +111,7 @@ class GeminiLLM:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gemini-2.5-flash-preview-05-20",
+        model: str = "gemini-2.5-flash",
     ):
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
         self.model = model
@@ -133,6 +142,19 @@ class GeminiLLM:
         temperature: float = 0.7,
         max_tokens: int = 512,
     ) -> str:
+        try:
+            return await self._chat_with_retry(messages, temperature, max_tokens)
+        except Exception as e:
+            logger.error(f"Gemini LLM failed: {e}", exc_info=True)
+            return ""
+
+    @with_retries(max_attempts=3, backoff_seconds=(0.5, 1.0, 2.0))
+    async def _chat_with_retry(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.7,
+        max_tokens: int = 512,
+    ) -> str:
         system_instruction, contents = self._to_gemini_contents(messages)
         payload: Dict[str, Any] = {
             "contents": contents,
@@ -145,16 +167,12 @@ class GeminiLLM:
             payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
 
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
-        try:
-            resp = await self.client.post(url, json=payload, timeout=60.0)
-            resp.raise_for_status()
-            data = resp.json()
-            candidate = data.get("candidates", [{}])[0]
-            text = candidate.get("content", {}).get("parts", [{}])[0].get("text", "")
-            return text.strip()
-        except Exception as e:
-            logger.error(f"Gemini LLM failed: {e}", exc_info=True)
-            return ""
+        resp = await self.client.post(url, json=payload, timeout=60.0)
+        resp.raise_for_status()
+        data = resp.json()
+        candidate = data.get("candidates", [{}])[0]
+        text = candidate.get("content", {}).get("parts", [{}])[0].get("text", "")
+        return text.strip()
 
     async def chat_stream(
         self,

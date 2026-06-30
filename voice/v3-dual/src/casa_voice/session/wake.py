@@ -17,7 +17,13 @@ async def _wait_for_wake(self) -> Optional[str]:
     if self.wake_word_detector:
         return await self._wait_for_wake_porcupine()
 
-    # Fallback: STT-based wake phrase detection.
+    # Fallback: STT-based wake phrase detection (only if STT is configured).
+    if self.providers.stt is None:
+        logger.error(f"[{self.session_id}] IDLE: no wake-word detector and no STT provider")
+        await self._broadcast(VoiceMessage.error("config", "No speech recognition available"))
+        # Prevent a tight error loop; sleep before the caller retries IDLE.
+        await asyncio.sleep(2.0)
+        return None
     return await self._wait_for_wake_stt()
 
 
@@ -29,10 +35,8 @@ async def _wait_for_wake_porcupine(self) -> Optional[str]:
 
     while not detected_keyword:
         self._wake_event.clear()
-        try:
-            await asyncio.wait_for(self._wake_event.wait(), timeout=0.05)
-        except asyncio.TimeoutError:
-            pass
+        # Block until audio arrives or the state changes out of IDLE.
+        await self._wake_event.wait()
 
         # A manual wake command (e.g. push-to-talk button) can move us out of IDLE.
         if self.state != VoiceState.IDLE:
@@ -66,10 +70,8 @@ async def _wait_for_wake_stt(self) -> Optional[str]:
     logger.info(f"[{self.session_id}] IDLE: STT-based wake listener active")
     while True:
         self._wake_event.clear()
-        try:
-            await asyncio.wait_for(self._wake_event.wait(), timeout=0.05)
-        except asyncio.TimeoutError:
-            pass
+        # Block until audio arrives or the state changes out of IDLE.
+        await self._wake_event.wait()
 
         # A manual wake command (e.g. push-to-talk button) can move us out of IDLE.
         if self.state != VoiceState.IDLE:
@@ -147,6 +149,7 @@ async def _collect_short_utterance(self) -> bytes:
     for _ in range(max_frames):
         self._wake_event.clear()
         try:
+            # Wait for more audio, but cap silence so we don't wait forever.
             await asyncio.wait_for(self._wake_event.wait(), timeout=0.05)
         except asyncio.TimeoutError:
             pass

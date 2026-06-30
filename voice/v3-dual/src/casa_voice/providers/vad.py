@@ -55,6 +55,10 @@ class SileroVAD:
         logger.info("Silero VAD: starting background load...")
         try:
             import torch
+            torch_hub_dir = os.environ.get("TORCH_HOME")
+            if torch_hub_dir:
+                torch.hub.set_dir(torch_hub_dir)
+                logger.info(f"Silero VAD: using torch hub dir {torch_hub_dir}")
             model, utils = await asyncio.to_thread(
                 torch.hub.load,
                 repo_or_dir="snakers4/silero-vad",

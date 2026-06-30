@@ -49,6 +49,7 @@ async def _process_native_audio(self, audio_buffer: bytes):
                         self.state = VoiceState.SPEAKING
                         await self._broadcast(VoiceMessage.state_change(VoiceState.SPEAKING))
                         self._speaking.set()
+                        self._speaking_done.clear()
                         self._interrupted.clear()
                     if full_assistant_text:
                         await self._broadcast(VoiceMessage.assistant_text(full_assistant_text))
@@ -72,6 +73,7 @@ async def _process_native_audio(self, audio_buffer: bytes):
         await self._broadcast(VoiceMessage.error("native_audio_failed", "Sorry, I had trouble hearing you. Try again!"))
     finally:
         self._speaking.clear()
+        self._speaking_done.set()
         # Update native history for context across quick-chat turns.
         if user_transcript:
             self._native_history.append({"role": "user", "content": user_transcript})

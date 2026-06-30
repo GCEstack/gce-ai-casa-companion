@@ -1,11 +1,17 @@
-"""In-memory phone-as-parent-microphone pairing manager.
+"""Phone-as-parent-microphone pairing manager.
 
 A kid-side session creates a short-lived pairing code. A parent phone joins by
 opening the realtime WebSocket with the pairing's join token and session id.
+
+Two implementations are provided:
+  - PairingManager: in-memory (suitable for single-instance deployments).
+  - RedisPairingManager: Redis-backed (survives redeploys, works across replicas).
 """
 
 import asyncio
+import json
 import logging
+import os
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -148,3 +154,148 @@ class PairingManager:
             if not code:
                 return None
             return self._get_unlocked(code)
+
+
+class RedisPairingManager:
+    """Redis-backed pairing manager with TTL-based expiration.
+
+    Works across replicas and survives server redeploys.
+    """
+
+    _ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    _CODE_LENGTH = 6
+    _TTL_SECONDS = 600  # 10 minutes
+
+    def __init__(self, redis_url: Optional[str] = None):
+        import redis.asyncio as redis
+        self._redis_url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        self._client = redis.from_url(self._redis_url)
+        self._lock = asyncio.Lock()
+
+    def _now(self) -> datetime:
+        return datetime.now(timezone.utc)
+
+    def _generate_code(self) -> str:
+        return "".join(secrets.choice(self._ALPHABET) for _ in range(self._CODE_LENGTH))
+
+    def _generate_session_id(self) -> str:
+        return f"pair-{secrets.token_urlsafe(12)}"
+
+    def _generate_token(self) -> str:
+        return secrets.token_urlsafe(24)
+
+    def _key_code(self, code: str) -> str:
+        return f"casa:pairing:code:{code}"
+
+    def _key_token(self, token: str) -> str:
+        return f"casa:pairing:token:{token}"
+
+    def _key_session(self, session_id: str) -> str:
+        return f"casa:pairing:session:{session_id}"
+
+    def _pairing_to_json(self, pairing: Pairing) -> str:
+        return json.dumps({
+            "code": pairing.code,
+            "session_id": pairing.session_id,
+            "join_token": pairing.join_token,
+            "character": pairing.character,
+            "mode": pairing.mode,
+            "created_at": pairing.created_at.isoformat(),
+            "expires_at": pairing.expires_at.isoformat(),
+        })
+
+    def _pairing_from_json(self, data: str) -> Pairing:
+        obj = json.loads(data)
+        return Pairing(
+            code=obj["code"],
+            session_id=obj["session_id"],
+            join_token=obj["join_token"],
+            character=obj["character"],
+            mode=obj["mode"],
+            created_at=datetime.fromisoformat(obj["created_at"]),
+            expires_at=datetime.fromisoformat(obj["expires_at"]),
+        )
+
+    async def _get_unlocked(self, code: str) -> Optional[Pairing]:
+        data = await self._client.get(self._key_code(code))
+        if data is None:
+            return None
+        try:
+            pairing = self._pairing_from_json(data)
+        except Exception:
+            await self._client.delete(self._key_code(code))
+            return None
+        if self._now() >= pairing.expires_at:
+            await self._client.delete(self._key_code(code))
+            await self._client.delete(self._key_token(pairing.join_token))
+            await self._client.delete(self._key_session(pairing.session_id))
+            return None
+        return pairing
+
+    async def cleanup(self) -> int:
+        """Redis TTL handles expiration; this method scans for stale entries.
+
+        For large deployments use a dedicated Redis key with expiration or a
+        scheduled job. Here we just return 0 to keep the interface compatible.
+        """
+        return 0
+
+    async def create(
+        self,
+        character: str = "default",
+        mode: str = "default",
+    ) -> Pairing:
+        async with self._lock:
+            for _ in range(10):
+                code = self._generate_code()
+                existing = await self._client.get(self._key_code(code))
+                if existing is None:
+                    break
+            else:
+                raise RuntimeError("Could not generate a unique pairing code")
+
+            session_id = self._generate_session_id()
+            token = self._generate_token()
+            created_at = self._now()
+            expires_at = created_at + timedelta(seconds=self._TTL_SECONDS)
+            pairing = Pairing(
+                code=code,
+                session_id=session_id,
+                join_token=token,
+                character=character,
+                mode=mode,
+                created_at=created_at,
+                expires_at=expires_at,
+            )
+            data = self._pairing_to_json(pairing)
+            pipe = self._client.pipeline()
+            pipe.setex(self._key_code(code), self._TTL_SECONDS, data)
+            pipe.setex(self._key_token(token), self._TTL_SECONDS, code)
+            pipe.setex(self._key_session(session_id), self._TTL_SECONDS, code)
+            await pipe.execute()
+            logger.info(
+                f"[RedisPairingManager] Created pairing {code} for session {session_id} "
+                f"(character={character}, mode={mode})"
+            )
+            return pairing
+
+    async def get(self, code: str) -> Optional[Pairing]:
+        return await self._get_unlocked(code)
+
+    async def get_by_token(self, token: str) -> Optional[Pairing]:
+        code = await self._client.get(self._key_token(token))
+        if code is None:
+            return None
+        return await self._get_unlocked(code.decode("utf-8") if isinstance(code, bytes) else code)
+
+    async def get_by_session_id(self, session_id: str) -> Optional[Pairing]:
+        code = await self._client.get(self._key_session(session_id))
+        if code is None:
+            return None
+        return await self._get_unlocked(code.decode("utf-8") if isinstance(code, bytes) else code)
+
+    async def close(self):
+        try:
+            await self._client.close()
+        except Exception as e:
+            logger.warning(f"Redis pairing client close error: {e}")

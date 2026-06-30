@@ -77,6 +77,7 @@ async def _process_and_speak_streaming(self, text: str):
                 await sentence_queue.put(buffer.strip())
         except Exception as e:
             logger.error(f"[{self.session_id}] LLM stream error: {e}", exc_info=True)
+            await self._broadcast(VoiceMessage.error("llm", "Sorry, I had trouble thinking. Try again!"))
         finally:
             await sentence_queue.put(None)
             llm_done.set()
@@ -97,8 +98,11 @@ async def _process_and_speak_streaming(self, text: str):
                         self.state = VoiceState.SPEAKING
                         await self._broadcast(VoiceMessage.state_change(VoiceState.SPEAKING))
                         self._speaking.set()
+                        self._speaking_done.clear()
                         self._interrupted.clear()
+                    async with self.input_buffer.lock:
                         self.input_buffer.get_and_clear()
+                    async with self.vad_buffer.lock:
                         self.vad_buffer.get_and_clear()
 
                 logger.info(f"[{self.session_id}] TTS streaming sentence ({len(sentence)} chars)")
@@ -112,13 +116,28 @@ async def _process_and_speak_streaming(self, text: str):
                     break
         except Exception as e:
             logger.error(f"[{self.session_id}] TTS streaming error: {e}", exc_info=True)
+            await self._broadcast(VoiceMessage.error("tts", "Sorry, I had trouble speaking. Try again!"))
 
+    pipeline_error: Optional[Exception] = None
     try:
         await asyncio.gather(llm_producer(), tts_consumer())
     except Exception as e:
+        pipeline_error = e
         logger.error(f"[{self.session_id}] Streaming pipeline error: {e}", exc_info=True)
+        await self._broadcast(VoiceMessage.error("pipeline", "Sorry, something went wrong. Try again!"))
 
     self._speaking.clear()
+    self._speaking_done.set()
+
+    # If something failed but we never produced audio, try a spoken apology.
+    if pipeline_error and tts_seq == 0 and self.providers.tts is not None:
+        try:
+            apology = "Sorry, I didn't catch that. Can you say it again?"
+            async for chunk in self.providers.tts.synthesize_stream(apology, self.character, self.mode):
+                await self._broadcast(VoiceMessage.tts_chunk(chunk, sequence=tts_seq))
+                tts_seq += 1
+        except Exception as apology_err:
+            logger.warning(f"[{self.session_id}] Apology TTS also failed: {apology_err}")
 
     # Persist the complete exchange.
     if full_response.strip():
