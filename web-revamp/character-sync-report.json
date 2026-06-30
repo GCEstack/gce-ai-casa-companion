@@ -1,0 +1,333 @@
+{
+  "generatedAt": "2026-06-30T05:19:28.945Z",
+  "total": 46,
+  "errors": 0,
+  "videoFallbacks": 3,
+  "characters": [
+    {
+      "slug": "corvo",
+      "portrait": "/characters/corvo.png",
+      "idleVideo": "/videos/corvo_idle.mp4",
+      "speakingVideo": "/videos/corvo_speaking.mp4",
+      "voiceIntro": "/audio/corvo-intro.mp3"
+    },
+    {
+      "slug": "gufo",
+      "portrait": "/characters/gufo.png",
+      "idleVideo": "/videos/gufo_idle.mp4",
+      "speakingVideo": "/videos/gufo_speaking.mp4",
+      "voiceIntro": "/audio/gufo-intro.mp3"
+    },
+    {
+      "slug": "orsetto",
+      "portrait": "/characters/orsetto.png",
+      "idleVideo": "/videos/orsetto_idle.mp4",
+      "speakingVideo": "/videos/orsetto_speaking.mp4",
+      "voiceIntro": "/audio/orsetto-intro.mp3"
+    },
+    {
+      "slug": "coniglio",
+      "portrait": "/characters/coniglio.png",
+      "idleVideo": "/videos/coniglio_idle.mp4",
+      "speakingVideo": "/videos/coniglio_speaking.mp4",
+      "voiceIntro": "/audio/coniglio-intro.mp3"
+    },
+    {
+      "slug": "tartaruga",
+      "portrait": "/characters/tartaruga.webp",
+      "idleVideo": "/videos/tartaruga_idle.mp4",
+      "speakingVideo": "/videos/tartaruga_speaking.mp4",
+      "voiceIntro": "/audio/tartaruga-intro.mp3"
+    },
+    {
+      "slug": "elefante",
+      "portrait": "/characters/elefante.png",
+      "idleVideo": "/videos/elefante_idle.mp4",
+      "speakingVideo": "/videos/elefante_speaking.mp4",
+      "voiceIntro": "/audio/elefante-intro.mp3"
+    },
+    {
+      "slug": "leone",
+      "portrait": "/characters/leone.png",
+      "idleVideo": "/videos/leone_idle.mp4",
+      "speakingVideo": "/videos/leone_speaking.mp4",
+      "voiceIntro": "/audio/leone-intro.mp3"
+    },
+    {
+      "slug": "delfino",
+      "portrait": "/characters/delfino.png",
+      "idleVideo": "/videos/delfino_idle.mp4",
+      "speakingVideo": "/videos/delfino_speaking.mp4",
+      "voiceIntro": "/audio/delfino-intro.mp3"
+    },
+    {
+      "slug": "volpe",
+      "portrait": "/characters/volpe.png",
+      "idleVideo": "/videos/volpe_idle.mp4",
+      "speakingVideo": "/videos/volpe_speaking.mp4",
+      "voiceIntro": "/audio/volpe-intro.mp3"
+    },
+    {
+      "slug": "drago",
+      "portrait": "/characters/drago.png",
+      "idleVideo": "/videos/drago_idle.mp4",
+      "speakingVideo": "/videos/drago_speaking.mp4",
+      "voiceIntro": "/audio/drago-intro.mp3"
+    },
+    {
+      "slug": "xolo",
+      "portrait": "/characters/xolo.png",
+      "idleVideo": null,
+      "speakingVideo": null,
+      "voiceIntro": "/audio/xolo-intro.mp3",
+      "fallback": true
+    },
+    {
+      "slug": "scheletro",
+      "portrait": "/characters/scheletro.png",
+      "idleVideo": "/videos/scheletro_idle.mp4",
+      "speakingVideo": "/videos/scheletro_speaking.mp4",
+      "voiceIntro": "/audio/scheletro-intro.mp3"
+    },
+    {
+      "slug": "ragno",
+      "portrait": "/characters/ragno.png",
+      "idleVideo": "/videos/ragno_idle.mp4",
+      "speakingVideo": "/videos/ragno_speaking.mp4",
+      "voiceIntro": "/audio/ragno-intro.mp3"
+    },
+    {
+      "slug": "veloce",
+      "portrait": "/characters/veloce.png",
+      "idleVideo": "/videos/veloce_idle.mp4",
+      "speakingVideo": "/videos/veloce_speaking.mp4",
+      "voiceIntro": "/audio/veloce-intro.mp3"
+    },
+    {
+      "slug": "stellino",
+      "portrait": "/characters/stellino.png",
+      "idleVideo": null,
+      "speakingVideo": null,
+      "voiceIntro": "/audio/stellino-intro.mp3",
+      "fallback": true
+    },
+    {
+      "slug": "sacco",
+      "portrait": "/characters/sacco.png",
+      "idleVideo": "/videos/sacco_idle.mp4",
+      "speakingVideo": "/videos/sacco_speaking.mp4",
+      "voiceIntro": "/audio/sacco-intro.mp3"
+    },
+    {
+      "slug": "spugna",
+      "portrait": "/characters/spugna.png",
+      "idleVideo": "/videos/spugna_idle.mp4",
+      "speakingVideo": "/videos/spugna_speaking.mp4",
+      "voiceIntro": "/audio/spugna-intro.mp3"
+    },
+    {
+      "slug": "rocco",
+      "portrait": "/characters/rocco.png",
+      "idleVideo": "/videos/rocco_idle.mp4",
+      "speakingVideo": "/videos/rocco_speaking.mp4",
+      "voiceIntro": "/audio/rocco-intro.mp3"
+    },
+    {
+      "slug": "vinile",
+      "portrait": "/characters/vinile.png",
+      "idleVideo": null,
+      "speakingVideo": null,
+      "voiceIntro": "/audio/vinile-intro.mp3",
+      "fallback": true
+    },
+    {
+      "slug": "battito",
+      "portrait": "/characters/battito.png",
+      "idleVideo": "/videos/battito_idle.mp4",
+      "speakingVideo": "/videos/battito_speaking.mp4",
+      "voiceIntro": "/audio/battito-intro.mp3"
+    },
+    {
+      "slug": "onda",
+      "portrait": "/characters/onda.png",
+      "idleVideo": "/videos/onda_idle.mp4",
+      "speakingVideo": "/videos/onda_speaking.mp4",
+      "voiceIntro": "/audio/onda-intro.mp3"
+    },
+    {
+      "slug": "maestra",
+      "portrait": "/characters/maestra.png",
+      "idleVideo": "/videos/maestra_idle.mp4",
+      "speakingVideo": "/videos/maestra_speaking.mp4",
+      "voiceIntro": "/audio/maestra-intro.mp3"
+    },
+    {
+      "slug": "costruttore",
+      "portrait": "/characters/costruttore.png",
+      "idleVideo": "/videos/costruttore_idle.mp4",
+      "speakingVideo": "/videos/costruttore_speaking.mp4",
+      "voiceIntro": "/audio/costruttore-intro.mp3"
+    },
+    {
+      "slug": "dottore",
+      "portrait": "/characters/dottore.png",
+      "idleVideo": "/videos/dottore_idle.mp4",
+      "speakingVideo": "/videos/dottore_speaking.mp4",
+      "voiceIntro": "/audio/dottore-intro.mp3"
+    },
+    {
+      "slug": "pietro",
+      "portrait": "/characters/pietro.png",
+      "idleVideo": "/videos/pietro_idle.mp4",
+      "speakingVideo": "/videos/pietro_speaking.mp4",
+      "voiceIntro": "/audio/pietro-intro.mp3"
+    },
+    {
+      "slug": "borsa",
+      "portrait": "/characters/borsa.png",
+      "idleVideo": "/videos/borsa_idle.mp4",
+      "speakingVideo": "/videos/borsa_speaking.mp4",
+      "voiceIntro": "/audio/borsa-intro.mp3"
+    },
+    {
+      "slug": "mamma",
+      "portrait": "/characters/mamma.png",
+      "idleVideo": "/videos/mamma_idle.mp4",
+      "speakingVideo": "/videos/mamma_speaking.mp4",
+      "voiceIntro": "/audio/mamma-intro.mp3"
+    },
+    {
+      "slug": "verita",
+      "portrait": "/characters/verita.png",
+      "idleVideo": "/videos/verita_idle.mp4",
+      "speakingVideo": "/videos/verita_speaking.mp4",
+      "voiceIntro": "/audio/verita-intro.mp3"
+    },
+    {
+      "slug": "forza",
+      "portrait": "/characters/forza.png",
+      "idleVideo": "/videos/forza_idle.mp4",
+      "speakingVideo": "/videos/forza_speaking.mp4",
+      "voiceIntro": "/audio/forza-intro.mp3"
+    },
+    {
+      "slug": "bella",
+      "portrait": "/characters/bella.png",
+      "idleVideo": "/videos/bella_idle.mp4",
+      "speakingVideo": "/videos/bella_speaking.mp4",
+      "voiceIntro": "/audio/bella-intro.mp3"
+    },
+    {
+      "slug": "cuoco",
+      "portrait": "/characters/cuoco.png",
+      "idleVideo": "/videos/cuoco_idle.mp4",
+      "speakingVideo": "/videos/cuoco_speaking.mp4",
+      "voiceIntro": "/audio/cuoco-intro.mp3"
+    },
+    {
+      "slug": "nonna",
+      "portrait": "/characters/nonna.png",
+      "idleVideo": "/videos/nonna_idle.mp4",
+      "speakingVideo": "/videos/nonna_speaking.mp4",
+      "voiceIntro": "/audio/nonna-intro.mp3"
+    },
+    {
+      "slug": "cucita",
+      "portrait": "/characters/cucita.png",
+      "idleVideo": "/videos/cucita_idle.mp4",
+      "speakingVideo": "/videos/cucita_speaking.mp4",
+      "voiceIntro": "/audio/cucita-intro.mp3"
+    },
+    {
+      "slug": "polpo",
+      "portrait": "/characters/polpo.png",
+      "idleVideo": "/videos/polpo_idle.mp4",
+      "speakingVideo": "/videos/polpo_speaking.mp4",
+      "voiceIntro": "/audio/polpo-intro.mp3"
+    },
+    {
+      "slug": "jack",
+      "portrait": "/characters/jack.png",
+      "idleVideo": "/videos/jack_idle.mp4",
+      "speakingVideo": "/videos/jack_speaking.mp4",
+      "voiceIntro": "/audio/jack-intro.mp3"
+    },
+    {
+      "slug": "agenda",
+      "portrait": "/characters/agenda.png",
+      "idleVideo": "/videos/agenda_idle.mp4",
+      "speakingVideo": "/videos/agenda_speaking.mp4",
+      "voiceIntro": "/audio/agenda-intro.mp3"
+    },
+    {
+      "slug": "alien",
+      "portrait": "/characters/alien.png",
+      "idleVideo": "/videos/alien_idle.mp4",
+      "speakingVideo": "/videos/alien_speaking.mp4",
+      "voiceIntro": "/audio/alien-intro.mp3"
+    },
+    {
+      "slug": "dragon",
+      "portrait": "/characters/dragon.png",
+      "idleVideo": "/videos/dragon_idle.mp4",
+      "speakingVideo": "/videos/dragon_speaking.mp4",
+      "voiceIntro": "/audio/dragon-intro.mp3"
+    },
+    {
+      "slug": "fraggl",
+      "portrait": "/characters/fraggl.png",
+      "idleVideo": "/videos/fraggl_idle.mp4",
+      "speakingVideo": "/videos/fraggl_speaking.mp4",
+      "voiceIntro": "/audio/fraggl-intro.mp3"
+    },
+    {
+      "slug": "grouch",
+      "portrait": "/characters/grouch.png",
+      "idleVideo": "/videos/grouch_idle.mp4",
+      "speakingVideo": "/videos/grouch_speaking.mp4",
+      "voiceIntro": "/audio/grouch-intro.mp3"
+    },
+    {
+      "slug": "lucha_bee",
+      "portrait": "/characters/lucha_bee.png",
+      "idleVideo": "/videos/lucha_bee_idle.mp4",
+      "speakingVideo": "/videos/lucha_bee_speaking.mp4",
+      "voiceIntro": "/audio/lucha_bee-intro.mp3"
+    },
+    {
+      "slug": "ninja_cat",
+      "portrait": "/characters/ninja_cat.png",
+      "idleVideo": "/videos/ninja_cat_idle.mp4",
+      "speakingVideo": "/videos/ninja_cat_speaking.mp4",
+      "voiceIntro": "/audio/ninja_cat-intro.mp3"
+    },
+    {
+      "slug": "papa",
+      "portrait": "/characters/papa.png",
+      "idleVideo": "/videos/papa_idle.mp4",
+      "speakingVideo": "/videos/papa_speaking.mp4",
+      "voiceIntro": "/audio/papa-intro.mp3"
+    },
+    {
+      "slug": "pirate_parrot",
+      "portrait": "/characters/pirate_parrot.png",
+      "idleVideo": "/videos/pirate_parrot_idle.mp4",
+      "speakingVideo": "/videos/pirate_parrot_speaking.mp4",
+      "voiceIntro": "/audio/pirate_parrot-intro.mp3"
+    },
+    {
+      "slug": "transformer_bot",
+      "portrait": "/characters/transformer_bot.png",
+      "idleVideo": "/videos/transformer_bot_idle.mp4",
+      "speakingVideo": "/videos/transformer_bot_speaking.mp4",
+      "voiceIntro": "/audio/transformer_bot-intro.mp3"
+    },
+    {
+      "slug": "trex",
+      "portrait": "/characters/trex.png",
+      "idleVideo": "/videos/trex_idle.mp4",
+      "speakingVideo": "/videos/trex_speaking.mp4",
+      "voiceIntro": "/audio/trex-intro.mp3"
+    }
+  ]
+}

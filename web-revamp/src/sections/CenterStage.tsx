@@ -209,7 +209,7 @@ export default function CenterStage({ character, activeMode, onModeChange, voice
           <img
             src={`/characters/${character.slug}.png`}
             alt={character.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover portrait-breathe-loop"
           />
         )}
 

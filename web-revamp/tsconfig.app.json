@@ -14,7 +14,7 @@
         "./src/*"
       ],
       "@casa/characters": [
-        "./src/lib/@casa/characters/src/index.ts"
+        "./src/lib/@casa/characters/index.ts"
       ]
     },
     /* Bundler mode */

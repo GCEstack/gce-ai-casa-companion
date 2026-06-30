@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router';
 import type { Character } from '@/types';
+import { getCharacterMotion } from '@/lib/characterMotions';
 
 interface CharacterCardProps {
   character: Character;
@@ -9,6 +10,7 @@ interface CharacterCardProps {
 
 export default function CharacterCard({ character, role, featured }: CharacterCardProps) {
   const navigate = useNavigate();
+  const motion = getCharacterMotion(character.slug);
 
   return (
     <button
@@ -18,7 +20,7 @@ export default function CharacterCard({ character, role, featured }: CharacterCa
       <img
         src={character.portrait}
         alt={character.name}
-        className="char-portrait"
+        className={`char-portrait motion-${motion}`}
       />
       <div className="char-name">{character.name}</div>
       {role && <div className="char-role">{role}</div>}
