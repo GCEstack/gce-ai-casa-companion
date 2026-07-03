@@ -6,11 +6,13 @@ A progressive web app for kids (and grown-ups) to chat with Casa Companion chara
 
 | App | URL | Personalization |
 |-----|-----|-----------------|
-| Main | https://web-mobile-omega-sable.vercel.app | Full 46-character roster |
+| Main | https://mobile-delta-pied.vercel.app | Full 46-character roster |
 | Peter | https://web-mobile-peter.vercel.app | `pietro` featured; `pietro,leone,drago,trex,volpe,ninja_cat` enabled |
 | Liam | https://web-mobile-liam.vercel.app | `tartaruga` featured; `tartaruga,corvo,veloce,jack` enabled |
 | Jimmy | https://web-mobile-jimmy.vercel.app | `papa` featured; `papa,rocco,sacco` enabled |
 | Jenny | https://web-mobile-jenny.vercel.app | `agenda` featured; `agenda,scheletro,dottore,maestra,bella` enabled |
+
+> **Note:** The old `web-mobile-omega-sable.vercel.app` URL and the `casa-mobile-*.vercel.app` URLs are currently 404. The Main build now deploys from Vercel project `mobile` to `mobile-delta-pied.vercel.app`. The child builds (Peter/Liam/Jimmy/Jenny) still need to be redeployed from their own Vercel projects.
 
 ## Features
 
@@ -198,3 +200,29 @@ Current precache is approximately **150+ MB** (idle/speaking videos + character 
 ## License
 
 This project is part of the Casa Companion monorepo. See the root repository for licensing details.
+
+## Purpose
+The Casa Companion project in the Lares Family portfolio.
+
+## Status
+Active
+
+## Family Pod
+- **Lead:** Sintonia
+- **Members:** Costruito, Falco, Vesta, Tartaruga
+
+## Stack
+- **Languages:** TypeScript, JavaScript
+- **Frameworks:** Next.js, React Native, Expo
+- **Apis:** OpenAI realtime, OpenAI TTS, Deepgram STT, Groq, Cloudflare Workers AI
+
+## Quick Commands
+
+- `open casa`
+- `audit casa`
+
+## Backlog
+See `BACKLOG.md`.
+
+## Risks
+TBD — add risks and mitigations as they are identified.
