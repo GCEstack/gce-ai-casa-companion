@@ -4,6 +4,7 @@ import VideoBackground from '@/components/VideoBackground';
 import ParticleField from '@/components/ParticleField';
 import CenterStage from '@/sections/CenterStage';
 import { getCharacterBySlug } from '@/lib/characters';
+import { getCharacterVideos } from '@/lib/characterVideos';
 import { findModeBySlug, introductionMode, modeFromFeature } from '@/lib/modes';
 import { characterConfigs } from '@/lib/characterConfig';
 import type { Character, ModeConfig } from '@/types';
@@ -26,6 +27,12 @@ function CharacterDetailContent({ character, activeMode }: CharacterDetailConten
   const hasTriggeredRef = useRef(false);
 
   const voice = useVoiceChat(character.slug, activeMode);
+
+  // Background video switches between idle and speaking just like CenterStage.
+  const { idle: idleVideo, speaking: speakingVideo } = getCharacterVideos(character.slug);
+  const backgroundVideoSrc = voice.isSpeaking && speakingVideo
+    ? speakingVideo
+    : idleVideo || character.videoSrc;
 
   // Pietro auto-onboarding
   useEffect(() => {
@@ -126,7 +133,7 @@ function CharacterDetailContent({ character, activeMode }: CharacterDetailConten
   return (
     <div className="relative min-h-full flex flex-col">
       {/* Video Background */}
-      <VideoBackground blur={40} brightness={0.35} overlayOpacity={0.7} accentColor={character.accentColor} videoSrc={character.videoSrc} />
+      <VideoBackground blur={40} brightness={0.35} overlayOpacity={0.7} accentColor={character.accentColor} videoSrc={backgroundVideoSrc} />
 
       {/* Character-themed particles */}
       <ParticleField
