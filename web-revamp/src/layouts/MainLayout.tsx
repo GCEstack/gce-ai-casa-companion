@@ -13,11 +13,11 @@ export function MainLayout() {
     <>
       <Background />
       <div className={`app-layout ${isLanding ? 'landing-layout' : ''}`}>
-        <TopToolbar />
+        {isLanding && <TopToolbar />}
         <main className="main-content">
           <Outlet />
         </main>
-        {!isLanding && <RightSidebar character={state.selectedCharacter} />}
+        {isLanding && <RightSidebar character={state.selectedCharacter} compact />}
       </div>
     </>
   );

@@ -3,14 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import VideoBackground from '@/components/VideoBackground';
 import ParticleField from '@/components/ParticleField';
 import CenterStage from '@/sections/CenterStage';
-import BottomBar from '@/components/BottomBar';
-import { characters, getCharacterBySlug } from '@/lib/characters';
+import { getCharacterBySlug } from '@/lib/characters';
 import { findModeBySlug, introductionMode, modeFromFeature } from '@/lib/modes';
 import { characterConfigs } from '@/lib/characterConfig';
 import type { Character, ModeConfig } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { useVoiceChat } from '@/hooks/useVoiceChat';
-import { useRelayVoiceChat } from '@/hooks/useRelayVoiceChat';
 import { hasOnboarded, markOnboarded } from '@/hooks/useOnboarding';
 import { fetchBackendTTS } from '@/lib/tts';
 
@@ -20,45 +18,14 @@ const WELCOME_SCRIPT =
 interface CharacterDetailContentProps {
   character: Character;
   activeMode: ModeConfig;
-  onModeChange: (mode: ModeConfig) => void;
 }
 
-function CompanionStrip({ activeSlug }: { activeSlug: string }) {
-  const navigate = useNavigate();
-
-  return (
-    <div className="companion-strip relative z-20">
-      {characters.map((c) => (
-        <button
-          key={c.slug}
-          type="button"
-          className={`companion-pill ${c.slug === activeSlug ? 'active' : ''}`}
-          onClick={() => navigate(`/character/${c.slug}`)}
-        >
-          <img src={c.portrait} alt={c.name} style={{ width: 24, height: 24 }} />
-          <span>{c.name}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function CharacterDetailContent({ character, activeMode, onModeChange }: CharacterDetailContentProps) {
+function CharacterDetailContent({ character, activeMode }: CharacterDetailContentProps) {
   const [searchParams] = useSearchParams();
-  const { state, dispatch } = useApp();
+  const { dispatch } = useApp();
   const hasTriggeredRef = useRef(false);
-  const [relayInfo, setRelayInfo] = useState<{ sessionId: string; token: string } | null>(null);
 
-  const localVoice = useVoiceChat(character.slug, activeMode);
-  const relayVoice = useRelayVoiceChat({
-    sessionId: relayInfo?.sessionId ?? '',
-    token: relayInfo?.token ?? '',
-    deviceId: relayInfo ? `relay-${crypto.randomUUID()}` : '',
-    characterSlug: character.slug,
-    modeSlug: activeMode.slug,
-  });
-
-  const voice = state.connectionMode === 'relay' ? relayVoice : localVoice;
+  const voice = useVoiceChat(character.slug, activeMode);
 
   // Pietro auto-onboarding
   useEffect(() => {
@@ -131,10 +98,7 @@ function CharacterDetailContent({ character, activeMode, onModeChange }: Charact
   }, [voice]);
 
   return (
-    <div className="relative min-h-full flex flex-col pb-16">
-      {/* Companion switcher */}
-      <CompanionStrip activeSlug={character.slug} />
-
+    <div className="relative min-h-full flex flex-col">
       {/* Video Background */}
       <VideoBackground blur={40} brightness={0.35} overlayOpacity={0.7} accentColor={character.accentColor} videoSrc={character.videoSrc} />
 
@@ -149,13 +113,8 @@ function CharacterDetailContent({ character, activeMode, onModeChange }: Charact
       <CenterStage
         character={character}
         activeMode={activeMode}
-        onModeChange={onModeChange}
         voice={voice}
-        onRelaySessionReady={setRelayInfo}
       />
-
-      {/* Bottom Bar */}
-      <BottomBar voice={voice} />
     </div>
   );
 }
@@ -206,13 +165,6 @@ export default function CharacterDetail() {
     }
   }, [character, slug, modeParam, navigate, dispatch]);
 
-  const handleModeChange = (mode: ModeConfig) => {
-    setActiveMode(mode);
-    dispatch({ type: 'SET_MODE', payload: mode });
-    // Update URL without navigation
-    navigate(`/character/${slug}/${mode.slug}`, { replace: true });
-  };
-
   if (!character) {
     return null;
   }
@@ -221,7 +173,6 @@ export default function CharacterDetail() {
     <CharacterDetailContent
       character={character}
       activeMode={activeMode}
-      onModeChange={handleModeChange}
     />
   );
 }
