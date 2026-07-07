@@ -528,6 +528,38 @@ def _wav_header(
 
 # ── Simple HTTP chat endpoint (no WebSocket) ──────────────────────────────────
 
+# Mode-specific system prompt additions. See CHARACTER_VOICE_MAP.md.
+_MODE_PROMPTS = {
+    "teach": "You are in teaching mode. Guide the child to discover answers through questions. Never give the answer directly.",
+    "calm": "You are in calm mode. Speak softly and slowly. Help the child breathe and relax. Use gentle, soothing language.",
+    "laugh": "You are in play mode. Be silly, tell jokes, make funny sounds. The goal is laughter and joy.",
+    "story": "You are in story mode. Tell an engaging story where the child is the hero. Use vivid descriptions and cliffhangers.",
+    "music": "You are in music mode. Sing, rhyme, teach rhythm. Make everything musical and fun.",
+    "learn": "You are in learning mode. Teach something new in a fun way. Use examples, ask questions, make it interactive.",
+}
+
+# Frontend/button mode slugs to canonical mode keys.
+_MODE_SLUG_MAP = {
+    "teaching-mode": "teach",
+    "teach": "teach",
+    "calm-breathe": "calm",
+    "calm": "calm",
+    "play": "laugh",
+    "laugh": "laugh",
+    "story-time": "story",
+    "story": "story",
+    "music-rhythm": "music",
+    "music": "music",
+    "homework-helper": "learn",
+    "stem-sparks": "learn",
+    "geography": "learn",
+    "all-languages": "learn",
+    "coding": "learn",
+    "milestones": "learn",
+    "learn": "learn",
+}
+
+
 class ChatRequest(BaseModel):
     text: str
     character: Optional[str] = "default"
@@ -567,6 +599,11 @@ async def chat(req: ChatRequest):
             persona = f"{profile.prompt_prefix} Respond briefly (1-2 sentences). Be warm and fun."
         except Exception:
             pass
+
+    # Append mode-specific instructions if a recognized mode is passed.
+    canonical_mode = _MODE_SLUG_MAP.get(mode.lower(), mode.lower())
+    if canonical_mode in _MODE_PROMPTS:
+        persona = f"{persona} {_MODE_PROMPTS[canonical_mode]}"
 
     messages = [{"role": "system", "content": persona}]
     for turn in (req.history or [])[-6:]:
@@ -753,14 +790,42 @@ async def tap_get(
     return {"status": "ok", "session_id": session_id, "action": action}
 
 
-# OpenAI TTS fallback voices when the primary Gemini TTS fails or sounds off.
+# OpenAI TTS voices per character. See CHARACTER_VOICE_MAP.md.
 _OPENAI_TTS_VOICES = {
-    "mamma": "nova",
-    "delfino": "onyx",
     "tartaruga": "echo",
-    "rocco": "fable",
-    "pietro": "onyx",
+    "delfino": "shimmer",
+    "mamma": "nova",
+    "leone": "onyx",
+    "drago": "fable",
+    "corvo": "alloy",
+    "gufo": "echo",
+    "orsetto": "onyx",
+    "coniglio": "shimmer",
+    "elefante": "nova",
+    "volpe": "alloy",
+    "xolo": "alloy",
+    "scheletro": "fable",
+    "ragno": "alloy",
+    "veloce": "onyx",
+    "stellino": "shimmer",
+    "sacco": "nova",
+    "spugna": "nova",
+    "rocco": "onyx",
+    "vinile": "alloy",
+    "battito": "alloy",
+    "onda": "shimmer",
+    "maestra": "nova",
+    "costruttore": "onyx",
+    "dottore": "nova",
+    "pietro": "alloy",
+    "borsa": "alloy",
+    "verita": "onyx",
+    "forza": "shimmer",
     "bella": "shimmer",
+    "cuoco": "fable",
+    "nonna": "nova",
+    "cucita": "nova",
+    "polpo": "alloy",
     "default": "alloy",
 }
 
