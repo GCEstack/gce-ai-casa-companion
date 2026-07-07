@@ -85,6 +85,32 @@ function CharacterDetailContent({ character, activeMode }: CharacterDetailConten
     };
   }, [character.slug, searchParams, voice, dispatch]);
 
+  // Play character intro MP3 when landing on the character page.
+  useEffect(() => {
+    const introUrl = `/audio/characters/${character.slug}-intro.mp3`;
+    const audio = new Audio(introUrl);
+    audio.preload = 'auto';
+
+    const playIntro = async () => {
+      try {
+        await audio.play();
+        console.log('[intro] playing', introUrl);
+      } catch (err) {
+        // Browsers may block autoplay until user interaction. Log and continue.
+        console.warn('[intro] autoplay blocked or failed for', introUrl, err);
+      }
+    };
+
+    // Small delay so the page transition doesn't cut off the start.
+    const timer = setTimeout(playIntro, 300);
+
+    return () => {
+      clearTimeout(timer);
+      audio.pause();
+      audio.src = '';
+    };
+  }, [character.slug]);
+
   // Listen for toolbar mode-switch events
   useEffect(() => {
     const handler = (e: Event) => {
