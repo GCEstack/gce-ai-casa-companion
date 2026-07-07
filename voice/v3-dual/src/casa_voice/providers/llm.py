@@ -261,3 +261,98 @@ class OpenRouterLLM:
         resp.raise_for_status()
         data = resp.json()
         return data["choices"][0]["message"]["content"].strip()
+
+
+class OpenAILLM:
+    """LLM directly via OpenAI /chat/completions."""
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "gpt-4o-mini",
+    ):
+        self.api_key = api_key or os.environ.get("OPENAI_API_KEY", "")
+        self.model = model
+        self.client = httpx.AsyncClient(timeout=60.0)
+
+    async def chat(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.7,
+        max_tokens: int = 512,
+    ) -> str:
+        try:
+            return await self._chat_with_retry(messages, temperature, max_tokens)
+        except Exception as e:
+            logger.error(f"OpenAI LLM failed: {e}", exc_info=True)
+            return ""
+
+    @with_retries(max_attempts=3, backoff_seconds=(0.5, 1.0, 2.0))
+    async def _chat_with_retry(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.7,
+        max_tokens: int = 512,
+    ) -> str:
+        resp = await self.client.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"].strip()
+
+    async def chat_stream(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.7,
+        max_tokens: int = 512,
+    ) -> AsyncIterator[str]:
+        """Stream LLM text chunks as they arrive from OpenAI."""
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": True,
+        }
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        try:
+            async with self.client.stream(
+                "POST",
+                "https://api.openai.com/v1/chat/completions",
+                headers=headers,
+                json=payload,
+            ) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if not line.startswith("data: "):
+                        continue
+                    data = line[6:]
+                    if data == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
+                    if not chunk.get("choices"):
+                        continue
+                    delta = chunk["choices"][0].get("delta", {})
+                    content = delta.get("content")
+                    if content:
+                        yield content
+        except Exception as e:
+            logger.error(f"OpenAI LLM stream failed: {e}", exc_info=True)
+            raise
