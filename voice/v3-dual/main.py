@@ -32,7 +32,7 @@ from io import BytesIO
 from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request, HTTPException, Body, Depends
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request, HTTPException, Body, Depends, File, UploadFile
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, field_validator
 
@@ -585,6 +585,52 @@ async def chat(req: ChatRequest):
         raise HTTPException(status_code=502, detail="LLM returned empty response")
 
     return {"text": reply, "character": character, "mode": mode}
+
+
+# ── STT endpoint (OpenAI Whisper) ─────────────────────────────────────────────
+
+@app.post("/api/transcribe")
+async def transcribe(audio: UploadFile = File(...)):
+    """Transcribe an audio file using OpenAI Whisper.
+
+    The front-end records audio from the mic and POSTs it here.
+    Returns the transcript text.
+    """
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="OpenAI API key not configured")
+
+    audio_bytes = await audio.read()
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="Empty audio file")
+
+    # Whisper supports many formats; the browser typically sends webm/opus.
+    # OpenAI will decode it.
+    filename = audio.filename or "audio.webm"
+    if "." not in filename:
+        filename = "audio.webm"
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            files = {"file": (filename, BytesIO(audio_bytes), audio.content_type or "audio/webm")}
+            data = {"model": "whisper-1", "language": "en"}
+            resp = await client.post(
+                "https://api.openai.com/v1/audio/transcriptions",
+                headers={"Authorization": f"Bearer {api_key}"},
+                files=files,
+                data=data,
+            )
+            resp.raise_for_status()
+            result = resp.json()
+            text = result.get("text", "").strip()
+            if not text:
+                raise HTTPException(status_code=502, detail="Whisper returned empty transcript")
+            return {"text": text}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Transcription failed")
+        raise HTTPException(status_code=502, detail=f"Transcription failed: {str(e)}") from e
 
 
 # ── NFC / Physical Actions ────────────────────────────────────────────────────
