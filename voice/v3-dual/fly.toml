@@ -19,6 +19,8 @@ primary_region = "iad"
   NATIVE_AUDIO_ENABLED = "0"
   # TTS provider: "openai" (default, tts-1/nova) or "openrouter" (Gemini Flash with tags).
   TTS_PROVIDER = "openrouter"
+  # LLM provider: "gemini" (default if key set), "groq", or "openrouter".
+  LLM_PROVIDER = "openrouter"
   # Gemini model used for LLM. Override in env if a newer preview is available.
   GEMINI_MODEL = "gemini-2.5-flash"
 

@@ -7,7 +7,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional
 
 import httpx
 
-from .common import logger, with_retries
+from .common import OPENROUTER_BASE, logger, with_retries
 
 
 class GroqLLM:
@@ -210,3 +210,54 @@ class GeminiLLM:
         except Exception as e:
             logger.error(f"Gemini LLM stream failed: {e}", exc_info=True)
             raise
+
+
+class OpenRouterLLM:
+    """LLM via OpenRouter /chat/completions (OpenAI-compatible)."""
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "openai/gpt-4o-mini",
+    ):
+        self.api_key = api_key or os.environ.get("OPENROUTER_API_KEY", "")
+        self.model = model
+        self.client = httpx.AsyncClient(timeout=60.0)
+
+    async def chat(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.7,
+        max_tokens: int = 512,
+    ) -> str:
+        try:
+            return await self._chat_with_retry(messages, temperature, max_tokens)
+        except Exception as e:
+            logger.error(f"OpenRouter LLM failed: {e}", exc_info=True)
+            return ""
+
+    @with_retries(max_attempts=3, backoff_seconds=(0.5, 1.0, 2.0))
+    async def _chat_with_retry(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.7,
+        max_tokens: int = 512,
+    ) -> str:
+        resp = await self.client.post(
+            f"{OPENROUTER_BASE}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://casa-companion.io",
+                "X-Title": "Casa Companion Voice",
+            },
+            json={
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"].strip()

@@ -6,7 +6,7 @@ from typing import Optional
 
 from .character_router import CharacterVoiceRouter
 from .common import DEFAULT_LLM, logger
-from .llm import GeminiLLM, GroqLLM
+from .llm import GeminiLLM, GroqLLM, OpenRouterLLM
 from .native_audio import NativeAudioProvider
 from .stt import GroqSTT, OpenRouterSTT
 from .tts import OpenAIDirectTTS, OpenRouterTTS
@@ -45,7 +45,15 @@ class VoiceProviders:
             self.stt = None
 
         # LLM provider
-        if gemini_key:
+        llm_provider = os.environ.get("LLM_PROVIDER", "").strip().lower()
+
+        if llm_provider == "openrouter" and openrouter_key:
+            logger.info("Using OpenRouter LLM as configured by LLM_PROVIDER")
+            self.llm = OpenRouterLLM(
+                api_key=openrouter_key,
+                model=os.environ.get("OPENROUTER_LLM_MODEL", "openai/gpt-4o-mini"),
+            )
+        elif gemini_key:
             logger.info("Using Gemini LLM")
             self.llm = GeminiLLM(
                 api_key=gemini_key,
@@ -59,7 +67,10 @@ class VoiceProviders:
             )
         elif openrouter_key:
             logger.info("Using OpenRouter LLM fallback")
-            self.llm = None
+            self.llm = OpenRouterLLM(
+                api_key=openrouter_key,
+                model=os.environ.get("OPENROUTER_LLM_MODEL", "openai/gpt-4o-mini"),
+            )
         else:
             logger.warning("No LLM API key found. Set GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY.")
             self.llm = None
