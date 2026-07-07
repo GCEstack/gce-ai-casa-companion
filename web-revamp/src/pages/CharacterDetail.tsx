@@ -132,8 +132,8 @@ function CharacterDetailContent({ character, activeMode }: CharacterDetailConten
 
   return (
     <div className="relative min-h-full flex flex-col">
-      {/* Video Background */}
-      <VideoBackground blur={40} brightness={0.35} overlayOpacity={0.7} accentColor={character.accentColor} videoSrc={backgroundVideoSrc} />
+      {/* Immersive full-screen character video background */}
+      <VideoBackground blur={0} brightness={0.55} overlayOpacity={0.45} accentColor={character.accentColor} videoSrc={backgroundVideoSrc} />
 
       {/* Character-themed particles */}
       <ParticleField
