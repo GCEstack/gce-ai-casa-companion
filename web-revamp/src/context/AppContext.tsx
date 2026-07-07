@@ -19,6 +19,7 @@ const initialState: AppState = {
   bargeInEnabled: false,
   isWakeWordListening: false,
   isBargeInActive: false,
+  userName: null,
 };
 
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -53,6 +54,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, isWakeWordListening: action.payload };
     case 'SET_BARGE_IN_ACTIVE':
       return { ...state, isBargeInActive: action.payload };
+    case 'SET_USER_NAME':
+      return { ...state, userName: action.payload };
     default:
       return state;
   }

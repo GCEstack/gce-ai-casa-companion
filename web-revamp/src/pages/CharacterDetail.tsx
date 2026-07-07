@@ -4,7 +4,6 @@ import VideoBackground from '@/components/VideoBackground';
 import ParticleField from '@/components/ParticleField';
 import CenterStage from '@/sections/CenterStage';
 import { getCharacterBySlug } from '@/lib/characters';
-import { getCharacterVideos } from '@/lib/characterVideos';
 import { findModeBySlug, introductionMode, modeFromFeature } from '@/lib/modes';
 import { characterConfigs } from '@/lib/characterConfig';
 import type { Character, ModeConfig } from '@/types';
@@ -27,12 +26,6 @@ function CharacterDetailContent({ character, activeMode }: CharacterDetailConten
   const hasTriggeredRef = useRef(false);
 
   const voice = useVoiceChat(character.slug, activeMode);
-
-  // Background video switches between idle and speaking just like CenterStage.
-  const { idle: idleVideo, speaking: speakingVideo } = getCharacterVideos(character.slug);
-  const backgroundVideoSrc = voice.isSpeaking && speakingVideo
-    ? speakingVideo
-    : idleVideo || character.videoSrc;
 
   // Pietro auto-onboarding
   useEffect(() => {
@@ -92,32 +85,6 @@ function CharacterDetailContent({ character, activeMode }: CharacterDetailConten
     };
   }, [character.slug, searchParams, voice, dispatch]);
 
-  // Play character intro MP3 when landing on the character page.
-  useEffect(() => {
-    const introUrl = `/audio/characters/${character.slug}-intro.mp3`;
-    const audio = new Audio(introUrl);
-    audio.preload = 'auto';
-
-    const playIntro = async () => {
-      try {
-        await audio.play();
-        console.log('[intro] playing', introUrl);
-      } catch (err) {
-        // Browsers may block autoplay until user interaction. Log and continue.
-        console.warn('[intro] autoplay blocked or failed for', introUrl, err);
-      }
-    };
-
-    // Small delay so the page transition doesn't cut off the start.
-    const timer = setTimeout(playIntro, 300);
-
-    return () => {
-      clearTimeout(timer);
-      audio.pause();
-      audio.src = '';
-    };
-  }, [character.slug]);
-
   // Listen for toolbar mode-switch events
   useEffect(() => {
     const handler = (e: Event) => {
@@ -132,8 +99,8 @@ function CharacterDetailContent({ character, activeMode }: CharacterDetailConten
 
   return (
     <div className="relative min-h-full flex flex-col">
-      {/* Immersive full-screen character video background */}
-      <VideoBackground blur={0} brightness={0.55} overlayOpacity={0.45} accentColor={character.accentColor} videoSrc={backgroundVideoSrc} />
+      {/* Video Background */}
+      <VideoBackground blur={40} brightness={0.35} overlayOpacity={0.7} accentColor={character.accentColor} videoSrc={character.videoSrc} />
 
       {/* Character-themed particles */}
       <ParticleField

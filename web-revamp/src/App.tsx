@@ -3,6 +3,8 @@ import { AppProvider } from '@/context/AppContext';
 import { Toaster } from '@/components/ui/sonner';
 import { MainLayout } from '@/layouts/MainLayout';
 import Landing from '@/pages/Landing';
+import NamePage from '@/pages/NamePage';
+import CharactersPage from '@/pages/CharactersPage';
 import CharacterDetail from '@/pages/CharacterDetail';
 
 export default function App() {
@@ -11,6 +13,8 @@ export default function App() {
       <Routes>
         <Route element={<MainLayout />}>
           <Route path="/" element={<Landing />} />
+          <Route path="/name" element={<NamePage />} />
+          <Route path="/characters" element={<CharactersPage />} />
           <Route path="/character/:slug" element={<CharacterDetail />} />
           <Route path="/character/:slug/:mode" element={<CharacterDetail />} />
         </Route>
