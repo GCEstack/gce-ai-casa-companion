@@ -1,23 +1,14 @@
-import { Outlet, useLocation } from 'react-router';
-import { useApp } from '@/context/AppContext';
-import TopToolbar from '@/components/TopToolbar';
-import RightSidebar from '@/sections/RightSidebar';
+import { Outlet } from 'react-router';
 import { Background } from '@/components/Background';
 
 export function MainLayout() {
-  const location = useLocation();
-  const { state } = useApp();
-  const isLanding = location.pathname === '/';
-
   return (
     <>
       <Background />
-      <div className={`app-layout ${isLanding ? 'landing-layout' : ''}`}>
-        {isLanding && <TopToolbar />}
+      <div className="app-layout">
         <main className="main-content">
           <Outlet />
         </main>
-        {isLanding && <RightSidebar character={state.selectedCharacter} compact />}
       </div>
     </>
   );
