@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import type { AiMode, ModeConfig, TurnState } from '@/types';
-import { useVoiceSocket } from './useVoiceSocket';
-import { useAudioWorklet } from './useAudioWorklet';
+import { fetchBackendChat, fetchBackendTTS, getBackendUrl } from '@/lib/tts';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -31,8 +30,7 @@ export interface UseVoiceChatReturn {
   sendText: (text: string) => Promise<void>;
 }
 
-// Legacy waveform API stubs. VoiceWaveform.tsx still registers here;
-// the waveform is now driven by the server-side pipeline rather than local VAD.
+// Legacy waveform API stubs. VoiceWaveform.tsx still registers here.
 interface WaveformApi {
   setData: (data: number[]) => void;
 }
@@ -44,31 +42,94 @@ export function unregisterWaveform() {
   waveformApiRef.current = null;
 }
 
-function mapVoiceStateToTurnState(voiceState: string): TurnState {
-  if (voiceState === 'speaking') return 'speaking';
-  if (voiceState === 'processing') return 'processing';
-  if (voiceState === 'listening' || voiceState === 'wake_detected') return 'listening';
-  return 'idle';
+declare global {
+  interface Window {
+    SpeechRecognition?: new () => SpeechRecognition;
+    webkitSpeechRecognition?: new () => SpeechRecognition;
+  }
+}
+
+interface SpeechRecognition extends EventTarget {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start(): void;
+  stop(): void;
+  abort(): void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: { error: string; message?: string }) => void) | null;
+}
+
+interface SpeechRecognitionEvent {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  length: number;
+  item(index: number): SpeechRecognitionAlternative;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+function storageKey(slug: string) {
+  return `casa-chat-${slug}`;
 }
 
 export function useVoiceChat(slug: string, activeMode?: ModeConfig): UseVoiceChatReturn {
   const { state, dispatch } = useApp();
-  const socket = useVoiceSocket();
-  const audio = useAudioWorklet();
 
+  const [isConnected, setIsConnected] = useState(false);
+  const [turnState, setTurnState] = useState<TurnState>('idle');
   const [lastTranscript, setLastTranscript] = useState('');
   const [lastResponse, setLastResponse] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const raw = localStorage.getItem(storageKey(slug));
+      if (raw) {
+        const parsed = JSON.parse(raw) as ChatMessage[];
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {
+      // ignore corrupt storage
+    }
+    return [];
+  });
   const [conversationMode, setConversationModeState] = useState<'turn-based' | 'free-flow'>(
     state.conversationMode ?? 'turn-based'
   );
 
-  const turnState = useMemo(() => mapVoiceStateToTurnState(socket.voiceState), [socket.voiceState]);
-  const isRecording = socket.voiceState === 'listening' || socket.voiceState === 'wake_detected';
-  const isSpeaking = socket.voiceState === 'speaking';
-  const isConnected = socket.connectionState === 'connected';
+  const isRecording = turnState === 'listening';
+  const isSpeaking = turnState === 'speaking';
 
-  // Reflect socket state into AppContext so existing UI stays in sync.
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const pendingTranscriptRef = useRef('');
+  const isMountedRef = useRef(true);
+
+  // Persist messages locally.
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey(slug), JSON.stringify(messages));
+    } catch {
+      // ignore storage errors
+    }
+  }, [messages, slug]);
+
+  // Reflect state into AppContext so existing UI stays in sync.
   useEffect(() => {
     if (state.connectionStatus !== (isConnected ? 'online' : 'offline')) {
       dispatch({ type: 'SET_CONNECTION_STATUS', payload: isConnected ? 'online' : 'offline' });
@@ -87,115 +148,287 @@ export function useVoiceChat(slug: string, activeMode?: ModeConfig): UseVoiceCha
     }
   }, [isSpeaking, state.isSpeaking, dispatch]);
 
-  // Wire captured PCM into the WebSocket.
+  // Health check on mount.
   useEffect(() => {
-    audio.setOnAudioChunk((chunk) => {
-      socket.sendAudio(chunk);
-    });
-  }, [audio, socket]);
-
-  // Update transcript and assistant messages as they arrive.
-  useEffect(() => {
-    if (socket.transcript) {
-      setLastTranscript(socket.transcript);
-    }
-  }, [socket.transcript]);
-
-  useEffect(() => {
-    if (socket.assistantText) {
-      setLastResponse(socket.assistantText);
-      setMessages((prev) => {
-        if (prev.length > 0 && prev[prev.length - 1].role === 'assistant') {
-          const next = [...prev];
-          next[next.length - 1] = { role: 'assistant', text: socket.assistantText };
-          return next;
-        }
-        return [...prev, { role: 'assistant', text: socket.assistantText }];
+    let cancelled = false;
+    fetch(`${getBackendUrl()}/health`, { method: 'GET' })
+      .then((res) => {
+        if (!cancelled) setIsConnected(res.ok);
+      })
+      .catch(() => {
+        if (!cancelled) setIsConnected(false);
       });
-      dispatch({ type: 'INCREMENT_MESSAGES' });
-    }
-  }, [socket.assistantText, dispatch]);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  // Send config change whenever character or mode changes.
-  useEffect(() => {
-    if (isConnected) {
-      socket.sendConfigChange(slug, activeMode?.slug ?? 'default');
+  const stopAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
     }
-  }, [slug, activeMode, isConnected, socket]);
+  }, []);
+
+  const playAudio = useCallback(
+    async (blob: Blob) => {
+      stopAudio();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      setTurnState('speaking');
+      return new Promise<void>((resolve) => {
+        audio.onended = () => {
+          URL.revokeObjectURL(url);
+          if (isMountedRef.current) setTurnState('idle');
+          resolve();
+        };
+        audio.onerror = () => {
+          URL.revokeObjectURL(url);
+          if (isMountedRef.current) setTurnState('idle');
+          resolve();
+        };
+        void audio.play();
+      });
+    },
+    [stopAudio]
+  );
+
+  const processText = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) {
+        setTurnState('idle');
+        return;
+      }
+      setLastTranscript(trimmed);
+      const history: { role: 'user' | 'assistant'; content: string }[] = messages.map((m) => ({
+        role: m.role,
+        content: m.text,
+      }));
+      setMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
+      setTurnState('processing');
+      try {
+        const mode = activeMode?.slug ?? 'default';
+        const reply = await fetchBackendChat(trimmed, slug, mode, history);
+        setLastResponse(reply.text);
+        setMessages((prev) => {
+          if (prev.length > 0 && prev[prev.length - 1].role === 'assistant') {
+            const next = [...prev];
+            next[next.length - 1] = { role: 'assistant', text: reply.text };
+            return next;
+          }
+          return [...prev, { role: 'assistant', text: reply.text }];
+        });
+        dispatch({ type: 'INCREMENT_MESSAGES' });
+        const audio = await fetchBackendTTS(reply.text, slug, mode, 'wav');
+        await playAudio(audio);
+      } catch (err) {
+        console.error('Voice chat turn failed:', err);
+        setLastResponse('Sorry, I had trouble answering. Try again!');
+        setTurnState('idle');
+      }
+    },
+    [activeMode, dispatch, messages, playAudio, slug]
+  );
+
+  const initRecognition = useCallback(() => {
+    if (recognitionRef.current) return;
+    const SpeechRecognitionCtor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      console.warn('SpeechRecognition not supported in this browser');
+      return;
+    }
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = 'en-US';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let final = '';
+      let interim = '';
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        const alt = result[0];
+        if (result.isFinal) {
+          final += alt.transcript;
+        } else {
+          interim += alt.transcript;
+        }
+      }
+      pendingTranscriptRef.current = final || interim;
+      setLastTranscript(final || interim);
+    };
+
+    recognition.onend = () => {
+      // If the user is still holding the mic, restart.
+      if (turnState === 'listening' && recognitionRef.current) {
+        try {
+          recognition.start();
+        } catch {
+          // already started or stopped
+        }
+      }
+    };
+
+    recognition.onerror = (event) => {
+      if (event.error === 'no-speech') return;
+      console.error('SpeechRecognition error:', event.error);
+      if (turnState === 'listening') {
+        setTurnState('idle');
+      }
+    };
+
+    recognitionRef.current = recognition;
+  }, [turnState]);
 
   const connect = useCallback(async () => {
-    socket.connect();
-  }, [socket]);
+    try {
+      const res = await fetch(`${getBackendUrl()}/health`);
+      setIsConnected(res.ok);
+    } catch {
+      setIsConnected(false);
+    }
+  }, []);
 
   const disconnect = useCallback(() => {
-    audio.stopCapture();
-    socket.disconnect();
-  }, [audio, socket]);
+    stopAudio();
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch {
+        // ignore
+      }
+      recognitionRef.current = null;
+    }
+    setTurnState('idle');
+  }, [stopAudio]);
 
   const startRecording = useCallback(() => {
     setLastTranscript('');
     setLastResponse('');
-    socket.sendCommand('wake');
-    void audio.startCapture();
-  }, [audio, socket]);
+    pendingTranscriptRef.current = '';
+    initRecognition();
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.start();
+        setTurnState('listening');
+      } catch (err) {
+        console.error('Failed to start recognition:', err);
+      }
+    }
+  }, [initRecognition]);
 
   const stopRecording = useCallback(async () => {
-    audio.stopCapture();
-    if (socket.voiceState === 'speaking') {
-      socket.sendCommand('interrupt');
+    stopAudio();
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // ignore
+      }
+    }
+    const transcript = pendingTranscriptRef.current;
+    pendingTranscriptRef.current = '';
+    if (transcript) {
+      await processText(transcript);
+    } else {
+      setTurnState('idle');
     }
     return null;
-  }, [audio, socket]);
+  }, [processText, stopAudio]);
 
   const toggleRecording = useCallback(async () => {
-    if (socket.voiceState === 'listening' || socket.voiceState === 'wake_detected') {
+    if (turnState === 'listening') {
       await stopRecording();
     } else {
       startRecording();
     }
-  }, [socket.voiceState, startRecording, stopRecording]);
+  }, [turnState, startRecording, stopRecording]);
 
   const requestMicPermission = useCallback(async () => {
     try {
-      await audio.startCapture();
+      const SpeechRecognitionCtor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+      if (!SpeechRecognitionCtor) {
+        dispatch({ type: 'SET_MIC_PERMISSION', payload: false });
+        return false;
+      }
+      const recognition = new SpeechRecognitionCtor();
+      recognition.lang = 'en-US';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      await new Promise<void>((resolve, reject) => {
+        recognition.onstart = () => {
+          try {
+            recognition.stop();
+          } catch {
+            // ignore
+          }
+          resolve();
+        };
+        recognition.onerror = (event) => {
+          reject(new Error(event.error));
+        };
+        recognition.start();
+      });
       dispatch({ type: 'SET_MIC_PERMISSION', payload: true });
       return true;
     } catch {
       dispatch({ type: 'SET_MIC_PERMISSION', payload: false });
       return false;
-    } finally {
-      audio.stopCapture();
     }
-  }, [audio, dispatch]);
-
-  const setConversationMode = useCallback((mode: 'turn-based' | 'free-flow') => {
-    setConversationModeState(mode);
-    dispatch({ type: 'SET_CONVERSATION_MODE', payload: mode });
   }, [dispatch]);
 
+  const setConversationMode = useCallback(
+    (mode: 'turn-based' | 'free-flow') => {
+      setConversationModeState(mode);
+      dispatch({ type: 'SET_CONVERSATION_MODE', payload: mode });
+    },
+    [dispatch]
+  );
+
   const stopSpeaking = useCallback(() => {
-    socket.stopPlayback();
-    dispatch({ type: 'SET_SPEAKING', payload: false });
-  }, [socket, dispatch]);
+    stopAudio();
+    setTurnState('idle');
+  }, [stopAudio]);
 
   const sendText = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed) return;
-      setMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
-      setLastTranscript(trimmed);
-      socket.sendTextInput(trimmed);
+      await processText(trimmed);
     },
-    [socket]
+    [processText]
   );
+
+  const speakResponse = useCallback(() => {
+    // no-op: the last response was already spoken.  Re-trigger could be added here.
+  }, []);
 
   // Cleanup on unmount.
   useEffect(() => {
     return () => {
-      audio.stopCapture();
-      socket.stopPlayback();
+      isMountedRef.current = false;
+      stopAudio();
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // ignore
+        }
+      }
     };
-  }, [audio, socket]);
+  }, [stopAudio]);
+
+  const currentMode = useMemo<AiMode>(() => {
+    const mode = activeMode?.slug ?? 'default';
+    if (mode === 'story' || mode === 'math' || mode === 'homework' || mode === 'teaching' || mode === 'calm' || mode === 'creative' || mode === 'debate') {
+      return mode as AiMode;
+    }
+    return 'default';
+  }, [activeMode]);
 
   return {
     isConnected,
@@ -203,7 +436,7 @@ export function useVoiceChat(slug: string, activeMode?: ModeConfig): UseVoiceCha
     isSpeaking,
     conversationMode,
     turnState,
-    currentMode: 'default',
+    currentMode,
     lastTranscript,
     lastResponse,
     messages,
@@ -214,7 +447,7 @@ export function useVoiceChat(slug: string, activeMode?: ModeConfig): UseVoiceCha
     toggleRecording,
     requestMicPermission,
     setConversationMode,
-    speakResponse: () => {}, // no-op: v3-dual speaks automatically
+    speakResponse,
     stopSpeaking,
     sendText,
   };

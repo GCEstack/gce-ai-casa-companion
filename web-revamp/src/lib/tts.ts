@@ -1,6 +1,6 @@
 const DEFAULT_BACKEND = "https://casa-voice-agent.fly.dev";
 
-function getBackendUrl(): string {
+export function getBackendUrl(): string {
   if (import.meta.env.VITE_BACKEND_HTTP_URL) {
     return import.meta.env.VITE_BACKEND_HTTP_URL.replace(/\/$/, "");
   }
@@ -30,4 +30,22 @@ export async function fetchBackendTTS(
     throw new Error(`Backend TTS error ${res.status}: ${err}`);
   }
   return await res.blob();
+}
+
+export async function fetchBackendChat(
+  text: string,
+  character: string,
+  mode = "default",
+  history: { role: "user" | "assistant"; content: string }[] = []
+): Promise<{ text: string; character: string; mode: string }> {
+  const res = await fetch(`${getBackendUrl()}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, character, mode, history }),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => "");
+    throw new Error(`Backend chat error ${res.status}: ${err}`);
+  }
+  return await res.json();
 }
