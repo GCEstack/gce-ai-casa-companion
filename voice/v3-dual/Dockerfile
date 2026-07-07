@@ -26,6 +26,9 @@ except Exception as e:
     print(f"Silero VAD cache warning (will retry at runtime): {e}")
 PY
 
+# Copy shared character prompts so the voice agent can load per-character personas.
+COPY packages/characters/characters.json /app/packages/characters/characters.json
+
 # Copy application entry point.
 COPY main.py .
 
