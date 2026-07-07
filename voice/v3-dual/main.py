@@ -792,14 +792,23 @@ async def _openai_tts_fallback(text: str, character: str) -> bytes:
 
 @app.post("/api/tts")
 async def tts(req: TTSRequest):
-    """Synthesize speech through the configured backend TTS provider.
+    """Synthesize speech.
 
-    Returns a WAV file by default; pass ``format="pcm"`` for raw s16le PCM.
-    Falls back to OpenAI TTS (MP3) if the primary provider fails.
+    Primary: OpenAI TTS (MP3) — small, fast, no WAV header needed.
+    Fallback: configured provider (OpenRouter Gemini or OpenAI Direct) which
+    returns raw PCM; we wrap it in a WAV header unless ``format="pcm"``.
     """
     tts_provider = getattr(app.state, "providers", None)
 
-    # Try primary TTS provider first (OpenRouter Gemini).
+    # Primary: OpenAI TTS (MP3).
+    if req.format != "pcm":
+        try:
+            mp3 = await _openai_tts_fallback(req.text, req.character or "default")
+            return StreamingResponse(BytesIO(mp3), media_type="audio/mpeg")
+        except Exception as e:
+            logger.warning(f"OpenAI TTS failed, trying configured provider: {e}")
+
+    # Fallback: configured TTS provider (PCM).
     if tts_provider is not None and tts_provider.tts is not None:
         try:
             pcm = await tts_provider.tts.synthesize(
@@ -815,15 +824,10 @@ async def tts(req: TTSRequest):
             wav = _wav_header(pcm) + pcm
             return StreamingResponse(BytesIO(wav), media_type="audio/wav")
         except Exception as e:
-            logger.warning(f"Primary TTS failed, trying OpenAI fallback: {e}")
+            logger.exception("Configured TTS provider failed")
+            raise HTTPException(status_code=502, detail="TTS synthesis failed") from e
 
-    # Fallback: OpenAI TTS (MP3).
-    try:
-        mp3 = await _openai_tts_fallback(req.text, req.character or "default")
-        return StreamingResponse(BytesIO(mp3), media_type="audio/mpeg")
-    except Exception as e:
-        logger.exception("TTS endpoint failed")
-        raise HTTPException(status_code=502, detail="TTS synthesis failed") from e
+    raise HTTPException(status_code=503, detail="No TTS provider available")
 
 
 # ── SSE Events ────────────────────────────────────────────────────────────────
