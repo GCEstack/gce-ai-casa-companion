@@ -23,6 +23,7 @@ if str(src_path) not in sys.path:
 import os
 import re
 import asyncio
+import base64
 import json
 import logging
 import secrets
@@ -32,7 +33,7 @@ from io import BytesIO
 from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request, HTTPException, Body, Depends, File, UploadFile
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request, HTTPException, Body, Depends
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, field_validator
 
@@ -589,30 +590,46 @@ async def chat(req: ChatRequest):
 
 # ── STT endpoint (OpenAI Whisper) ─────────────────────────────────────────────
 
-@app.post("/api/transcribe")
-async def transcribe(audio: UploadFile = File(...)):
-    """Transcribe an audio file using OpenAI Whisper.
+class TranscribeRequest(BaseModel):
+    audio_base64: str
+    filename: Optional[str] = "recording.webm"
 
-    The front-end records audio from the mic and POSTs it here.
-    Returns the transcript text.
+
+@app.post("/api/transcribe")
+async def transcribe(req: TranscribeRequest):
+    """Transcribe a base64-encoded audio file using OpenAI Whisper.
+
+    The front-end records audio from the mic, base64-encodes it, and POSTs it
+    here. Returns the transcript text.
     """
     api_key = os.environ.get("OPENAI_API_KEY", "")
     if not api_key:
         raise HTTPException(status_code=503, detail="OpenAI API key not configured")
 
-    audio_bytes = await audio.read()
+    try:
+        audio_bytes = base64.b64decode(req.audio_base64)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid base64 audio")
+
     if not audio_bytes:
         raise HTTPException(status_code=400, detail="Empty audio file")
 
-    # Whisper supports many formats; the browser typically sends webm/opus.
-    # OpenAI will decode it.
-    filename = audio.filename or "audio.webm"
+    filename = req.filename or "recording.webm"
     if "." not in filename:
-        filename = "audio.webm"
+        filename = "recording.webm"
+    content_type = "audio/webm"
+    if filename.endswith(".webm"):
+        content_type = "audio/webm"
+    elif filename.endswith(".mp4"):
+        content_type = "audio/mp4"
+    elif filename.endswith(".ogg"):
+        content_type = "audio/ogg"
+    elif filename.endswith(".wav"):
+        content_type = "audio/wav"
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            files = {"file": (filename, BytesIO(audio_bytes), audio.content_type or "audio/webm")}
+            files = {"file": (filename, BytesIO(audio_bytes), content_type)}
             data = {"model": "whisper-1", "language": "en"}
             resp = await client.post(
                 "https://api.openai.com/v1/audio/transcriptions",
