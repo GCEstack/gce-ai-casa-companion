@@ -6,3 +6,7 @@
 !Dockerfile
 !fly.toml
 !.dockerignore
+
+# Exclude heavy, unnecessary paths inside web-revamp.
+web-revamp/node_modules
+web-revamp/dist
