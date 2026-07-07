@@ -753,34 +753,77 @@ async def tap_get(
     return {"status": "ok", "session_id": session_id, "action": action}
 
 
+# OpenAI TTS fallback voices when the primary Gemini TTS fails or sounds off.
+_OPENAI_TTS_VOICES = {
+    "mamma": "nova",
+    "delfino": "onyx",
+    "tartaruga": "echo",
+    "rocco": "fable",
+    "pietro": "onyx",
+    "bella": "shimmer",
+    "default": "alloy",
+}
+
+
+async def _openai_tts_fallback(text: str, character: str) -> bytes:
+    """Call OpenAI /audio/speech directly via httpx and return MP3 bytes."""
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY not set")
+
+    voice = _OPENAI_TTS_VOICES.get(character, _OPENAI_TTS_VOICES["default"])
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(
+            "https://api.openai.com/v1/audio/speech",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "tts-1",
+                "voice": voice,
+                "input": text,
+                "response_format": "mp3",
+            },
+        )
+        resp.raise_for_status()
+        return resp.content
+
+
 @app.post("/api/tts")
 async def tts(req: TTSRequest):
     """Synthesize speech through the configured backend TTS provider.
 
     Returns a WAV file by default; pass ``format="pcm"`` for raw s16le PCM.
+    Falls back to OpenAI TTS (MP3) if the primary provider fails.
     """
     tts_provider = getattr(app.state, "providers", None)
-    if tts_provider is None or tts_provider.tts is None:
-        raise HTTPException(status_code=503, detail="TTS provider not available")
 
+    # Try primary TTS provider first (OpenRouter Gemini).
+    if tts_provider is not None and tts_provider.tts is not None:
+        try:
+            pcm = await tts_provider.tts.synthesize(
+                req.text,
+                character=req.character or "default",
+                mode=req.mode or "default",
+            )
+            if req.format == "pcm":
+                return StreamingResponse(
+                    BytesIO(pcm),
+                    media_type="audio/L16;rate=16000;channels=1",
+                )
+            wav = _wav_header(pcm) + pcm
+            return StreamingResponse(BytesIO(wav), media_type="audio/wav")
+        except Exception as e:
+            logger.warning(f"Primary TTS failed, trying OpenAI fallback: {e}")
+
+    # Fallback: OpenAI TTS (MP3).
     try:
-        pcm = await tts_provider.tts.synthesize(
-            req.text,
-            character=req.character or "default",
-            mode=req.mode or "default",
-        )
+        mp3 = await _openai_tts_fallback(req.text, req.character or "default")
+        return StreamingResponse(BytesIO(mp3), media_type="audio/mpeg")
     except Exception as e:
         logger.exception("TTS endpoint failed")
         raise HTTPException(status_code=502, detail="TTS synthesis failed") from e
-
-    if req.format == "pcm":
-        return StreamingResponse(
-            BytesIO(pcm),
-            media_type="audio/L16;rate=16000;channels=1",
-        )
-
-    wav = _wav_header(pcm) + pcm
-    return StreamingResponse(BytesIO(wav), media_type="audio/wav")
 
 
 # ── SSE Events ────────────────────────────────────────────────────────────────
