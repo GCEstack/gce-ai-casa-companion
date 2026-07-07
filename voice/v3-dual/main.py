@@ -36,6 +36,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request, HTTPException, Body, Depends
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, field_validator
+import httpx
 
 # Load environment variables from an optional .env file.
 # CASA_ENV_FILE can point to a custom path; otherwise the project root .env is used.
