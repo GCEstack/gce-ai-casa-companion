@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const BACKEND = ''; // same-origin, proxied through nginx
+  const BACKEND = 'https://casa-voice-agent.fly.dev';
 
   function getCharacterSlug() {
     const path = window.location.pathname;
