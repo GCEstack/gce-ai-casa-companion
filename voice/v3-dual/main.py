@@ -881,12 +881,13 @@ async def tts(req: TTSRequest):
                 character=req.character or "default",
                 mode=req.mode or "default",
             )
+            sample_rate = getattr(tts_provider.tts, "sample_rate", 16000)
             if req.format == "pcm":
                 return StreamingResponse(
                     BytesIO(pcm),
-                    media_type="audio/L16;rate=16000;channels=1",
+                    media_type=f"audio/L16;rate={sample_rate};channels=1",
                 )
-            wav = _wav_header(pcm) + pcm
+            wav = _wav_header(pcm, sample_rate=sample_rate) + pcm
             return StreamingResponse(BytesIO(wav), media_type="audio/wav")
         except Exception as e:
             logger.exception("Configured TTS provider failed")

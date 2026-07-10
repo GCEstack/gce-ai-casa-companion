@@ -91,7 +91,7 @@ class VoiceProviders:
 
         if tts_provider == "openrouter" and openrouter_key:
             logger.info("Using OpenRouter TTS (Gemini Flash) as configured by TTS_PROVIDER")
-            self.tts = OpenRouterTTS(api_key=openrouter_key)
+            self.tts = OpenRouterTTS(api_key=openrouter_key, sample_rate=24000)
         elif openai_key:
             logger.info("Using OpenAI direct TTS")
             self.tts = OpenAIDirectTTS(
@@ -101,7 +101,7 @@ class VoiceProviders:
             )
         elif openrouter_key:
             logger.info("Using OpenRouter TTS fallback")
-            self.tts = OpenRouterTTS(api_key=openrouter_key)
+            self.tts = OpenRouterTTS(api_key=openrouter_key, sample_rate=24000)
         else:
             logging.warning("No TTS API key found. Set OPENAI_API_KEY or OPENROUTER_API_KEY.")
             self.tts = None
