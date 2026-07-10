@@ -864,16 +864,17 @@ async def tts(req: TTSRequest):
     returns raw PCM; we wrap it in a WAV header unless ``format="pcm"``.
     """
     tts_provider = getattr(app.state, "providers", None)
+    configured_tts = os.environ.get("TTS_PROVIDER", "openai").strip().lower()
 
-    # Primary: OpenAI TTS (MP3).
-    if req.format != "pcm":
+    # Primary: OpenAI TTS (MP3) only when explicitly configured.
+    if configured_tts == "openai" and req.format != "pcm":
         try:
             mp3 = await _openai_tts_fallback(req.text, req.character or "default")
             return StreamingResponse(BytesIO(mp3), media_type="audio/mpeg")
         except Exception as e:
             logger.warning(f"OpenAI TTS failed, trying configured provider: {e}")
 
-    # Fallback: configured TTS provider (PCM).
+    # Configured TTS provider (OpenRouter Gemini or OpenAI Direct PCM).
     if tts_provider is not None and tts_provider.tts is not None:
         try:
             pcm = await tts_provider.tts.synthesize(
