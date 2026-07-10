@@ -75,23 +75,28 @@ def _load_character_prompts() -> Dict[str, str]:
     Falls back to an empty dict if the file is missing so the backend can still
     start when the shared package is not checked out.
     """
+    candidates = []
     try:
         parents = Path(__file__).resolve().parents
-        if len(parents) <= 5:
-            logger.warning(
-                "Shared character prompts not available: source tree is too shallow (%d parents)",
-                len(parents),
-            )
-            return {}
-        candidate = parents[5] / "packages" / "characters" / "characters.json"
-        if not candidate.exists():
-            logger.warning("Shared character prompts not found at %s", candidate)
-            return {}
-        with candidate.open("r", encoding="utf-8") as f:
-            data = json.load(f)
-        if isinstance(data, dict):
-            return {k: str(v) for k, v in data.items() if isinstance(v, str)}
-        logger.warning("Shared character prompts has unexpected shape: %s", type(data))
+        if len(parents) > 5:
+            candidates.append(parents[5] / "packages" / "characters" / "characters.json")
+        # Docker-deployed path where the file is copied by the Dockerfile.
+        candidates.append(Path("/app/packages/characters/characters.json"))
+        # Optional explicit override.
+        env_path = os.environ.get("CHARACTER_PROMPTS_PATH")
+        if env_path:
+            candidates.append(Path(env_path))
+
+        for candidate in candidates:
+            if candidate.exists():
+                with candidate.open("r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    logger.info("Loaded shared character prompts from %s", candidate)
+                    return {k: str(v) for k, v in data.items() if isinstance(v, str)}
+                logger.warning("Shared character prompts has unexpected shape: %s", type(data))
+                return {}
+        logger.warning("Shared character prompts not found at any candidate path: %s", candidates)
     except Exception as e:
         logger.warning("Failed to load shared character prompts: %s", e)
     return {}

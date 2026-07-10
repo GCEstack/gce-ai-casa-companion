@@ -1,25 +1,22 @@
 import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
-import type { Character, ModeConfig } from '@/types';
+import type { Character } from '@/types';
 import type { UseVoiceChatReturn } from '@/hooks/useVoiceChat';
 import MicButton from '@/components/MicButton';
-import { useApp } from '@/context/AppContext';
 import { useCharacterVoice } from '@/hooks/useCharacterVoice';
 import { getCharacterVideos } from '@/lib/characterVideos';
 
 interface CenterStageProps {
   character: Character;
-  activeMode: ModeConfig;
   voice: UseVoiceChatReturn;
 }
 
-export default function CenterStage({ character, activeMode, voice }: CenterStageProps) {
-  const { state } = useApp();
-  const portraitRef = useRef<HTMLDivElement>(null);
+export default function CenterStage({ character, voice }: CenterStageProps) {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const characterRef = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLHeadingElement>(null);
-  const subtitleRef = useRef<HTMLParagraphElement>(null);
-  const actionsRef = useRef<HTMLDivElement>(null);
+  const micRef = useRef<HTMLDivElement>(null);
 
   const { playVoice } = useCharacterVoice(character);
 
@@ -27,136 +24,154 @@ export default function CenterStage({ character, activeMode, voice }: CenterStag
   useGSAP(() => {
     const tl = gsap.timeline();
 
-    // Portrait scale-in
-    if (portraitRef.current) {
+    if (stageRef.current) {
       tl.fromTo(
-        portraitRef.current,
-        { scale: 0.85, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 0.8, ease: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+        stageRef.current,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.6, ease: 'power2.out' },
         0
       );
     }
 
-    // Name fade-up
+    if (characterRef.current) {
+      tl.fromTo(
+        characterRef.current,
+        { scale: 0.9, opacity: 0, y: 30 },
+        { scale: 1, opacity: 1, y: 0, duration: 0.9, ease: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+        0.1
+      );
+    }
+
     if (nameRef.current) {
       tl.fromTo(
         nameRef.current,
+        { y: -20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' },
+        0.4
+      );
+    }
+
+    if (micRef.current) {
+      tl.fromTo(
+        micRef.current,
         { y: 20, opacity: 0 },
         { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' },
-        0.3
-      );
-    }
-
-    // Subtitle fade-up
-    if (subtitleRef.current) {
-      tl.fromTo(
-        subtitleRef.current,
-        { y: 20, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' },
-        0.45
-      );
-    }
-
-    // Action buttons
-    if (actionsRef.current) {
-      const buttons = actionsRef.current.querySelectorAll('button');
-      tl.fromTo(
-        buttons,
-        { scale: 0.8, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 0.4, stagger: 0.1, ease: 'power3.out' },
         0.6
       );
     }
   }, { dependencies: [character.slug] });
 
-  const subtitleText = `${character.description} \u00b7 ${activeMode.label}`;
-
   const { idle: idleVideo, speaking: rawSpeakingVideo } = getCharacterVideos(character.slug);
   const hasIdleVideo = !!idleVideo;
   const speakingVideo = rawSpeakingVideo || idleVideo;
-  const glowFallback = state.isSpeaking && (!rawSpeakingVideo || !hasIdleVideo);
+
+  const turnState = voice.turnState ?? 'idle';
+  const isListening = turnState === 'listening';
+  const isProcessing = turnState === 'processing';
+  const isSpeaking = turnState === 'speaking';
+
+  const micLabel = isListening
+    ? 'Listening...'
+    : isProcessing
+    ? 'Thinking...'
+    : isSpeaking
+    ? 'Speaking...'
+    : 'Tap to Talk';
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center min-h-full py-8 px-4">
-      {/* Character Portrait */}
-      <div
-        ref={portraitRef}
-        className={`relative w-[340px] h-[460px] md:w-[420px] md:h-[540px] rounded-2xl overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-[1.02] ${
-          state.isRecording ? 'recording-ring' : ''
-        }`}
-        style={{
-          background: '#000000',
-          boxShadow: state.isRecording
-            ? `0 0 0 4px rgba(239,68,68,0.6), 0 0 30px rgba(239,68,68,0.4), 0 8px 32px rgba(0,0,0,0.3), 0 0 60px ${character.accentColor}20${glowFallback ? `, 0 0 40px ${character.accentColor}80` : ''}`
-            : `0 8px 32px rgba(0,0,0,0.3), 0 0 60px ${character.accentColor}20${glowFallback ? `, 0 0 40px ${character.accentColor}80` : ''}`,
-        }}
-        onClick={playVoice}
-      >
-        {hasIdleVideo ? (
-          <>
-            <video
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-                state.isSpeaking ? 'opacity-0' : 'opacity-100'
-              }`}
-              src={idleVideo!}
-              autoPlay
-              loop
-              muted
-              playsInline
-              webkit-playsinline="true"
-            />
-            <video
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-                state.isSpeaking ? 'opacity-100' : 'opacity-0'
-              }`}
-              src={speakingVideo!}
-              autoPlay
-              muted
-              playsInline
-              webkit-playsinline="true"
-            />
-          </>
-        ) : (
-          <img
-            src={`/characters/${character.slug}.png`}
-            alt={character.name}
-            className="w-full h-full object-cover portrait-breathe-loop"
-          />
-        )}
+    <div
+      ref={stageRef}
+      className="relative flex-1 flex flex-col items-center justify-between min-h-full w-full overflow-hidden"
+    >
+      {/* Top: character name */}
+      <div className="relative z-20 pt-8 md:pt-12 px-4 text-center">
+        <h1
+          ref={nameRef}
+          className="text-3xl md:text-5xl font-black text-white tracking-tight"
+          style={{
+            textShadow: `0 0 60px ${character.accentColor}60, 0 2px 20px rgba(0,0,0,0.5)`,
+            fontFamily: 'Inter, system-ui, sans-serif',
+          }}
+        >
+          {character.name}
+        </h1>
+      </div>
 
-        {/* Hover overlay with hint */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300 bg-black/20">
-          <span className="text-xs text-white/80 font-medium tracking-wider uppercase">Click to hear me</span>
+      {/* Center: full-screen character */}
+      <div
+        ref={characterRef}
+        className="relative z-10 flex-1 flex items-center justify-center w-full px-4 py-4 cursor-pointer"
+        onClick={playVoice}
+        style={{ maxHeight: '70vh' }}
+      >
+        <div
+          className="relative w-full h-full max-w-[600px] max-h-[70vh] flex items-center justify-center"
+          style={{
+            filter: isListening
+              ? `drop-shadow(0 0 30px rgba(239,68,68,0.5))`
+              : `drop-shadow(0 0 40px ${character.accentColor}40)`,
+            transition: 'filter 0.3s ease',
+          }}
+        >
+          {hasIdleVideo ? (
+            <>
+              <video
+                className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-500 ${
+                  isSpeaking ? 'opacity-0' : 'opacity-100'
+                }`}
+                src={idleVideo!}
+                autoPlay
+                loop
+                muted
+                playsInline
+                webkit-playsinline="true"
+              />
+              <video
+                className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-500 ${
+                  isSpeaking ? 'opacity-100' : 'opacity-0'
+                }`}
+                src={speakingVideo!}
+                autoPlay
+                muted
+                playsInline
+                webkit-playsinline="true"
+              />
+            </>
+          ) : (
+            <img
+              src={`/characters/${character.slug}.png`}
+              alt={character.name}
+              className="w-full h-full object-contain portrait-breathe-loop"
+            />
+          )}
         </div>
       </div>
 
-      {/* Character Name */}
-      <h1
-        ref={nameRef}
-        className="mt-6 text-5xl md:text-6xl font-bold text-white text-center"
-        style={{ textShadow: `0 0 40px ${character.accentColor}40` }}
+      {/* Bottom: Tap to Talk */}
+      <div
+        ref={micRef}
+        className="relative z-20 flex flex-col items-center pb-10 md:pb-14"
       >
-        {character.name}
-      </h1>
-
-      {/* Subtitle */}
-      <p ref={subtitleRef} className="mt-2 text-base text-gray-400 text-center italic">
-        {subtitleText}
-      </p>
-
-      {/* Tap to Talk */}
-      <div ref={actionsRef} className="flex flex-col items-center gap-3 mt-8">
         <MicButton
-          isListening={voice.turnState === 'listening'}
-          isProcessing={voice.turnState === 'processing'}
-          isSpeaking={voice.turnState === 'speaking'}
+          isListening={isListening}
+          isProcessing={isProcessing}
+          isSpeaking={isSpeaking}
           accentColor={character.accentColor}
           onPress={() => {
             voice.toggleRecording();
           }}
           disabled={!voice.isConnected}
         />
-        <span className="text-sm font-medium text-white/80 tracking-wider uppercase">Tap to Talk</span>
+        <span
+          className="mt-4 text-[11px] md:text-xs font-bold tracking-[0.2em] uppercase transition-colors duration-300"
+          style={{
+            color: isListening || isSpeaking ? character.accentColor : 'rgba(255,255,255,0.6)',
+            fontFamily: 'IBM Plex Mono, monospace',
+            textShadow: '0 2px 10px rgba(0,0,0,0.5)',
+          }}
+        >
+          {micLabel}
+        </span>
       </div>
     </div>
   );

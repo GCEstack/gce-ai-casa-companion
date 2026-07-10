@@ -1,110 +1,62 @@
 import { useNavigate } from 'react-router';
 import { Mic } from 'lucide-react';
-import VideoBackground from '@/components/VideoBackground';
-import ParticleField from '@/components/ParticleField';
-import CharacterCard from '@/components/CharacterCard';
-import FooterSection from '@/sections/FooterSection';
-import { characters } from '@/lib/characters';
-import type { Character } from '@/types';
-
-function getRole(character: Character): string {
-  const parts = character.description.split('—');
-  const last = parts[parts.length - 1]?.trim() ?? '';
-  return last || character.italianMeaning;
-}
 
 export default function Landing() {
   const navigate = useNavigate();
 
-  const pietro = characters.find((c) => c.slug === 'pietro');
-  const others = characters
-    .filter((c) => c.slug !== 'pietro')
-    .slice()
-    .sort((a, b) => a.name.localeCompare(b.name));
-  const gridCharacters = pietro ? [pietro, ...others] : others;
-
   return (
-    <main className="relative min-h-[100dvh] pb-12">
-      {/* Hero */}
-      <section className="relative min-h-[50dvh] flex flex-col items-center justify-center overflow-hidden px-4 pt-10 pb-4">
-        <VideoBackground blur={60} brightness={0.4} overlayOpacity={0.85} />
-        <ParticleField count={60} hueMin={40} hueMax={55} />
+    <main className="relative h-[100dvh] w-full flex flex-col items-center justify-center overflow-hidden bg-[#060610]">
+      {/* Ambient glow */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div
+          className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] rounded-full blur-[120px]"
+          style={{ background: 'radial-gradient(circle, rgba(255,110,199,0.12) 0%, transparent 70%)' }}
+        />
+        <div
+          className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full blur-[120px]"
+          style={{ background: 'radial-gradient(circle, rgba(0,245,255,0.10) 0%, transparent 70%)' }}
+        />
+      </div>
 
-        <div className="relative z-10 flex flex-col items-center text-center max-w-3xl mx-auto">
-          {/* Logo */}
-          <div className="flex items-center gap-2 mb-4">
-            <Mic className="w-6 h-6 text-[#d4a843]" />
-            <span className="text-3xl font-extrabold text-white tracking-tight">Casa Companion</span>
-          </div>
-
-          {/* Tagline */}
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Your AI companion. Real voice. Real personality.
-          </h1>
-          <p className="text-base md:text-lg text-gray-400 mb-8">
-            Pick a friend. Start talking.
-          </p>
-        </div>
-      </section>
-
-      {/* Featured Pietro */}
-      {pietro && (
-        <section className="relative z-10 px-4 mb-8">
-          <div className="max-w-[1100px] mx-auto">
-            <div
-              className="pietro-featured cursor-pointer"
-              onClick={() => navigate('/character/pietro')}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') navigate('/character/pietro');
-              }}
-            >
-              <div className="flex-1 text-left">
-                <span className="pietro-badge">Meet the Founder</span>
-                <h2 className="text-2xl md:text-3xl font-bold text-white mt-2 mb-3">
-                  {pietro.name}
-                </h2>
-                <p className="text-sm md:text-base text-gray-400 mb-6 max-w-md">
-                  {getRole(pietro)}
-                </p>
-                <button
-                  type="button"
-                  className="talk-to-pietro-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate('/character/pietro');
-                  }}
-                >
-                  Talk to Pietro
-                </button>
-              </div>
-              <img
-                src={pietro.portrait}
-                alt={pietro.name}
-                className="pietro-portrait"
-              />
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Character grid */}
-      <section id="characters" className="relative z-10 py-8 px-4">
-        <div className="max-w-[1100px] mx-auto">
-          <div className="text-center mb-6">
-            <h2 className="companion-heading">Pick Your Companion</h2>
-          </div>
-
-          <div className="character-grid">
-            {gridCharacters.map((character) => (
-              <CharacterCard key={character.slug} character={character} role={getRole(character)} />
-            ))}
+      <div className="relative z-10 flex flex-col items-center text-center px-6">
+        <div className="flex items-center justify-center gap-3 mb-6">
+          <div
+            className="w-12 h-12 rounded-2xl flex items-center justify-center"
+            style={{
+              background: 'linear-gradient(135deg, #FF6EC7 0%, #00F5FF 100%)',
+              boxShadow: '0 0 40px rgba(255,110,199,0.3)',
+            }}
+          >
+            <Mic className="w-6 h-6 text-white" />
           </div>
         </div>
-      </section>
 
-      <FooterSection />
+        <h1
+          className="text-5xl md:text-7xl font-black text-white mb-4"
+          style={{
+            textShadow: '0 0 60px rgba(255,110,199,0.3)',
+            fontFamily: 'Inter, system-ui, sans-serif',
+          }}
+        >
+          Casa Companion
+        </h1>
+
+        <p className="text-base md:text-lg text-white/50 max-w-md mb-10">
+          Your AI friend is waiting.
+        </p>
+
+        <button
+          type="button"
+          onClick={() => navigate('/name')}
+          className="px-8 py-4 rounded-full text-white font-bold text-lg transition-transform active:scale-95"
+          style={{
+            background: 'linear-gradient(135deg, #FF6EC7 0%, #00F5FF 100%)',
+            boxShadow: '0 0 40px rgba(255,110,199,0.3)',
+          }}
+        >
+          Enter Casa
+        </button>
+      </div>
     </main>
   );
 }

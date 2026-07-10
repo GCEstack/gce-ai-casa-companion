@@ -60,6 +60,7 @@ export interface AppState {
   bargeInEnabled: boolean;
   isWakeWordListening: boolean;
   isBargeInActive: boolean;
+  userName: string | null;
 }
 
 export type AppAction =
@@ -77,4 +78,5 @@ export type AppAction =
   | { type: 'TOGGLE_WAKE_WORD' }
   | { type: 'TOGGLE_BARGE_IN' }
   | { type: 'SET_WAKE_WORD_LISTENING'; payload: boolean }
-  | { type: 'SET_BARGE_IN_ACTIVE'; payload: boolean };
+  | { type: 'SET_BARGE_IN_ACTIVE'; payload: boolean }
+  | { type: 'SET_USER_NAME'; payload: string };

@@ -23,6 +23,7 @@ if str(src_path) not in sys.path:
 import os
 import re
 import asyncio
+import base64
 import json
 import logging
 import secrets
@@ -35,6 +36,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request, HTTPException, Body, Depends
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, field_validator
+import httpx
 
 # Load environment variables from an optional .env file.
 # CASA_ENV_FILE can point to a custom path; otherwise the project root .env is used.
@@ -526,6 +528,38 @@ def _wav_header(
 
 # ── Simple HTTP chat endpoint (no WebSocket) ──────────────────────────────────
 
+# Mode-specific system prompt additions. See CHARACTER_VOICE_MAP.md.
+_MODE_PROMPTS = {
+    "teach": "You are in teaching mode. Guide the child to discover answers through questions. Never give the answer directly.",
+    "calm": "You are in calm mode. Speak softly and slowly. Help the child breathe and relax. Use gentle, soothing language.",
+    "laugh": "You are in play mode. Be silly, tell jokes, make funny sounds. The goal is laughter and joy.",
+    "story": "You are in story mode. Tell an engaging story where the child is the hero. Use vivid descriptions and cliffhangers.",
+    "music": "You are in music mode. Sing, rhyme, teach rhythm. Make everything musical and fun.",
+    "learn": "You are in learning mode. Teach something new in a fun way. Use examples, ask questions, make it interactive.",
+}
+
+# Frontend/button mode slugs to canonical mode keys.
+_MODE_SLUG_MAP = {
+    "teaching-mode": "teach",
+    "teach": "teach",
+    "calm-breathe": "calm",
+    "calm": "calm",
+    "play": "laugh",
+    "laugh": "laugh",
+    "story-time": "story",
+    "story": "story",
+    "music-rhythm": "music",
+    "music": "music",
+    "homework-helper": "learn",
+    "stem-sparks": "learn",
+    "geography": "learn",
+    "all-languages": "learn",
+    "coding": "learn",
+    "milestones": "learn",
+    "learn": "learn",
+}
+
+
 class ChatRequest(BaseModel):
     text: str
     character: Optional[str] = "default"
@@ -566,6 +600,11 @@ async def chat(req: ChatRequest):
         except Exception:
             pass
 
+    # Append mode-specific instructions if a recognized mode is passed.
+    canonical_mode = _MODE_SLUG_MAP.get(mode.lower(), mode.lower())
+    if canonical_mode in _MODE_PROMPTS:
+        persona = f"{persona} {_MODE_PROMPTS[canonical_mode]}"
+
     messages = [{"role": "system", "content": persona}]
     for turn in (req.history or [])[-6:]:
         messages.append(turn)
@@ -585,6 +624,68 @@ async def chat(req: ChatRequest):
         raise HTTPException(status_code=502, detail="LLM returned empty response")
 
     return {"text": reply, "character": character, "mode": mode}
+
+
+# ── STT endpoint (OpenAI Whisper) ─────────────────────────────────────────────
+
+class TranscribeRequest(BaseModel):
+    audio_base64: str
+    filename: Optional[str] = "recording.webm"
+
+
+@app.post("/api/transcribe")
+async def transcribe(req: TranscribeRequest):
+    """Transcribe a base64-encoded audio file using OpenAI Whisper.
+
+    The front-end records audio from the mic, base64-encodes it, and POSTs it
+    here. Returns the transcript text.
+    """
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="OpenAI API key not configured")
+
+    try:
+        audio_bytes = base64.b64decode(req.audio_base64)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid base64 audio")
+
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="Empty audio file")
+
+    filename = req.filename or "recording.webm"
+    if "." not in filename:
+        filename = "recording.webm"
+    content_type = "audio/webm"
+    if filename.endswith(".webm"):
+        content_type = "audio/webm"
+    elif filename.endswith(".mp4"):
+        content_type = "audio/mp4"
+    elif filename.endswith(".ogg"):
+        content_type = "audio/ogg"
+    elif filename.endswith(".wav"):
+        content_type = "audio/wav"
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            files = {"file": (filename, BytesIO(audio_bytes), content_type)}
+            data = {"model": "whisper-1", "language": "en"}
+            resp = await client.post(
+                "https://api.openai.com/v1/audio/transcriptions",
+                headers={"Authorization": f"Bearer {api_key}"},
+                files=files,
+                data=data,
+            )
+            resp.raise_for_status()
+            result = resp.json()
+            text = result.get("text", "").strip()
+            if not text:
+                raise HTTPException(status_code=502, detail="Whisper returned empty transcript")
+            return {"text": text}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Transcription failed")
+        raise HTTPException(status_code=502, detail=f"Transcription failed: {str(e)}") from e
 
 
 # ── NFC / Physical Actions ────────────────────────────────────────────────────
@@ -689,34 +790,109 @@ async def tap_get(
     return {"status": "ok", "session_id": session_id, "action": action}
 
 
+# OpenAI TTS voices per character. See CHARACTER_VOICE_MAP.md.
+_OPENAI_TTS_VOICES = {
+    "tartaruga": "echo",
+    "delfino": "shimmer",
+    "mamma": "nova",
+    "leone": "onyx",
+    "drago": "fable",
+    "corvo": "alloy",
+    "gufo": "echo",
+    "orsetto": "onyx",
+    "coniglio": "shimmer",
+    "elefante": "nova",
+    "volpe": "alloy",
+    "xolo": "alloy",
+    "scheletro": "fable",
+    "ragno": "alloy",
+    "veloce": "onyx",
+    "stellino": "shimmer",
+    "sacco": "nova",
+    "spugna": "nova",
+    "rocco": "onyx",
+    "vinile": "alloy",
+    "battito": "alloy",
+    "onda": "shimmer",
+    "maestra": "nova",
+    "costruttore": "onyx",
+    "dottore": "nova",
+    "pietro": "alloy",
+    "borsa": "alloy",
+    "verita": "onyx",
+    "forza": "shimmer",
+    "bella": "shimmer",
+    "cuoco": "fable",
+    "nonna": "nova",
+    "cucita": "nova",
+    "polpo": "alloy",
+    "default": "alloy",
+}
+
+
+async def _openai_tts_fallback(text: str, character: str) -> bytes:
+    """Call OpenAI /audio/speech directly via httpx and return MP3 bytes."""
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY not set")
+
+    voice = _OPENAI_TTS_VOICES.get(character, _OPENAI_TTS_VOICES["default"])
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(
+            "https://api.openai.com/v1/audio/speech",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "tts-1",
+                "voice": voice,
+                "input": text,
+                "response_format": "mp3",
+            },
+        )
+        resp.raise_for_status()
+        return resp.content
+
+
 @app.post("/api/tts")
 async def tts(req: TTSRequest):
-    """Synthesize speech through the configured backend TTS provider.
+    """Synthesize speech.
 
-    Returns a WAV file by default; pass ``format="pcm"`` for raw s16le PCM.
+    Primary: OpenAI TTS (MP3) — small, fast, no WAV header needed.
+    Fallback: configured provider (OpenRouter Gemini or OpenAI Direct) which
+    returns raw PCM; we wrap it in a WAV header unless ``format="pcm"``.
     """
     tts_provider = getattr(app.state, "providers", None)
-    if tts_provider is None or tts_provider.tts is None:
-        raise HTTPException(status_code=503, detail="TTS provider not available")
 
-    try:
-        pcm = await tts_provider.tts.synthesize(
-            req.text,
-            character=req.character or "default",
-            mode=req.mode or "default",
-        )
-    except Exception as e:
-        logger.exception("TTS endpoint failed")
-        raise HTTPException(status_code=502, detail="TTS synthesis failed") from e
+    # Primary: OpenAI TTS (MP3).
+    if req.format != "pcm":
+        try:
+            mp3 = await _openai_tts_fallback(req.text, req.character or "default")
+            return StreamingResponse(BytesIO(mp3), media_type="audio/mpeg")
+        except Exception as e:
+            logger.warning(f"OpenAI TTS failed, trying configured provider: {e}")
 
-    if req.format == "pcm":
-        return StreamingResponse(
-            BytesIO(pcm),
-            media_type="audio/L16;rate=16000;channels=1",
-        )
+    # Fallback: configured TTS provider (PCM).
+    if tts_provider is not None and tts_provider.tts is not None:
+        try:
+            pcm = await tts_provider.tts.synthesize(
+                req.text,
+                character=req.character or "default",
+                mode=req.mode or "default",
+            )
+            if req.format == "pcm":
+                return StreamingResponse(
+                    BytesIO(pcm),
+                    media_type="audio/L16;rate=16000;channels=1",
+                )
+            wav = _wav_header(pcm) + pcm
+            return StreamingResponse(BytesIO(wav), media_type="audio/wav")
+        except Exception as e:
+            logger.exception("Configured TTS provider failed")
+            raise HTTPException(status_code=502, detail="TTS synthesis failed") from e
 
-    wav = _wav_header(pcm) + pcm
-    return StreamingResponse(BytesIO(wav), media_type="audio/wav")
+    raise HTTPException(status_code=503, detail="No TTS provider available")
 
 
 # ── SSE Events ────────────────────────────────────────────────────────────────

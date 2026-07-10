@@ -1,32 +1,12 @@
-node_modules
-npm-debug.log
-.git
-.gitignore
-README.md
-.env
-.env.local
-.env.*.local
-.vscode
-.idea
-.DS_Store
-ARCHIVE
-__pycache__
-*.pyc
-*.zip
-*.png
-*.jpg
-*.jpeg
-*.webp
-*.mp4
-*.mp3
-*.mov
-*.wav
-*.ogg
-dist
-build
-.vercel
-.kimi
-.pytest_cache
-.mypy_cache
-coverage
-*.log
+# Whitelist only the files needed by the web-revamp Dockerfile.
+# This keeps the Fly.io build context small.
+*
+!web-revamp/
+!web-revamp/**
+!Dockerfile
+!fly.toml
+!.dockerignore
+
+# Exclude heavy, unnecessary paths inside web-revamp.
+web-revamp/node_modules
+web-revamp/dist

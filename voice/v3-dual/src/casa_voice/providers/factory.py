@@ -6,7 +6,7 @@ from typing import Optional
 
 from .character_router import CharacterVoiceRouter
 from .common import DEFAULT_LLM, logger
-from .llm import GeminiLLM, GroqLLM
+from .llm import GeminiLLM, GroqLLM, OpenAILLM, OpenRouterLLM
 from .native_audio import NativeAudioProvider
 from .stt import GroqSTT, OpenRouterSTT
 from .tts import OpenAIDirectTTS, OpenRouterTTS
@@ -45,7 +45,21 @@ class VoiceProviders:
             self.stt = None
 
         # LLM provider
-        if gemini_key:
+        llm_provider = os.environ.get("LLM_PROVIDER", "").strip().lower()
+
+        if llm_provider == "openai" and openai_key:
+            logger.info("Using OpenAI LLM as configured by LLM_PROVIDER")
+            self.llm = OpenAILLM(
+                api_key=openai_key,
+                model=os.environ.get("OPENAI_LLM_MODEL", "gpt-4o-mini"),
+            )
+        elif llm_provider == "openrouter" and openrouter_key:
+            logger.info("Using OpenRouter LLM as configured by LLM_PROVIDER")
+            self.llm = OpenRouterLLM(
+                api_key=openrouter_key,
+                model=os.environ.get("OPENROUTER_LLM_MODEL", "openai/gpt-4o-mini"),
+            )
+        elif gemini_key:
             logger.info("Using Gemini LLM")
             self.llm = GeminiLLM(
                 api_key=gemini_key,
@@ -57,11 +71,20 @@ class VoiceProviders:
                 api_key=groq_key,
                 model=os.environ.get("GROQ_LLM_MODEL", "llama-3.3-70b-versatile"),
             )
+        elif openai_key:
+            logger.info("Using OpenAI LLM fallback")
+            self.llm = OpenAILLM(
+                api_key=openai_key,
+                model=os.environ.get("OPENAI_LLM_MODEL", "gpt-4o-mini"),
+            )
         elif openrouter_key:
             logger.info("Using OpenRouter LLM fallback")
-            self.llm = None
+            self.llm = OpenRouterLLM(
+                api_key=openrouter_key,
+                model=os.environ.get("OPENROUTER_LLM_MODEL", "openai/gpt-4o-mini"),
+            )
         else:
-            logger.warning("No LLM API key found. Set GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY.")
+            logger.warning("No LLM API key found. Set OPENAI_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY.")
             self.llm = None
 
         tts_provider = os.environ.get("TTS_PROVIDER", "openai").strip().lower()

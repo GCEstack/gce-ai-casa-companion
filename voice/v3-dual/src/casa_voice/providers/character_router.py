@@ -38,25 +38,9 @@ class CharacterVoiceRouter:
         "trembling": "[trembling]",
     }
 
-    PROFILES = {
-        "drago": VoiceProfile(
-            name="Drago the Dragon",
-            prompt_prefix="You are Drago, a friendly dragon. Speak with enthusiasm and warmth.",
-            tags={"story": "[excited]", "play": "[laughs]", "calm": "[sighs]", "secret": "[whispers]"},
-            default_tag="[excited]",
-        ),
-        "liam": VoiceProfile(
-            name="Liam",
-            prompt_prefix="You are Liam, a cool teen DJ. Use casual language, be energetic.",
-            tags={"story": "[singing]", "play": "[excited]", "calm": "[sighs]", "secret": "[whispers]"},
-            default_tag="[excited]",
-        ),
-        "jenny": VoiceProfile(
-            name="Jenny",
-            prompt_prefix="You are Jenny, a creative artist. Be expressive and imaginative.",
-            tags={"story": "[excited]", "play": "[laughs]", "calm": "[sighs]", "secret": "[whispers]"},
-            default_tag="[excited]",
-        ),
+    # Build per-character profiles from characters.json prompts.
+    # Keep a hardcoded default for when no character prompt exists.
+    PROFILES: Dict[str, VoiceProfile] = {
         "default": VoiceProfile(
             name="Casa Companion",
             prompt_prefix="You are a friendly companion for kids. Be warm, encouraging, and fun.",
@@ -64,6 +48,13 @@ class CharacterVoiceRouter:
             default_tag="[excited]",
         ),
     }
+    for _slug, _prompt in _CHARACTER_PROMPTS.items():
+        PROFILES[_slug] = VoiceProfile(
+            name=_slug,
+            prompt_prefix=_prompt,
+            tags={"story": "[excited]", "play": "[laughs]", "calm": "[sighs]", "secret": "[whispers]"},
+            default_tag="[excited]",
+        )
 
     # Per-character Gemini TTS voices. 30 voices available; a few similar characters
     # intentionally share a voice so every character still sounds distinct.

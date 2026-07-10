@@ -112,7 +112,6 @@ function CharacterDetailContent({ character, activeMode }: CharacterDetailConten
       {/* Center Stage - Character Showcase */}
       <CenterStage
         character={character}
-        activeMode={activeMode}
         voice={voice}
       />
     </div>
