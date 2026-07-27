@@ -1,0 +1,946 @@
+{
+  "characters": [
+    {
+      "slug": "pietro",
+      "name": "Pietro",
+      "italianMeaning": "Founder & Creator",
+      "accentColor": "#ff6b6b",
+      "category": "person",
+      "traits": ["Warm", "Creative", "Italian-American", "Founder"],
+      "portrait": "/pietro.png",
+      "showcase": "/pietro.png",
+      "voiceIntro": "/audio/characters/pietro-intro.mp3",
+      "idleVideo": "/videos/pietro_idle.mp4",
+      "speakingVideo": "/videos/pietro_speaking.mp4",
+      "voice": "alloy",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "corvo",
+      "name": "Corvo",
+      "italianMeaning": "Crow in Italian",
+      "accentColor": "#6b7fd7",
+      "category": "animal",
+      "traits": ["Friendly", "Curious", "Wise", "Mischievous"],
+      "portrait": "/corvo.png",
+      "showcase": "/corvo.png",
+      "voiceIntro": "/audio/characters/corvo-intro.mp3",
+      "idleVideo": "/videos/corvo_idle.mp4",
+      "speakingVideo": "/videos/corvo_speaking.mp4",
+      "voice": "alloy",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "gufo",
+      "name": "Gufo",
+      "italianMeaning": "Owl in Italian",
+      "accentColor": "#c49a6c",
+      "category": "animal",
+      "traits": ["Calm", "Wise", "Gentle", "Bedtime"],
+      "portrait": "/gufo.png",
+      "showcase": "/gufo.png",
+      "voiceIntro": "/audio/characters/gufo-intro.mp3",
+      "idleVideo": "/videos/gufo_idle.mp4",
+      "speakingVideo": "/videos/gufo_speaking.mp4",
+      "voice": "echo",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "orsetto",
+      "name": "Orsetto",
+      "italianMeaning": "Little Bear in Italian",
+      "accentColor": "#d4a843",
+      "category": "animal",
+      "traits": ["Brave", "Warm", "Protective", "Adventurous"],
+      "portrait": "/orsetto.png",
+      "showcase": "/orsetto.png",
+      "voiceIntro": "/audio/characters/orsetto-intro.mp3",
+      "idleVideo": "/videos/orsetto_idle.mp4",
+      "speakingVideo": "/videos/orsetto_speaking.mp4",
+      "voice": "onyx",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "coniglio",
+      "name": "Coniglio",
+      "italianMeaning": "Bunny in Italian",
+      "accentColor": "#f5a0b5",
+      "category": "animal",
+      "traits": ["Sweet", "Gentle", "Musical", "Empathetic"],
+      "portrait": "/coniglio.png",
+      "showcase": "/coniglio.png",
+      "voiceIntro": "/audio/characters/coniglio-intro.mp3",
+      "idleVideo": "/videos/coniglio_idle.mp4",
+      "speakingVideo": "/videos/coniglio_speaking.mp4",
+      "voice": "shimmer",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "tartaruga",
+      "name": "Tartaruga",
+      "italianMeaning": "Sea Turtle in Italian",
+      "accentColor": "#5cb88a",
+      "category": "animal",
+      "traits": ["Patient", "Wise", "Ocean", "Calm"],
+      "portrait": "/tartaruga.png",
+      "showcase": "/tartaruga-showcase.png",
+      "voiceIntro": "/audio/characters/tartaruga-intro.mp3",
+      "idleVideo": "/videos/tartaruga_idle.mp4",
+      "speakingVideo": "/videos/tartaruga_speaking.mp4",
+      "voice": "echo",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "elefante",
+      "name": "Elefante",
+      "italianMeaning": "Elephant in Italian",
+      "accentColor": "#8b5a3c",
+      "category": "animal",
+      "traits": ["Gentle", "Nurturing", "Memory", "Family"],
+      "portrait": "/elefante.png",
+      "showcase": "/elefante.png",
+      "voiceIntro": "/audio/characters/elefante-intro.mp3",
+      "idleVideo": "/videos/elefante_idle.mp4",
+      "speakingVideo": "/videos/elefante_speaking.mp4",
+      "voice": "nova",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "leone",
+      "name": "Leone",
+      "italianMeaning": "Lion in Italian",
+      "accentColor": "#ffd700",
+      "category": "animal",
+      "traits": ["Confident", "Brave", "Leader", "Protective"],
+      "portrait": "/leone.png",
+      "showcase": "/leone.png",
+      "voiceIntro": "/audio/characters/leone-intro.mp3",
+      "idleVideo": "/videos/leone_idle.mp4",
+      "speakingVideo": "/videos/leone_speaking.mp4",
+      "voice": "onyx",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "delfino",
+      "name": "Delfino",
+      "italianMeaning": "Dolphin in Italian",
+      "accentColor": "#00bfff",
+      "category": "animal",
+      "traits": ["Playful", "Energetic", "Joyful", "Social"],
+      "portrait": "/delfino.png",
+      "showcase": "/delfino.png",
+      "voiceIntro": "/audio/characters/delfino-intro.mp3",
+      "idleVideo": "/videos/delfino_idle.mp4",
+      "speakingVideo": "/videos/delfino_speaking.mp4",
+      "voice": "shimmer",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "drago",
+      "name": "Drago",
+      "italianMeaning": "Dragon in Italian",
+      "accentColor": "#9932cc",
+      "category": "fantasy",
+      "traits": ["Imaginative", "Magical", "Creative", "Wonder"],
+      "portrait": "/drago.png",
+      "showcase": "/drago.png",
+      "voiceIntro": "/audio/characters/drago-intro.mp3",
+      "idleVideo": "/videos/drago_idle.mp4",
+      "speakingVideo": "/videos/drago_speaking.mp4",
+      "voice": "fable",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "volpe",
+      "name": "Volpe",
+      "italianMeaning": "Fox in Italian",
+      "accentColor": "#ff6347",
+      "category": "animal",
+      "traits": ["Clever", "Curious", "Quick-witted", "Explorer"],
+      "portrait": "/volpe.png",
+      "showcase": "/volpe.png",
+      "voiceIntro": "/audio/characters/volpe-intro.mp3",
+      "idleVideo": "/videos/volpe_idle.mp4",
+      "speakingVideo": "/videos/volpe_speaking.mp4",
+      "voice": "alloy",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "xolo",
+      "name": "Xolo",
+      "italianMeaning": "Ancient Aztec Dog",
+      "accentColor": "#cd853f",
+      "category": "animal",
+      "traits": ["Loyal", "Ancient", "Cultural", "Wise"],
+      "portrait": "/xolo.png",
+      "showcase": "/xolo.png",
+      "voiceIntro": "/audio/characters/xolo-intro.mp3",
+      "idleVideo": "/videos/xolo_idle.mp4",
+      "speakingVideo": "/videos/xolo_speaking.mp4",
+      "voice": "alloy",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "scheletro",
+      "name": "Scheletro",
+      "italianMeaning": "Skeleton in Italian",
+      "accentColor": "#f5f5dc",
+      "category": "fantasy",
+      "traits": ["Theatrical", "Elegant", "Italian", "Charming"],
+      "portrait": "/scheletro.png",
+      "showcase": "/scheletro.png",
+      "voiceIntro": "/audio/characters/scheletro-intro.mp3",
+      "idleVideo": "/videos/scheletro_idle.mp4",
+      "speakingVideo": "/videos/scheletro_speaking.mp4",
+      "voice": "fable",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "ragno",
+      "name": "Ragno",
+      "italianMeaning": "Spider in Italian",
+      "accentColor": "#2f4f4f",
+      "category": "animal",
+      "traits": ["Brave", "Curious", "Explorer", "Tiny"],
+      "portrait": "/ragno.png",
+      "showcase": "/ragno.png",
+      "voiceIntro": "/audio/characters/ragno-intro.mp3",
+      "idleVideo": "/videos/ragno_idle.mp4",
+      "speakingVideo": "/videos/ragno_speaking.mp4",
+      "voice": "alloy",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "veloce",
+      "name": "Veloce",
+      "italianMeaning": "Fast in Italian",
+      "accentColor": "#ff4500",
+      "category": "object",
+      "traits": ["Energetic", "Fast", "Competitive", "Teamwork"],
+      "portrait": "/veloce.png",
+      "showcase": "/veloce.png",
+      "voiceIntro": "/audio/characters/veloce-intro.mp3",
+      "idleVideo": "/videos/veloce_idle.mp4",
+      "speakingVideo": "/videos/veloce_speaking.mp4",
+      "voice": "onyx",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "stellino",
+      "name": "Stellino",
+      "italianMeaning": "Little Star in Italian",
+      "accentColor": "#e6e6fa",
+      "category": "fantasy",
+      "traits": ["Wonderstruck", "Curious", "Gentle", "Space"],
+      "portrait": "/stellino.png",
+      "showcase": "/stellino.png",
+      "voiceIntro": "/audio/characters/stellino-intro.mp3",
+      "idleVideo": "/videos/stellino_idle.mp4",
+      "speakingVideo": "/videos/stellino_speaking.mp4",
+      "voice": "shimmer",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "sacco",
+      "name": "Sacco",
+      "italianMeaning": "Bag/Sack in Italian",
+      "accentColor": "#daa520",
+      "category": "fantasy",
+      "traits": ["Cozy", "Warm", "Memories", "Magical"],
+      "portrait": "/sacco.png",
+      "showcase": "/sacco.png",
+      "voiceIntro": "/audio/characters/sacco-intro.mp3",
+      "idleVideo": "/videos/sacco_idle.mp4",
+      "speakingVideo": "/videos/sacco_speaking.mp4",
+      "voice": "nova",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "spugna",
+      "name": "Spugna",
+      "italianMeaning": "Sponge in Italian",
+      "accentColor": "#ffa07a",
+      "category": "animal",
+      "traits": ["Gentle", "Calm", "Patient", "Ocean"],
+      "portrait": "/spugna.png",
+      "showcase": "/spugna.png",
+      "voiceIntro": "/audio/characters/spugna-intro.mp3",
+      "idleVideo": "/videos/spugna_idle.mp4",
+      "speakingVideo": "/videos/spugna_speaking.mp4",
+      "voice": "nova",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "rocco",
+      "name": "Rocco",
+      "italianMeaning": "Rock in Italian",
+      "accentColor": "#8b0000",
+      "category": "animal",
+      "traits": ["Raw", "Energetic", "Resilient", "Rock"],
+      "portrait": "/rocco.png",
+      "showcase": "/rocco.png",
+      "voiceIntro": "/audio/characters/rocco-intro.mp3",
+      "idleVideo": "/videos/rocco_idle.mp4",
+      "speakingVideo": "/videos/rocco_speaking.mp4",
+      "voice": "onyx",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "vinile",
+      "name": "Vinile",
+      "italianMeaning": "Vinyl in Italian",
+      "accentColor": "#1a1a1a",
+      "category": "object",
+      "traits": ["Smooth", "Cool", "Soulful", "House Music"],
+      "portrait": "/vinile.png",
+      "showcase": "/vinile.png",
+      "voiceIntro": "/audio/characters/vinile-intro.mp3",
+      "idleVideo": "/videos/vinile_idle.mp4",
+      "speakingVideo": "/videos/vinile_speaking.mp4",
+      "voice": "alloy",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "battito",
+      "name": "Battito",
+      "italianMeaning": "Beat in Italian",
+      "accentColor": "#4169e1",
+      "category": "object",
+      "traits": ["Precise", "Focused", "Hypnotic", "Techno"],
+      "portrait": "/battito.png",
+      "showcase": "/battito.png",
+      "voiceIntro": "/audio/characters/battito-intro.mp3",
+      "idleVideo": "/videos/battito_idle.mp4",
+      "speakingVideo": "/videos/battito_speaking.mp4",
+      "voice": "alloy",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "onda",
+      "name": "Onda",
+      "italianMeaning": "Wave in Italian",
+      "accentColor": "#ff69b4",
+      "category": "object",
+      "traits": ["Euphoric", "Joyful", "Energy", "Festival"],
+      "portrait": "/onda.png",
+      "showcase": "/onda.png",
+      "voiceIntro": "/audio/characters/onda-intro.mp3",
+      "idleVideo": "/videos/onda_idle.mp4",
+      "speakingVideo": "/videos/onda_speaking.mp4",
+      "voice": "shimmer",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "maestra",
+      "name": "Maestra",
+      "italianMeaning": "Teacher in Italian",
+      "accentColor": "#ff6b6b",
+      "category": "person",
+      "traits": ["Patient", "Encouraging", "Magical", "Guidance"],
+      "portrait": "/maestra.png",
+      "showcase": "/maestra.png",
+      "voiceIntro": "/audio/characters/maestra-intro.mp3",
+      "idleVideo": "/videos/maestra_idle.mp4",
+      "speakingVideo": "/videos/maestra_speaking.mp4",
+      "voice": "nova",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "costruttore",
+      "name": "Costruttore",
+      "italianMeaning": "Builder in Italian",
+      "accentColor": "#8b4513",
+      "category": "person",
+      "traits": ["Steady", "Confident", "Builder", "Plans"],
+      "portrait": "/costruttore.png",
+      "showcase": "/costruttore.png",
+      "voiceIntro": "/audio/characters/costruttore-intro.mp3",
+      "idleVideo": "/videos/costruttore_idle.mp4",
+      "speakingVideo": "/videos/costruttore_speaking.mp4",
+      "voice": "onyx",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "dottore",
+      "name": "Dottore",
+      "italianMeaning": "Doctor in Italian",
+      "accentColor": "#98fb98",
+      "category": "person",
+      "traits": ["Gentle", "Reassuring", "Patient", "Health"],
+      "portrait": "/dottore.png",
+      "showcase": "/dottore.png",
+      "voiceIntro": "/audio/characters/dottore-intro.mp3",
+      "idleVideo": "/videos/dottore_idle.mp4",
+      "speakingVideo": "/videos/dottore_speaking.mp4",
+      "voice": "nova",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "mamma",
+      "name": "Mamma",
+      "italianMeaning": "Mom in Italian",
+      "accentColor": "#ffb6c1",
+      "category": "person",
+      "traits": ["Warm", "Loving", "Nurturing", "Safe"],
+      "portrait": "/mamma.png",
+      "showcase": "/mamma.png",
+      "voiceIntro": "/audio/characters/mamma-intro.mp3",
+      "idleVideo": "/videos/mamma_idle.mp4",
+      "speakingVideo": "/videos/mamma_speaking.mp4",
+      "voice": "nova",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "nonna",
+      "name": "Nonna",
+      "italianMeaning": "Grandma in Italian",
+      "accentColor": "#dda0dd",
+      "category": "person",
+      "traits": ["Wise", "Cozy", "Traditional", "Stories"],
+      "portrait": "/nonna.png",
+      "showcase": "/nonna.png",
+      "voiceIntro": "/audio/characters/nonna-intro.mp3",
+      "idleVideo": "/videos/nonna_idle.mp4",
+      "speakingVideo": "/videos/nonna_speaking.mp4",
+      "voice": "nova",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "papa",
+      "name": "Papa",
+      "italianMeaning": "Dad in Italian",
+      "accentColor": "#87ceeb",
+      "category": "person",
+      "traits": ["Calm", "Wise", "Storytelling", "Protective"],
+      "portrait": "/papa.png",
+      "showcase": "/papa.png",
+      "voiceIntro": "/audio/characters/papa-intro.mp3",
+      "idleVideo": "/videos/papa_idle.mp4",
+      "speakingVideo": "/videos/papa_speaking.mp4",
+      "voice": "echo",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "borsa",
+      "name": "Borsa",
+      "italianMeaning": "Bag/Wallet in Italian",
+      "accentColor": "#ff8c00",
+      "category": "object",
+      "traits": ["Sharp", "Calm", "Business", "Angles"],
+      "portrait": "/borsa.png",
+      "showcase": "/borsa.png",
+      "voiceIntro": "/audio/characters/borsa-intro.mp3",
+      "idleVideo": "/videos/borsa_idle.mp4",
+      "speakingVideo": "/videos/borsa_speaking.mp4",
+      "voice": "alloy",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "verita",
+      "name": "Verita",
+      "italianMeaning": "Truth in Italian",
+      "accentColor": "#c0c0c0",
+      "category": "object",
+      "traits": ["Bold", "Direct", "Honest", "Courage"],
+      "portrait": "/verita.png",
+      "showcase": "/verita.png",
+      "voiceIntro": "/audio/characters/verita-intro.mp3",
+      "idleVideo": "/videos/verita_idle.mp4",
+      "speakingVideo": "/videos/verita_speaking.mp4",
+      "voice": "onyx",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "forza",
+      "name": "Forza",
+      "italianMeaning": "Strength/Power in Italian",
+      "accentColor": "#ff4500",
+      "category": "object",
+      "traits": ["Energetic", "Motivating", "Positive", "Exercise"],
+      "portrait": "/forza.png",
+      "showcase": "/forza.png",
+      "voiceIntro": "/audio/characters/forza-intro.mp3",
+      "idleVideo": "/videos/forza_idle.mp4",
+      "speakingVideo": "/videos/forza_speaking.mp4",
+      "voice": "shimmer",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "bella",
+      "name": "Bella",
+      "italianMeaning": "Beautiful in Italian",
+      "accentColor": "#ff69b4",
+      "category": "object",
+      "traits": ["Elegant", "Glamorous", "Confident", "Style"],
+      "portrait": "/bella.png",
+      "showcase": "/bella.png",
+      "voiceIntro": "/audio/characters/bella-intro.mp3",
+      "idleVideo": "/videos/bella_idle.mp4",
+      "speakingVideo": "/videos/bella_speaking.mp4",
+      "voice": "shimmer",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "cuoco",
+      "name": "Cuoco",
+      "italianMeaning": "Chef in Italian",
+      "accentColor": "#ff6347",
+      "category": "person",
+      "traits": ["Passionate", "Dramatic", "Culinary", "Food"],
+      "portrait": "/cuoco.png",
+      "showcase": "/cuoco.png",
+      "voiceIntro": "/audio/characters/cuoco-intro.mp3",
+      "idleVideo": "/videos/cuoco_idle.mp4",
+      "speakingVideo": "/videos/cuoco_speaking.mp4",
+      "voice": "fable",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "cucita",
+      "name": "Cucita",
+      "italianMeaning": "Stitched in Italian",
+      "accentColor": "#dda0dd",
+      "category": "fantasy",
+      "traits": ["Gentle", "Creative", "Handmade", "Love"],
+      "portrait": "/cucita.png",
+      "showcase": "/cucita.png",
+      "voiceIntro": "/audio/characters/cucita-intro.mp3",
+      "idleVideo": "/videos/cucita_idle.mp4",
+      "speakingVideo": "/videos/cucita_speaking.mp4",
+      "voice": "nova",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "polpo",
+      "name": "Polpo",
+      "italianMeaning": "Octopus in Italian",
+      "accentColor": "#1e90ff",
+      "category": "animal",
+      "traits": ["Curious", "Playful", "Demo", "Fun"],
+      "portrait": "/polpo.png",
+      "showcase": "/polpo.png",
+      "voiceIntro": "/audio/characters/polpo-intro.mp3",
+      "idleVideo": "/videos/polpo_idle.mp4",
+      "speakingVideo": "/videos/polpo_speaking.mp4",
+      "voice": "alloy",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "jack",
+      "name": "Jack",
+      "italianMeaning": "Playful Companion",
+      "accentColor": "#87ceeb",
+      "category": "fantasy",
+      "traits": ["Playful", "Upbeat", "Friendly", "Fun"],
+      "portrait": "/jack.png",
+      "showcase": "/jack.png",
+      "voiceIntro": "/audio/characters/jack-intro.mp3",
+      "idleVideo": "/videos/jack_idle.mp4",
+      "speakingVideo": "/videos/jack_speaking.mp4",
+      "voice": "shimmer",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "agenda",
+      "name": "Agenda",
+      "italianMeaning": "Planner in Italian",
+      "accentColor": "#ffd700",
+      "category": "object",
+      "traits": ["Organized", "Cheerful", "Helpful", "Planning"],
+      "portrait": "/agenda.png",
+      "showcase": "/agenda.png",
+      "voiceIntro": "/audio/characters/agenda-intro.mp3",
+      "idleVideo": "/videos/agenda_idle.mp4",
+      "speakingVideo": "/videos/agenda_speaking.mp4",
+      "voice": "nova",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "alien",
+      "name": "Alien",
+      "italianMeaning": "Space Traveler",
+      "accentColor": "#e6e6fa",
+      "category": "fantasy",
+      "traits": ["Curious", "Whimsical", "Playful", "Space"],
+      "portrait": "/alien.png",
+      "showcase": "/alien.png",
+      "voiceIntro": "/audio/characters/alien-intro.mp3",
+      "idleVideo": "/videos/alien_idle.mp4",
+      "speakingVideo": "/videos/alien_speaking.mp4",
+      "voice": "shimmer",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "dragon",
+      "name": "Dragon",
+      "italianMeaning": "Magical Creature",
+      "accentColor": "#9932cc",
+      "category": "fantasy",
+      "traits": ["Gentle", "Brave", "Magical", "Creative"],
+      "portrait": "/dragon.png",
+      "showcase": "/dragon.png",
+      "voiceIntro": "/audio/characters/dragon-intro.mp3",
+      "idleVideo": "/videos/dragon_idle.mp4",
+      "speakingVideo": "/videos/dragon_speaking.mp4",
+      "voice": "fable",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "fraggl",
+      "name": "Fraggl",
+      "italianMeaning": "Fun-loving Creature",
+      "accentColor": "#ff6347",
+      "category": "fantasy",
+      "traits": ["Fun-loving", "Bouncy", "Musical", "Joyful"],
+      "portrait": "/fraggl.png",
+      "showcase": "/fraggl_full.png",
+      "voiceIntro": "/audio/characters/fraggl-intro.mp3",
+      "idleVideo": "/videos/fraggl_idle.mp4",
+      "speakingVideo": "/videos/fraggl_speaking.mp4",
+      "voice": "onyx",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "grouch",
+      "name": "Grouch",
+      "italianMeaning": "Grumpy but Warm",
+      "accentColor": "#808080",
+      "category": "fantasy",
+      "traits": ["Grumpy", "Warm", "Funny", "Lovable"],
+      "portrait": "/grouch.png",
+      "showcase": "/grouch.png",
+      "voiceIntro": "/audio/characters/grouch-intro.mp3",
+      "idleVideo": "/videos/grouch_idle.mp4",
+      "speakingVideo": "/videos/grouch_speaking.mp4",
+      "voice": "fable",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "lucha_bee",
+      "name": "Lucha Bee",
+      "italianMeaning": "Wrestling Bee",
+      "accentColor": "#ffd700",
+      "category": "animal",
+      "traits": ["Spirited", "Energetic", "Brave", "Teamwork"],
+      "portrait": "/lucha_bee.png",
+      "showcase": "/lucha_bee.png",
+      "voiceIntro": "/audio/characters/lucha_bee-intro.mp3",
+      "idleVideo": "/videos/lucha_bee_idle.mp4",
+      "speakingVideo": "/videos/lucha_bee_speaking.mp4",
+      "voice": "shimmer",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "ninja_cat",
+      "name": "Ninja Cat",
+      "italianMeaning": "Stealthy Warrior",
+      "accentColor": "#2f4f4f",
+      "category": "animal",
+      "traits": ["Calm", "Mysterious", "Skilled", "Stealth"],
+      "portrait": "/ninja_cat.png",
+      "showcase": "/ninja_cat.png",
+      "voiceIntro": "/audio/characters/ninja_cat-intro.mp3",
+      "idleVideo": "/videos/ninja_cat_idle.mp4",
+      "speakingVideo": "/videos/ninja_cat_speaking.mp4",
+      "voice": "alloy",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "pirate_parrot",
+      "name": "Pirate Parrot",
+      "italianMeaning": "Adventurous Bird",
+      "accentColor": "#ff4500",
+      "category": "animal",
+      "traits": ["Lively", "Adventurous", "Bold", "Stories"],
+      "portrait": "/pirate_parrot.png",
+      "showcase": "/pirate_parrot.png",
+      "voiceIntro": "/audio/characters/pirate_parrot-intro.mp3",
+      "idleVideo": "/videos/pirate_parrot_idle.mp4",
+      "speakingVideo": "/videos/pirate_parrot_speaking.mp4",
+      "voice": "shimmer",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "transformer_bot",
+      "name": "Transformer Bot",
+      "italianMeaning": "Creative Robot",
+      "accentColor": "#4169e1",
+      "category": "object",
+      "traits": ["Creative", "Enthusiastic", "Inventive", "Builder"],
+      "portrait": "/transformer_bot.png",
+      "showcase": "/transformer_bot.png",
+      "voiceIntro": "/audio/characters/transformer_bot-intro.mp3",
+      "idleVideo": "/videos/transformer_bot_idle.mp4",
+      "speakingVideo": "/videos/transformer_bot_speaking.mp4",
+      "voice": "nova",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    },
+    {
+      "slug": "trex",
+      "name": "T-Rex",
+      "italianMeaning": "Gentle Giant Dinosaur",
+      "accentColor": "#32cd32",
+      "category": "animal",
+      "traits": ["Friendly", "Booming", "Gentle", "Dinosaur"],
+      "portrait": "/trex.png",
+      "showcase": "/trex.png",
+      "voiceIntro": "/audio/characters/trex-intro.mp3",
+      "idleVideo": "/videos/trex_idle.mp4",
+      "speakingVideo": "/videos/trex_speaking.mp4",
+      "voice": "onyx",
+      "modes": {
+        "play": ["Story Time", "Music & Rhythm", "Geography", "STEM Sparks"],
+        "learn": ["All Languages", "Homework Helper", "Coding"],
+        "support": ["Calm & Breathe", "Milestones", "Teaching Mode"]
+      }
+    }
+  ],
+  "modes": {
+    "introduction": {
+      "label": "Introduction",
+      "icon": "👋",
+      "category": "introduction",
+      "description": "Meet your companion and hear their voice"
+    },
+    "story_time": {
+      "label": "Story Time",
+      "icon": "📚",
+      "category": "play",
+      "description": "Listen to magical stories and adventures"
+    },
+    "calm_breathe": {
+      "label": "Calm & Breathe",
+      "icon": "🧘",
+      "category": "support",
+      "description": "Guided breathing and relaxation"
+    },
+    "stem_sparks": {
+      "label": "STEM Sparks",
+      "icon": "🔬",
+      "category": "play",
+      "description": "Explore science, tech, engineering, and math"
+    },
+    "music_rhythm": {
+      "label": "Music & Rhythm",
+      "icon": "🎵",
+      "category": "play",
+      "description": "Sing, dance, and explore musical worlds"
+    },
+    "geography": {
+      "label": "Geography",
+      "icon": "🌎",
+      "category": "play",
+      "description": "Travel the world with your companion"
+    },
+    "languages": {
+      "label": "All Languages",
+      "icon": "🌐",
+      "category": "learn",
+      "description": "Learn words and phrases in any language"
+    },
+    "homework": {
+      "label": "Homework Helper",
+      "icon": "📝",
+      "category": "learn",
+      "description": "Get help with school assignments"
+    },
+    "coding": {
+      "label": "Coding",
+      "icon": "🤖",
+      "category": "learn",
+      "description": "Learn programming fundamentals"
+    },
+    "milestones": {
+      "label": "Milestones",
+      "icon": "🏆",
+      "category": "support",
+      "description": "Track your learning achievements"
+    },
+    "teaching": {
+      "label": "Teaching Mode",
+      "icon": "🎓",
+      "category": "support",
+      "description": "Parent-guided lesson controls"
+    }
+  }
+}

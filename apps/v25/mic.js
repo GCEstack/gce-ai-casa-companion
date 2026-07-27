@@ -199,7 +199,42 @@
     }
   }
 
+  function isLandingPage() {
+    const path = window.location.pathname;
+    return path === '/' || path === '/index.html';
+  }
+
+  function createTartarugaTab() {
+    if (document.getElementById('casa-tartaruga-tab')) return;
+    const btn = document.createElement('a');
+    btn.id = 'casa-tartaruga-tab';
+    btn.href = '/character/tartaruga';
+    btn.textContent = '🐢 Tartaruga';
+    btn.style.cssText = `
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      padding: 12px 20px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #00F5FF, #FF6EC7);
+      color: #fff;
+      font-family: Inter, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      text-decoration: none;
+      z-index: 10000;
+      box-shadow: 0 0 30px rgba(0,245,255,0.4);
+      transition: transform 0.15s ease;
+    `;
+    btn.addEventListener('mousedown', () => { btn.style.transform = 'scale(0.95)'; });
+    btn.addEventListener('mouseup', () => { btn.style.transform = 'scale(1)'; });
+    document.body.appendChild(btn);
+  }
+
   function attach() {
+    if (isLandingPage()) {
+      createTartarugaTab();
+    }
     const existing = findMicButton();
     if (existing) {
       existing.addEventListener('click', (e) => {
